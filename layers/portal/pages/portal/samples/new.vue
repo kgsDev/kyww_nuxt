@@ -83,68 +83,6 @@ const waterColorOptions = [
 	},
 ];
 
-const odorOptions = [
-	{
-		value: 'none',
-		label: 'None',
-	},
-	{
-		value: 'rotteneggs',
-		label: 'Rotten Eggs',
-	},
-	{
-		value: 'chlorine',
-		label: 'Chlorine',
-	},
-	{
-		value: 'rancid/sour',
-		label: 'Rancid/Sour',
-	},
-	{
-		value: 'gas/Petro',
-		label: 'Gas/Petro',
-	},
-	{
-		value: 'musty',
-		label: 'Musty',
-	},
-	{
-		value: 'sweet/fruity',
-		label: 'Sweet/Fruity',
-	},
-	{
-		value: 'sharp/pungent',
-		label: 'Sharp/Pungent',
-	},
-];
-
-const waterSurfaceOptions = [
-	{
-		value: 'none',
-		label: 'None',
-	},
-	{
-		value: 'oilSheen',
-		label: 'Oil Sheen',
-	},
-	{
-		value: 'algae',
-		label: 'Algae',
-	},
-	{
-		value: 'soapSuds',
-		label: 'Soap Suds',
-	},
-	{
-		value: 'sewage',
-		label: 'Sewage',
-	},
-	{
-		value: 'erosion',
-		label: 'Erosion',
-	},
-];
-
 const streamFlowVisualOptions = [
 	{
 		value: 'flood',
@@ -172,29 +110,6 @@ const streamFlowVisualOptions = [
 	},
 ];
 
-const bacterialSourcesOptions = [
-	{
-		value: 'duckGoose',
-		label: 'Duck/Goose',
-	},
-	{
-		value: 'human',
-		label: 'Human',
-	},
-	{
-		value: 'livestock',
-		label: 'Livestock',
-	},
-	{
-		value: 'petWaste',
-		label: 'Pet Waste',
-	},
-	{
-		value: 'wildlife',
-		label: 'Wildlife',
-	},
-];
-
 const sampler = ref(user?.value?.first_name + ' ' + user?.value?.last_name);
 const adults = ref();
 const youths = ref();
@@ -208,8 +123,6 @@ const milesDriven = ref();
 const currentWeather = ref();
 const rainfall = ref();
 const waterColor = ref();
-const odor = ref();
-const waterSurface = ref();
 const streamFlowVisual = ref();
 const streamFlowMeasured = ref();
 const waterTemperature = ref();
@@ -221,7 +134,11 @@ const model = ref();
 const iCertifyCheckbox = ref();
 const timeINIncubator = ref();
 const timeOUTIncubator = ref();
-const bacterialSources = ref();
+const bacterialSourceHuman = ref();
+const bacterialSourceDuckGoose = ref();
+const bacterialSourceLivestock = ref();
+const bacterialSourcePetWaste = ref();
+const bacterialSourceWildlife = ref();
 const ecoliA = ref();
 const sampleVolA = ref();
 const ecoliB = ref();
@@ -310,10 +227,22 @@ const other = ref();
 							<URadioGroup v-model="waterColor" :options="waterColorOptions" name="waterColor" />
 						</UFormGroup>
 						<UFormGroup class="p-2 basis-1/3" label="Odor">
-							<URadioGroup v-model="odor" :options="odorOptions" name="odor" />
+							<UCheckbox v-model="odorNone" name="odorNone" label="None" />
+							<UCheckbox v-model="odorRottenEggs" name="odorRottenEggs" label="Rotten Eggs" />
+							<UCheckbox v-model="odorChlorine" name="odorChlorine" label="Chlorine" />
+							<UCheckbox v-model="odorRancidSour" name="odorRancidSour" label="Rancid/Sour" />
+							<UCheckbox v-model="odorGasPetro" name="odorGasPetro" label="Gas/Petro" />
+							<UCheckbox v-model="odorMusty" name="odorMusty" label="Musty" />
+							<UCheckbox v-model="odorSweetFruity" name="odorSweetFruity" label="Sweet/Fruity" />
+							<UCheckbox v-model="odorSharpPungent" name="odorSharpPungent" label="Sharp/Pungent" />
 						</UFormGroup>
 						<UFormGroup class="p-2 basis-1/3" label="Water Surface">
-							<URadioGroup v-model="waterSurface" :options="waterSurfaceOptions" name="waterSurface" />
+							<UCheckbox v-model="waterSurfaceNone" name="waterSurfaceNone" label="None" />
+							<UCheckbox v-model="waterSurfaceOilSheen" name="waterSurfaceOilSheen" label="Oil Sheen" />
+							<UCheckbox v-model="waterSurfaceAlgae" name="waterSurfaceAlgae" label="Algae" />
+							<UCheckbox v-model="waterSurfaceSoapSuds" name="waterSurfaceSoapSuds" label="Soap Suds" />
+							<UCheckbox v-model="waterSurfaceSewage" name="waterSurfaceSewage" label="Sewage" />
+							<UCheckbox v-model="waterSurfaceErosion" name="waterSurfaceErosion" label="Erosion" />
 						</UFormGroup>
 					</div>
 				</div>
@@ -359,7 +288,7 @@ const other = ref();
 						Calibrate meter within 24 hours of measurement.
 					</div>
 					<div class="border-4 p-1 border-gray-900 w-1/2">
-						<img src="assets/form_icons/field_multimeter.png" alt="Water Quality" class="w-10" label="stuff" />
+						<img src="assets/form_icons/field_multimeter.png" alt="Water Quality" class="w-10 inline" label="stuff" />
 						If Field Multimeter is Used:
 						<UFormGroup class="p-2" label="Manufacturer">
 							<UInput v-model="manufacturer" />
@@ -396,7 +325,11 @@ const other = ref();
 					<div class="border-4 p-1 border-gray-900 basis-1/6">
 						<h2 class="text-lg">Possible Bacterial Sources:</h2>
 						<UFormGroup class="p-2">
-							<URadioGroup v-model="bacterialSources" :options="bacterialSourcesOptions" name="bacterialSources" />
+							<UCheckbox v-model="bacterialSourceDuckGoose" label="Duck/Goose" />
+							<UCheckbox v-model="bacterialSourceHuman" label="Human" />
+							<UCheckbox v-model="bacterialSourceLivestock" label="Livestock" />
+							<UCheckbox v-model="bacterialSourcePetWaste" label="Pet Waste" />
+							<UCheckbox v-model="bacterialSourceWildlife" label="Wildlife" />
 						</UFormGroup>
 					</div>
 					<div class="border-4 p-1 border-gray-900 basis-1/2">

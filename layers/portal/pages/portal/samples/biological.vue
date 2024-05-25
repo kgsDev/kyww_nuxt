@@ -158,9 +158,23 @@ const weatherConditionOptions = [
 					</div>
 				</div>
 				<p class="text-l text-gray-900">
-					Check all of the macroinvertebrates that you find in your stream and the form will calculate your stream's
-					water quality rating.
+					Click all of the macroinvertebrates that you find in your stream and the form will calculate your stream's
+					biological water quality score.
 				</p>
+				<h2
+					class="border-2 border-gray-900 text-xl text-gray-900 text-center"
+					:class="{
+						'bg-red-500': habitatScore < 19,
+						'bg-orange-500': habitatScore >= 19 && habitatScore <= 32,
+						'bg-yellow-500': habitatScore > 32 && habitatScore <= 41,
+						'bg-green-500': habitatScore > 41,
+					}"
+				>
+					Biological Water Quality Score = {{ habitatScore }} - {{ habitatScore < 19 ? 'Poor' : '' }}
+					{{ habitatScore >= 19 && habitatScore <= 32 ? 'Marginal' : '' }}
+					{{ habitatScore > 32 && habitatScore <= 41 ? 'Fair' : '' }}
+					{{ habitatScore > 41 ? 'Good' : '' }}
+				</h2>
 				<div class="flex">
 					<h2 class="border-2 border-gray-900 bg-lime-500 basis-1/5 text-xl text-gray-900 text-center">
 						Highly Sensitive
@@ -247,8 +261,8 @@ const weatherConditionOptions = [
 							<label for="flatworms">Flatworms</label>
 							<img src="@/assets/form_icons/flatworms.png" alt="Flatworms" />
 						</div>
-						<div :class="{ 'bg-lime-500': midges }" @click="midge = !midge">
-							<label for="midge">Midges</label>
+						<div :class="{ 'bg-lime-500': midges }" @click="midges = !midges">
+							<label for="midges">Midges</label>
 							<img src="@/assets/form_icons/midges.png" alt="Midges" />
 						</div>
 					</div>
@@ -299,7 +313,7 @@ const weatherConditionOptions = [
 							'bg-green-500': habitatScore > 41,
 						}"
 					>
-						Water Quality Score = {{ habitatScore }} - {{ habitatScore < 19 ? 'Poor' : '' }}
+						Biological Water Quality Score = {{ habitatScore }} - {{ habitatScore < 19 ? 'Poor' : '' }}
 						{{ habitatScore >= 19 && habitatScore <= 32 ? 'Marginal' : '' }}
 						{{ habitatScore > 32 && habitatScore <= 41 ? 'Fair' : '' }}
 						{{ habitatScore > 41 ? 'Good' : '' }}
