@@ -1,11 +1,5 @@
 <script setup lang="ts">
-const { path, query } = useRoute();
-const router = useRouter();
-
-// Filters
-const search: Ref<any> = ref(query?.search?.toString() ?? undefined);
-const debouncedSearch = refDebounced(search as any, 500);
-const status: Ref<any> = ref(query.status?.toString() ?? undefined);
+const { user } = useDirectusAuth();
 
 const currentWeatherOptions = [
 	{
@@ -178,7 +172,30 @@ const streamFlowVisualOptions = [
 	},
 ];
 
-const sampler = ref('Bob Flannery');
+const bacterialSourcesOptions = [
+	{
+		value: 'duckGoose',
+		label: 'Duck/Goose',
+	},
+	{
+		value: 'human',
+		label: 'Human',
+	},
+	{
+		value: 'livestock',
+		label: 'Livestock',
+	},
+	{
+		value: 'petWaste',
+		label: 'Pet Waste',
+	},
+	{
+		value: 'wildlife',
+		label: 'Wildlife',
+	},
+];
+
+const sampler = ref(user?.value?.first_name + ' ' + user?.value?.last_name);
 const adults = ref();
 const youths = ref();
 const siteId = ref();
@@ -195,6 +212,32 @@ const odor = ref();
 const waterSurface = ref();
 const streamFlowVisual = ref();
 const streamFlowMeasured = ref();
+const waterTemperature = ref();
+const pH = ref();
+const dissolvedOxygen = ref();
+const conductivity = ref();
+const manufacturer = ref();
+const model = ref();
+const iCertifyCheckbox = ref();
+const timeINIncubator = ref();
+const timeOUTIncubator = ref();
+const bacterialSources = ref();
+const ecoliA = ref();
+const sampleVolA = ref();
+const ecoliB = ref();
+const sampleVolB = ref();
+const ecoliC = ref();
+const sampleVolC = ref();
+
+const averageEcoli = ref(
+	computed(() => {
+		let a = ecoliA.value && sampleVolA.value ? (ecoliA.value * 100) / sampleVolA.value : 0;
+		let b = ecoliB.value && sampleVolB.value ? (ecoliB.value * 100) / sampleVolB.value : 0;
+		let c = ecoliC.value && sampleVolC.value ? (ecoliC.value * 100) / sampleVolC.value : 0;
+
+		return (a + b + c) / 3;
+	}),
+);
 </script>
 <template>
 	<div>
@@ -285,9 +328,126 @@ const streamFlowMeasured = ref();
 						<img src="assets/form_icons/stream_flow.png" alt="Stream Flow" class="w-full" />
 					</div>
 				</div>
-			</div>
-			<div class="flex justify-end mt-6">
-				<UButton class="text-gray-900" variant="solid">Submit</UButton>
+				<div class="flex">
+					<div class="border-4 p-1 border-gray-900 w-1/2">
+						<UFormGroup class="p-2" label="Water Temperature">
+							<UInput v-model="waterTemperature" icon="mdi:thermometer" placeholder="°C" />
+						</UFormGroup>
+						<UFormGroup class="p-2" label="pH">
+							<UInput v-model="pH" icon="mdi:ph" placeholder="SU" />
+						</UFormGroup>
+						<UFormGroup class="p-2" label="Dissolved Oxygen">
+							<UInput v-model="dissolvedOxygen" icon="mdi:cloud" placeholder="mg/L" />
+						</UFormGroup>
+						<UFormGroup class="p-2" label="Conductivity">
+							<UInput v-model="conductivity" icon="ant-design:thunderbolt-outlined" placeholder="μS/cm" />
+						</UFormGroup>
+					</div>
+					<div class="border-4 p-1 border-gray-900 w-1/2">
+						<br />
+						Read thermometer in water or quickly after removing. Take reading in shade.
+						<br />
+						<br />
+						Use a white background or hold up to the sun. Don't wear sunglasses while reading.
+						<br />
+						<br />
+						Check bottle and syringes for air bubbles. Add drops slowly.
+						<br />
+						<br />
+						Calibrate meter within 24 hours of measurement.
+					</div>
+					<div class="border-4 p-1 border-gray-900 w-1/2">
+						<img src="assets/form_icons/field_multimeter.png" alt="Water Quality" class="w-10" label="stuff" />
+						If Field Multimeter is Used:
+						<UFormGroup class="p-2" label="Manufacturer">
+							<UInput v-model="manufacturer" />
+						</UFormGroup>
+						<UFormGroup class="p-2" label="Model">
+							<UInput v-model="model" />
+						</UFormGroup>
+						<UFormGroup class="p-2">
+							<UCheckbox
+								v-model="iCertifyCheckbox"
+								label="I certify that my instruments were successfully calibrated within 24 hours with unexpired reagents."
+							/>
+						</UFormGroup>
+					</div>
+				</div>
+				<div class="flex">
+					<div class="border-4 p-1 border-gray-900 basis-1/3">
+						<img
+							src="assets/form_icons/bacteria.png"
+							alt="Bacteria"
+							class="w-20 float-left"
+							label="Incubation should be for 20-24 hrs at 35-38°C"
+						/>
+						<h2 class="text-lg">Bacteria: R-Card Method</h2>
+						<p class="p-2">Incubation should be for 20-24 hrs at 35-38°C</p>
+						<br />
+						<UFormGroup class="p-2" label="Time IN Incubator" required>
+							<UInput v-model="timeINIncubator" icon="mdi:clock-outline" type="time" />
+						</UFormGroup>
+						<UFormGroup class="p-2" label="Time OUT Incubator" required>
+							<UInput v-model="timeOUTIncubator" icon="mdi:clock-outline" type="time" />
+						</UFormGroup>
+					</div>
+					<div class="border-4 p-1 border-gray-900 basis-1/6">
+						<h2 class="text-lg">Possible Bacterial Sources:</h2>
+						<UFormGroup class="p-2">
+							<URadioGroup v-model="bacterialSources" :options="bacterialSourcesOptions" name="bacterialSources" />
+						</UFormGroup>
+					</div>
+					<div class="border-4 p-1 border-gray-900 basis-1/2">
+						<div class="container grid grid-cols-3 grid-rows-4 gap-5 px-4">
+							<div></div>
+							<label>E. coli</label>
+							<label>Sample Vol (mL)</label>
+
+							<label>Sample A:</label>
+							<UInput v-model="ecoliA" type="number" />
+							<UInput v-model="sampleVolA" type="number" />
+
+							<label>Sample B:</label>
+							<UInput v-model="ecoliB" type="number" />
+							<UInput v-model="sampleVolB" type="number" />
+
+							<label>Sample C:</label>
+							<UInput v-model="ecoliC" type="number" />
+							<UInput v-model="sampleVolC" type="number" />
+
+							<label>Average E.coli/100mL</label>
+							<UInput v-model="averageEcoli" class="col-span-2" type="number" disabled />
+							<div></div>
+						</div>
+					</div>
+				</div>
+				<div class="flex">
+					<div class="border-4 p-1 border-gray-900 w-1/2">
+						<h2 class="text-lg">Other Observations or Measurements</h2>
+						<UFormGroup class="p-2">
+							<UTextarea v-model="other" />
+						</UFormGroup>
+					</div>
+					<div class="border-4 p-1 border-gray-900 w-1/2 flex">
+						<div class="basis-1/3">
+							<img src="assets/KyWW_logo.png" alt="Kentucky Watershed Watch Logo" class="h-fit" />
+						</div>
+						<div class="basis-2/3 p-4">
+							<h2 class="text-lg">
+								Visit
+								<a href="www.kywater.org">www.kywater.org</a>
+								to view and enter data.
+							</h2>
+							<p class="text-md">Kentucky Watershed Watch</p>
+							<p class="text-md">P.O. Box 1245</p>
+							<p class="text-md">Frankfort, KY 40602</p>
+							<p class="text-md">(502) 782-7032</p>
+						</div>
+					</div>
+				</div>
+				<div class="flex justify-end mt-6">
+					<UButton class="text-gray-900" variant="solid">Submit</UButton>
+				</div>
 			</div>
 		</Form>
 	</div>

@@ -60,7 +60,7 @@ export default defineNuxtConfig({
 			userFields: ['*', { contacts: ['*'] }], // Select user fields
 			redirect: {
 				login: '/auth/signin', // Path to redirect when login is required
-				logout: '/', // Path to redirect after logout
+				logout: '/auth/signin', // Path to redirect after logout
 				home: '/portal', // Path to redirect after successful login
 				resetPassword: '/auth/reset-password', // Path to redirect for password reset
 				callback: '/auth/callback', // Path to redirect after login with provider
