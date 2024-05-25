@@ -138,15 +138,15 @@ const weatherConditionOptions = [
 						<h3 class="p-2 basis-4/6 border-2 border-gray-900 text-center text-xl">Habitat Zone</h3>
 					</div>
 					<div class="flex">
-						<UFormGroup class="p-2 basis-2/6 b-2 border-gray-900">
+						<UFormGroup class="p-2 basis-2/6 border-2 border-gray-900">
 							<URadioGroup v-model="weatherConditions" :options="weatherConditionOptions" name="weatherConditions" />
 						</UFormGroup>
-						<UFormGroup class="p-2 basis-2/6 border-l">
+						<UFormGroup class="p-2 basis-2/6 border-l-2 border-b-2 border-t-2 border-gray-900">
 							<UCheckbox v-model="riffle" name="riffle" label="Riffle" />
 							<UCheckbox v-model="leafPacks" name="leafPacks" label="Leaf Packs" />
 							<UCheckbox v-model="woodyDebris" name="woodyDebris" label="Woody Debris" />
 						</UFormGroup>
-						<UFormGroup class="p-2 basis-2/6">
+						<UFormGroup class="p-2 basis-2/6 border-r-2 border-b-2 border-t-2 border-gray-900">
 							<UCheckbox v-model="pools" name="pools" label="Pools" />
 							<UCheckbox v-model="undercutBanks" name="undercutBanks" label="Undercut Banks" />
 							<UCheckbox
@@ -173,67 +173,150 @@ const weatherConditionOptions = [
 				</div>
 				<div class="flex">
 					<div class="border-2 p-2 border-gray-900 basis-1/5">
-						<UCheckbox v-model="mussels" :class="{ 'bg-lime-500': mussels }" name="mussels" label="Mussels (Native)" />
-						<img src="@/assets/form_icons/mussels-native.png" alt="Mussels" />
-						<UCheckbox v-model="stoneflies" name="stoneflies" label="Stoneflies" />
-						<img src="@/assets/form_icons/stoneflies.png" alt="Stoneflies" />
-						<UCheckbox
-							v-model="caddisfliesCaseBuilding"
-							name="caddisfliesCaseBuilding"
-							label="Caddisflies (case-building)"
-						/>
-						<img src="@/assets/form_icons/caddisflies-case_building.png" alt="Caddisflies" />
-						<UCheckbox v-model="mayflies" name="mayflies" label="Mayflies" />
-						<img src="@/assets/form_icons/mayflies.png" alt="Mayflies" />
-						<UCheckbox v-model="waterPennies" name="waterPennies" label="Water Pennies" />
-						<img src="@/assets/form_icons/water_pennies.png" alt="Water Pennies" />
-						<UCheckbox v-model="waterSnipe" name="waterSnipe" label="Water Snipe" />
-						<img src="@/assets/form_icons/water_snipe.png" alt="Water Snipe" />
+						<div :class="{ 'bg-lime-500': mussels }" @click="mussels = !mussels">
+							<label for="mussels">Mussels (Native)</label>
+							<img src="@/assets/form_icons/mussels-native.png" alt="Mussels" />
+						</div>
+						<div :class="{ 'bg-lime-500': stoneflies }" @click="stoneflies = !stoneflies">
+							<label for="stoneflies">Stoneflies</label>
+							<img src="@/assets/form_icons/stoneflies.png" alt="Stoneflies" />
+						</div>
+						<div
+							:class="{ 'bg-lime-500': caddisfliesCaseBuilding }"
+							@click="caddisfliesCaseBuilding = !caddisfliesCaseBuilding"
+						>
+							<label for="caddisfliesCaseBuilding">Caddisflies (case-building)</label>
+							<img src="@/assets/form_icons/caddisflies-case_building.png" alt="Caddisflies" />
+						</div>
+						<div :class="{ 'bg-lime-500': mayflies }" @click="mayflies = !mayflies">
+							<label for="mayflies">Mayflies</label>
+							<img src="@/assets/form_icons/mayflies.png" alt="Mayflies" />
+						</div>
+						<div :class="{ 'bg-lime-500': waterPennies }" @click="waterPennies = !waterPennies">
+							<label for="waterPennies">Water Pennies</label>
+							<img src="@/assets/form_icons/water_pennies.png" alt="Water Pennies" />
+						</div>
+						<div :class="{ 'bg-lime-500': waterSnipe }" @click="waterSnipe = !waterSnipe">
+							<label for="waterSnipe">Water Snipe</label>
+							<img src="@/assets/form_icons/water_snipe.png" alt="Water Snipe" />
+						</div>
 					</div>
 					<div class="border-2 p-2 border-gray-900 basis-1/5">
-						<UCheckbox
-							v-model="caddisfliesNetSpinning"
-							name="caddisfliesNetSpinning"
-							label="Caddisflies (net-spinning)"
-						/>
-						<UCheckbox v-model="riffleBeetles" name="riffleBeetles" label="Riffle Beetles (adults and larvae)" />
-						<UCheckbox v-model="operculateSnails" name="operculateSnails" label="Operculate Snails (Right-opening)" />
-						<UCheckbox v-model="blackFlyLarva" name="blackFlyLarva" label="Black Fly Larva" />
-						<UCheckbox v-model="craneFlyLarva" name="craneFlyLarva" label="Crane Fly Larva" />
+						<div
+							:class="{ 'bg-lime-500': caddisfliesNetSpinning }"
+							@click="caddisfliesNetSpinning = !caddisfliesNetSpinning"
+						>
+							<label for="caddisfliesNetSpinning">Caddisflies (net-spinning)</label>
+							<img src="@/assets/form_icons/caddisflies-net_spinning.png" alt="Caddisflies" />
+						</div>
+						<div :class="{ 'bg-lime-500': riffleBeetles }" @click="riffleBeetles = !riffleBeetles">
+							<label for="riffleBeetles">Riffle Beetles (adults and larvae)</label>
+							<img src="@/assets/form_icons/riffle_beetles-adults_and_larvae.png" alt="Riffle Beetles" />
+						</div>
+						<div :class="{ 'bg-lime-500': operculateSnails }" @click="operculateSnails = !operculateSnails">
+							<label for="operculateSnails">Operculate Snails (Right-opening)</label>
+							<img src="@/assets/form_icons/operculate_snails-right_opening.png" alt="Operculate Snails" />
+						</div>
+						<div :class="{ 'bg-lime-500': blackFlyLarva }" @click="blackFlyLarva = !blackFlyLarva">
+							<label for="blackFlyLarva">Black Fly Larva</label>
+							<img src="@/assets/form_icons/black_fly_larva.png" alt="Black Fly Larva" />
+						</div>
+						<div :class="{ 'bg-lime-500': craneFlyLarva }" @click="craneFlyLarva = !craneFlyLarva">
+							<label for="craneFlyLarva">Crane Fly Larva</label>
+							<img src="@/assets/form_icons/crane_fly_larva.png" alt="Crane Fly Larva" />
+						</div>
 					</div>
 					<div class="border-2 p-2 border-gray-900 basis-1/5">
-						<UCheckbox v-model="hellgrammites" name="hellgrammites" label="Hellgrammites / Dobsonfly larvae" />
-						<UCheckbox v-model="clamsAndMussels" name="clamsAndMussels" label="Clams and Mussels (Non-Native)" />
-						<UCheckbox v-model="crayfish" name="crayfish" label="Crayfish" />
-						<UCheckbox v-model="dragonflies" name="dragonflies" label="Dragonflies" />
-						<UCheckbox v-model="flatworms" name="flatworms" label="Flatworms" />
-						<UCheckbox v-model="midges" name="midges" label="Midges" />
+						<div :class="{ 'bg-lime-500': hellgrammites }" @click="hellgrammites = !hellgrammites">
+							<label for="hellgrammites">Hellgrammites / Dobsonfly larvae</label>
+							<img src="@/assets/form_icons/hellgrammites-dobsonfly_larvae.png" alt="Hellgrammites" />
+						</div>
+						<div :class="{ 'bg-lime-500': clamsAndMussels }" @click="clamsAndMussels = !clamsAndMussels">
+							<label for="clamsAndMussels">Clams and Mussels (Non-Native)</label>
+							<img src="@/assets/form_icons/clams_and_mussels-non_native.png" alt="Clams and Mussels" />
+						</div>
+						<div :class="{ 'bg-lime-500': crayfish }" @click="crayfish = !crayfish">
+							<label for="crayfish">Crayfish</label>
+							<img src="@/assets/form_icons/crayfish.png" alt="Crayfish" />
+						</div>
+						<div :class="{ 'bg-lime-500': dragonflies }" @click="dragonflies = !dragonflies">
+							<label for="dragonflies">Dragonflies</label>
+							<img src="@/assets/form_icons/dragonflies.png" alt="Dragonflies" />
+						</div>
+						<div :class="{ 'bg-lime-500': flatworms }" @click="flatworms = !flatworms">
+							<label for="flatworms">Flatworms</label>
+							<img src="@/assets/form_icons/flatworms.png" alt="Flatworms" />
+						</div>
+						<div :class="{ 'bg-lime-500': midges }" @click="midge = !midge">
+							<label for="midge">Midges</label>
+							<img src="@/assets/form_icons/midges.png" alt="Midges" />
+						</div>
 					</div>
-					<div class="border-2 p-2 border-gray-900 basis-1/5">
-						<UCheckbox v-model="alderflies" name="alderflies" label="Alderflies" />
-						<UCheckbox v-model="scuds" name="scuds" label="Scuds" />
-						<UCheckbox
-							v-model="nonOperculateSnails"
-							name="nonOperculateSnails"
-							label="Non-operculate Snails (Left-opening)"
-						/>
-						<UCheckbox v-model="sowBugs" name="sowBugs" label="Sow Bugs" />
-						<UCheckbox v-model="leeches" name="leeches" label="Leeches" />
+					<div class="border-b-2 border-l-2 border-t-2 p-2 border-gray-900 basis-1/5">
+						<div :class="{ 'bg-lime-500': alderflies }" @click="alderflies = !alderflies">
+							<label for="alderflies">Alderflies</label>
+							<img src="@/assets/form_icons/alderflies.png" alt="Alderflies" />
+						</div>
+						<div :class="{ 'bg-lime-500': scuds }" @click="scuds = !scuds">
+							<label for="scuds">Scuds</label>
+							<img src="@/assets/form_icons/scuds.png" alt="Scuds" />
+						</div>
+						<div :class="{ 'bg-lime-500': nonOperculateSnails }" @click="nonOperculateSnails = !nonOperculateSnails">
+							<label for="nonOperculateSnails">Non-operculate Snails (Left-opening)</label>
+							<img src="@/assets/form_icons/non_operculate_snails-left_opening.png" alt="Non-operculate Snails" />
+						</div>
+						<div :class="{ 'bg-lime-500': sowBugs }" @click="sowBugs = !sowBugs">
+							<label for="sowBugs">Sow Bugs</label>
+							<img src="@/assets/form_icons/sow_bugs.png" alt="Sow Bugs" />
+						</div>
+						<div :class="{ 'bg-lime-500': leeches }" @click="leeches = !leeches">
+							<label for="leeches">Leeches</label>
+							<img src="@/assets/form_icons/leeches.png" alt="Leeches" />
+						</div>
 					</div>
-					<div class="border-2 p-2 border-gray-900 basis-1/5">
-						<UCheckbox v-model="damselflies" name="damselflies" label="Damselflies" />
-						<UCheckbox v-model="aquaticWorms" name="aquaticWorms" label="Aquatic Worms" />
-						<UCheckbox
-							v-model="otherAquaticBeetles"
-							name="otherAquaticBeetles"
-							label="Other Aquatic Beetles (adults and larvae)"
-						/>
+					<div class="border-b-2 border-r-2 border-t-2 p-2 border-gray-900 basis-1/5">
+						<div :class="{ 'bg-lime-500': damselflies }" @click="damselflies = !damselflies">
+							<label for="damselflies">Damselflies</label>
+							<img src="@/assets/form_icons/damselflies.png" alt="Damselflies" />
+						</div>
+						<div :class="{ 'bg-lime-500': aquaticWorms }" @click="aquaticWorms = !aquaticWorms">
+							<label for="aquaticWorms">Aquatic Worms</label>
+							<img src="@/assets/form_icons/aquatic_worms.png" alt="Aquatic Worms" />
+						</div>
+						<div :class="{ 'bg-lime-500': otherAquaticBeetles }" @click="otherAquaticBeetles = !otherAquaticBeetles">
+							<label for="otherAquaticBeetles">Other Aquatic Beetles (adults and larvae)</label>
+							<img src="@/assets/form_icons/other_aquatic_beetles-adults_and_larvae.png" alt="Other Aquatic Beetles" />
+						</div>
 					</div>
 				</div>
 				<div>
-					<h2 class="border-2 border-gray-900 bg-lime-500 basis-1/5 text-xl text-gray-900 text-center">
-						Water Quality Score = {{ habitatScore }}
+					<h2
+						class="border-2 border-gray-900 text-xl text-gray-900 text-center"
+						:class="{
+							'bg-red-500': habitatScore < 19,
+							'bg-orange-500': habitatScore >= 19 && habitatScore <= 32,
+							'bg-yellow-500': habitatScore > 32 && habitatScore <= 41,
+							'bg-green-500': habitatScore > 41,
+						}"
+					>
+						Water Quality Score = {{ habitatScore }} - {{ habitatScore < 19 ? 'Poor' : '' }}
+						{{ habitatScore >= 19 && habitatScore <= 32 ? 'Marginal' : '' }}
+						{{ habitatScore > 32 && habitatScore <= 41 ? 'Fair' : '' }}
+						{{ habitatScore > 41 ? 'Good' : '' }}
 					</h2>
+				</div>
+				<div>
+					<p class="text-sm">
+						Images are not shown to scale. Images from the following sources: Zebra mussel Image: fieldguide.mt.gov;
+						Operculate Snail Image: mdc.mo.gov; Aquatic Worm Image: nwnature.net, All other images from
+						Macroinvertebrates.org
+					</p>
+					<p>
+						<strong>NOTE:</strong>
+						Common macroinvertebrates such as water boatmen, backswimmers, water scorpions, giant water bugs, water
+						striders, and fishing spiders are not included on the form as their presences is not linked to tolerance or
+						sensitivity to pollution.
+					</p>
 				</div>
 			</div>
 			<div class="flex justify-end mt-6">

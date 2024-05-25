@@ -53,7 +53,7 @@ export default {
 					description: 'Look for rocks, limbs and leaves on the stream bottom.',
 				},
 				{ description: 'Lots of different sized rocks, submerged wood, and plenty of leaf packs.' },
-				{ description: 'Only small gravel- sized rocks, some wood and leaf packs.' },
+				{ description: 'Only small gravel-sized rocks, some wood and leaf packs.' },
 				{ description: 'No rocks or wood, but some leaf packs.' },
 				{ description: 'No rocks, wood, or leaf packs. Stream bottom mainly mud or bedrock.' },
 
@@ -102,7 +102,7 @@ export default {
 						'Stream has areas of (a) fast/deep water, (b) fast/shallow water, (c) slow/shallow areas, and (d) slow/deep areas.',
 				},
 				{ description: 'Stream has 3 of the velocity and depth combinations.' },
-				{ description: 'Stream 2 of the velocity and depth combinations.' },
+				{ description: 'Stream has 2 of the velocity and depth combinations.' },
 				{ description: 'Stream has only 1 type of velocity and depth combination.' },
 			],
 			selectedOptions: [],
@@ -112,6 +112,7 @@ export default {
 	created() {
 		const groupCount = Math.ceil(this.items.length / 5);
 		this.selectedOptions = Array(groupCount).fill(null);
+		this.habitatScore = this.selectedOptions.reduce((acc, val) => acc + (5 - val), 0);
 	},
 	methods: {
 		selectOption(groupIndex, index) {
@@ -222,7 +223,7 @@ const landUseOtherDetail = ref();
 					</div>
 				</div>
 				<div class="border-b-4 border-l-4 border-r-4 border-collapse border-gray-900">
-					<h2 class="text-2xl text-center border-b-2 border-gray-900 bg-lime-500">Pollutant Indicator</h2>
+					<h2 class="text-2xl text-center border-b-2 border-gray-900 bg-lime-500">Pollutant Indicators</h2>
 					<p class="text-center border-b-2 border-gray-900">
 						Provide a brief description of any potential pollutant indicators you notice. These indicators may range
 						from strange odors, unusual colors, or floatables (suds, sewage, or petroleum). Refer to guidance, if
@@ -246,19 +247,12 @@ const landUseOtherDetail = ref();
 				<h1 class="text-2xl text-center text-gray-900 border-b-4 border-l-4 border-r-4 border-gray-900 bg-lime-500">
 					Physical Assessment: Stream Corridor Assessment
 				</h1>
-				<h2
-					v-if="selectedOptions.every((option) => option !== null)"
-					class="text-xl text-gray-900 border-b-4 border-l-4 border-r-4 border-gray-900 bg-lime-500"
-				>
-					Score: {{ selectedOptions.reduce((acc, val) => acc + (5 - val), 0) }}
-				</h2>
 				<p class="text-center text-gray-900 border-l-4 border-r-4 border-gray-900">
 					<em>Based on Stream Corridor Assessment protocol from Maryland Department of Natural Resources.</em>
 					<br />
 					<b>Instructions:</b>
-					Select a stream segment of 100+ feet and observe the stream habitat in and on both sides of the water. Based
-					on the descriptions for each habitat characteristic, rate your stream habitat from good (4 pts) to poor (1
-					pt).
+					Select a stream segment of 100+ feet and observe the stream habitat in and on both sides of the water. Select
+					the closest descriptions to that of your stream segment for each habitat characteristic.
 				</p>
 
 				<div class="border-4 p-1 border-gray-900">
@@ -289,6 +283,21 @@ const landUseOtherDetail = ref();
 						</div>
 					</div>
 				</div>
+				<h2
+					v-if="selectedOptions.every((option) => option !== null)"
+					class="text-xl text-center text-gray-900 border-b-4 border-l-4 border-r-4 border-gray-900 bg-lime-500"
+					:class="{
+						'bg-red-500': habitatScore < 15,
+						'bg-orange-500': habitatScore >= 16 && habitatScore <= 22,
+						'bg-yellow-500': habitatScore > 22 && habitatScore <= 29,
+						'bg-green-500': habitatScore > 29,
+					}"
+				>
+					Score: {{ habitatScore }} - {{ habitatScore <= 15 ? 'Poor' : '' }}
+					{{ habitatScore >= 16 && habitatScore <= 22 ? 'Marginal' : '' }}
+					{{ habitatScore >= 23 && habitatScore <= 29 ? 'Fair' : '' }}
+					{{ habitatScore >= 30 ? 'Good' : '' }}
+				</h2>
 			</div>
 
 			<div class="flex justify-end mt-6">

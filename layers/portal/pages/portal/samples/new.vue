@@ -238,6 +238,8 @@ const averageEcoli = ref(
 		return (a + b + c) / 3;
 	}),
 );
+
+const other = ref();
 </script>
 <template>
 	<div>
