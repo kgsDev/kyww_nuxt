@@ -6,12 +6,13 @@ const url = useRequestURL();
 const { fileUrl } = useFiles();
 const { globals } = useAppConfig();
 
-const pageFilter = computed(() => {
+const pageFilter = computed(async () => {
 	let finalPath;
 
 	if (path === '/') {
 		// Match the homepage
 		finalPath = '/';
+		await navigateTo({ path: '/auth/signin' });
 	} else if (path.endsWith('/')) {
 		// Remove any other trailing slash
 		finalPath = path.slice(0, -1);

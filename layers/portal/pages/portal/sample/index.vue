@@ -116,7 +116,7 @@ const streamFlowVisualOptions = [
 	},
 ];
 
-const sampler = ref(user?.value?.first_name + ' ' + user?.value?.last_name);
+const sampler = ref(user?.value?.display_name);
 const adults = ref();
 const youths = ref();
 const date = ref();
@@ -193,8 +193,8 @@ const isOpen = ref(false);
 					href: '/portal',
 				},
 				{
-					title: 'Samples',
-					href: '/portal/samples',
+					title: 'Sample',
+					href: '/portal/sample',
 				},
 			]"
 		></PortalPageHeader>

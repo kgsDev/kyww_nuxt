@@ -29,13 +29,11 @@ function useCommandPalette() {
 
 const sidebarNavigation = {
 	top: [
-		{ name: 'Search', click: () => (showCommandPalette.value = true), icon: 'material-symbols:search-rounded' },
 		{ name: 'Dashboard', href: '/portal', icon: 'material-symbols:home-outline-rounded' },
 		...(user.value.isTrainer ? [{ name: 'Train', href: '/portal/train', icon: 'oui:training' }] : []),
-		{ name: 'Sample', href: '/portal/samples/new', icon: 'mdi:eyedropper' },
-		{ name: 'Sites', href: '/portal/sites', icon: 'material-symbols:tab-group-outline-rounded' },
-		{ name: 'Donations', href: '/portal/donations', icon: 'material-symbols:attach-money-rounded' },
-		{ name: 'Account', href: '/portal/account', icon: 'material-symbols:account-circle-outline' },
+		{ name: 'Stream Sample', href: '/portal/sample', icon: 'mdi:eyedropper' },
+		{ name: 'Biological Assessment', href: '/portal/biological', icon: 'mdi:fish' },
+		{ name: 'Habitat Assessment', href: '/portal/habitat', icon: 'mdi:leaf' },
 	],
 	bottom: [{ name: 'Help', href: '/portal/help', icon: 'material-symbols:help-outline-rounded' }],
 };
@@ -75,7 +73,7 @@ const mobileMenuOpen = ref(false);
 								:href="item.href ?? undefined"
 								:class="[
 									item.current ? 'bg-gray-800 text-white' : 'text-gray-100 hover:bg-gray-800 hover:text-white',
-									'group flex w-full flex-col items-center rounded-card py-3 px-2 text-xs font-bold ',
+									'group flex w-full flex-col items-center text-center rounded-card py-3 px-2 text-xs font-bold ',
 								]"
 								:aria-current="item.current ? 'page' : undefined"
 								@click="item.click ? item.click() : undefined"

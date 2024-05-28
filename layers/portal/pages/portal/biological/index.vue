@@ -3,6 +3,10 @@ const { path, query } = useRoute();
 const router = useRouter();
 
 const { user } = useDirectusAuth();
+// Access the query parameters
+const siteId = ref(query?.siteId || '');
+const latitude = ref(query?.latitude || '');
+const longitude = ref(query?.longitude || '');
 
 const siteNumber = ref('');
 const streamName = ref('');
@@ -10,7 +14,7 @@ const basin = ref('');
 const date = ref('');
 const time = ref('');
 const samplerId = ref('');
-const samplerName = ref('');
+const samplerName = ref(user?.value?.display_name);
 const county = ref('');
 const samplingLocationDescription = ref('');
 const weatherConditions = ref('');
@@ -81,6 +85,14 @@ const weatherConditionOptions = [
 	{ value: 'below', label: 'Water below bank level, but flowing' },
 	{ value: 'drought', label: 'Drought condition; not flowing' },
 ];
+
+const submittedAlert = () => {
+	alert('Submitted');
+};
+
+const submitData = () => {
+	submittedAlert();
+};
 </script>
 <template>
 	<div>
@@ -124,7 +136,7 @@ const weatherConditionOptions = [
 							<UInput v-model="samplerId" />
 						</UFormGroup>
 						<UFormGroup class="p-2 basis-2/6" label="Sampler Name">
-							<UInput v-model="samplerName" />
+							<UInput v-model="samplerName" disabled />
 						</UFormGroup>
 						<UFormGroup class="p-2 basis-1/6" label="County">
 							<UInput v-model="county" />
@@ -162,7 +174,7 @@ const weatherConditionOptions = [
 					biological water quality score.
 				</p>
 				<h2
-					class="border-2 border-gray-900 text-xl text-gray-900 text-center"
+					class="border-2 border-gray-900 text-xl text-gray-900 text-center p-2"
 					:class="{
 						'bg-red-500': habitatScore < 19,
 						'bg-orange-500': habitatScore >= 19 && habitatScore <= 32,
@@ -186,118 +198,161 @@ const weatherConditionOptions = [
 					<h2 class="border-2 border-gray-900 bg-lime-500 basis-2/5 text-xl text-gray-900 text-center">Tolerant</h2>
 				</div>
 				<div class="flex">
-					<div class="border-2 p-2 border-gray-900 basis-1/5">
-						<div :class="{ 'bg-lime-500': mussels }" @click="mussels = !mussels">
+					<div class="border-2 border-gray-900 basis-1/5">
+						<div class="p-2" :class="{ 'bg-lime-500 text-gray-900': mussels }" @click="mussels = !mussels">
 							<label for="mussels">Mussels (Native)</label>
 							<img src="@/assets/form_icons/mussels-native.png" alt="Mussels" />
 						</div>
-						<div :class="{ 'bg-lime-500': stoneflies }" @click="stoneflies = !stoneflies">
+						<div class="p-2" :class="{ 'bg-lime-500 text-gray-900': stoneflies }" @click="stoneflies = !stoneflies">
 							<label for="stoneflies">Stoneflies</label>
 							<img src="@/assets/form_icons/stoneflies.png" alt="Stoneflies" />
 						</div>
 						<div
-							:class="{ 'bg-lime-500': caddisfliesCaseBuilding }"
+							class="p-2"
+							:class="{ 'bg-lime-500 text-gray-900': caddisfliesCaseBuilding }"
 							@click="caddisfliesCaseBuilding = !caddisfliesCaseBuilding"
 						>
 							<label for="caddisfliesCaseBuilding">Caddisflies (case-building)</label>
 							<img src="@/assets/form_icons/caddisflies-case_building.png" alt="Caddisflies" />
 						</div>
-						<div :class="{ 'bg-lime-500': mayflies }" @click="mayflies = !mayflies">
+						<div class="p-2" :class="{ 'bg-lime-500 text-gray-900': mayflies }" @click="mayflies = !mayflies">
 							<label for="mayflies">Mayflies</label>
 							<img src="@/assets/form_icons/mayflies.png" alt="Mayflies" />
 						</div>
-						<div :class="{ 'bg-lime-500': waterPennies }" @click="waterPennies = !waterPennies">
+						<div
+							class="p-2"
+							:class="{ 'bg-lime-500 text-gray-900': waterPennies }"
+							@click="waterPennies = !waterPennies"
+						>
 							<label for="waterPennies">Water Pennies</label>
 							<img src="@/assets/form_icons/water_pennies.png" alt="Water Pennies" />
 						</div>
-						<div :class="{ 'bg-lime-500': waterSnipe }" @click="waterSnipe = !waterSnipe">
+						<div class="p-2" :class="{ 'bg-lime-500 text-gray-900': waterSnipe }" @click="waterSnipe = !waterSnipe">
 							<label for="waterSnipe">Water Snipe</label>
 							<img src="@/assets/form_icons/water_snipe.png" alt="Water Snipe" />
 						</div>
 					</div>
-					<div class="border-2 p-2 border-gray-900 basis-1/5">
+					<div class="border-2 border-gray-900 basis-1/5">
 						<div
-							:class="{ 'bg-lime-500': caddisfliesNetSpinning }"
+							class="p-2"
+							:class="{ 'bg-lime-500 text-gray-900': caddisfliesNetSpinning }"
 							@click="caddisfliesNetSpinning = !caddisfliesNetSpinning"
 						>
 							<label for="caddisfliesNetSpinning">Caddisflies (net-spinning)</label>
 							<img src="@/assets/form_icons/caddisflies-net_spinning.png" alt="Caddisflies" />
 						</div>
-						<div :class="{ 'bg-lime-500': riffleBeetles }" @click="riffleBeetles = !riffleBeetles">
+						<div
+							class="p-2"
+							:class="{ 'bg-lime-500 text-gray-900': riffleBeetles }"
+							@click="riffleBeetles = !riffleBeetles"
+						>
 							<label for="riffleBeetles">Riffle Beetles (adults and larvae)</label>
 							<img src="@/assets/form_icons/riffle_beetles-adults_and_larvae.png" alt="Riffle Beetles" />
 						</div>
-						<div :class="{ 'bg-lime-500': operculateSnails }" @click="operculateSnails = !operculateSnails">
+						<div
+							class="p-2"
+							:class="{ 'bg-lime-500 text-gray-900': operculateSnails }"
+							@click="operculateSnails = !operculateSnails"
+						>
 							<label for="operculateSnails">Operculate Snails (Right-opening)</label>
 							<img src="@/assets/form_icons/operculate_snails-right_opening.png" alt="Operculate Snails" />
 						</div>
-						<div :class="{ 'bg-lime-500': blackFlyLarva }" @click="blackFlyLarva = !blackFlyLarva">
+						<div
+							class="p-2"
+							:class="{ 'bg-lime-500 text-gray-900': blackFlyLarva }"
+							@click="blackFlyLarva = !blackFlyLarva"
+						>
 							<label for="blackFlyLarva">Black Fly Larva</label>
 							<img src="@/assets/form_icons/black_fly_larva.png" alt="Black Fly Larva" />
 						</div>
-						<div :class="{ 'bg-lime-500': craneFlyLarva }" @click="craneFlyLarva = !craneFlyLarva">
+						const landUseOtherDetail = ref();
+						<div
+							class="p-2"
+							:class="{ 'bg-lime-500 text-gray-900': craneFlyLarva }"
+							@click="craneFlyLarva = !craneFlyLarva"
+						>
 							<label for="craneFlyLarva">Crane Fly Larva</label>
 							<img src="@/assets/form_icons/crane_fly_larva.png" alt="Crane Fly Larva" />
 						</div>
 					</div>
-					<div class="border-2 p-2 border-gray-900 basis-1/5">
-						<div :class="{ 'bg-lime-500': hellgrammites }" @click="hellgrammites = !hellgrammites">
+					<div class="border-2 border-gray-900 basis-1/5">
+						<div
+							class="p-2"
+							:class="{ 'bg-lime-500 text-gray-900': hellgrammites }"
+							@click="hellgrammites = !hellgrammites"
+						>
 							<label for="hellgrammites">Hellgrammites / Dobsonfly larvae</label>
 							<img src="@/assets/form_icons/hellgrammites-dobsonfly_larvae.png" alt="Hellgrammites" />
 						</div>
-						<div :class="{ 'bg-lime-500': clamsAndMussels }" @click="clamsAndMussels = !clamsAndMussels">
+						<div
+							class="p-2"
+							:class="{ 'bg-lime-500 text-gray-900': clamsAndMussels }"
+							@click="clamsAndMussels = !clamsAndMussels"
+						>
 							<label for="clamsAndMussels">Clams and Mussels (Non-Native)</label>
 							<img src="@/assets/form_icons/clams_and_mussels-non_native.png" alt="Clams and Mussels" />
 						</div>
-						<div :class="{ 'bg-lime-500': crayfish }" @click="crayfish = !crayfish">
+						<div class="p-2" :class="{ 'bg-lime-500 text-gray-900': crayfish }" @click="crayfish = !crayfish">
 							<label for="crayfish">Crayfish</label>
 							<img src="@/assets/form_icons/crayfish.png" alt="Crayfish" />
 						</div>
-						<div :class="{ 'bg-lime-500': dragonflies }" @click="dragonflies = !dragonflies">
+						<div class="p-2" :class="{ 'bg-lime-500 text-gray-900': dragonflies }" @click="dragonflies = !dragonflies">
 							<label for="dragonflies">Dragonflies</label>
 							<img src="@/assets/form_icons/dragonflies.png" alt="Dragonflies" />
 						</div>
-						<div :class="{ 'bg-lime-500': flatworms }" @click="flatworms = !flatworms">
+						<div class="p-2" :class="{ 'bg-lime-500 text-gray-900': flatworms }" @click="flatworms = !flatworms">
 							<label for="flatworms">Flatworms</label>
 							<img src="@/assets/form_icons/flatworms.png" alt="Flatworms" />
 						</div>
-						<div :class="{ 'bg-lime-500': midges }" @click="midges = !midges">
+						<div class="p-2" :class="{ 'bg-lime-500 text-gray-900': midges }" @click="midges = !midges">
 							<label for="midges">Midges</label>
 							<img src="@/assets/form_icons/midges.png" alt="Midges" />
 						</div>
 					</div>
-					<div class="border-b-2 border-l-2 border-t-2 p-2 border-gray-900 basis-1/5">
-						<div :class="{ 'bg-lime-500': alderflies }" @click="alderflies = !alderflies">
+					<div class="border-b-2 border-l-2 border-t-2 border-gray-900 basis-1/5">
+						<div class="p-2" :class="{ 'bg-lime-500 text-gray-900': alderflies }" @click="alderflies = !alderflies">
 							<label for="alderflies">Alderflies</label>
 							<img src="@/assets/form_icons/alderflies.png" alt="Alderflies" />
 						</div>
-						<div :class="{ 'bg-lime-500': scuds }" @click="scuds = !scuds">
+						<div class="p-2" :class="{ 'bg-lime-500 text-gray-900': scuds }" @click="scuds = !scuds">
 							<label for="scuds">Scuds</label>
 							<img src="@/assets/form_icons/scuds.png" alt="Scuds" />
 						</div>
-						<div :class="{ 'bg-lime-500': nonOperculateSnails }" @click="nonOperculateSnails = !nonOperculateSnails">
+						<div
+							class="p-2"
+							:class="{ 'bg-lime-500 text-gray-900': nonOperculateSnails }"
+							@click="nonOperculateSnails = !nonOperculateSnails"
+						>
 							<label for="nonOperculateSnails">Non-operculate Snails (Left-opening)</label>
 							<img src="@/assets/form_icons/non_operculate_snails-left_opening.png" alt="Non-operculate Snails" />
 						</div>
-						<div :class="{ 'bg-lime-500': sowBugs }" @click="sowBugs = !sowBugs">
+						<div class="p-2" :class="{ 'bg-lime-500 text-gray-900': sowBugs }" @click="sowBugs = !sowBugs">
 							<label for="sowBugs">Sow Bugs</label>
 							<img src="@/assets/form_icons/sow_bugs.png" alt="Sow Bugs" />
 						</div>
-						<div :class="{ 'bg-lime-500': leeches }" @click="leeches = !leeches">
+						<div class="p-2" :class="{ 'bg-lime-500 text-gray-900': leeches }" @click="leeches = !leeches">
 							<label for="leeches">Leeches</label>
 							<img src="@/assets/form_icons/leeches.png" alt="Leeches" />
 						</div>
 					</div>
-					<div class="border-b-2 border-r-2 border-t-2 p-2 border-gray-900 basis-1/5">
-						<div :class="{ 'bg-lime-500': damselflies }" @click="damselflies = !damselflies">
+					<div class="border-b-2 border-r-2 border-t-2 border-gray-900 basis-1/5">
+						<div class="p-2" :class="{ 'bg-lime-500 text-gray-900': damselflies }" @click="damselflies = !damselflies">
 							<label for="damselflies">Damselflies</label>
 							<img src="@/assets/form_icons/damselflies.png" alt="Damselflies" />
 						</div>
-						<div :class="{ 'bg-lime-500': aquaticWorms }" @click="aquaticWorms = !aquaticWorms">
+						<div
+							class="p-2"
+							:class="{ 'bg-lime-500 text-gray-900': aquaticWorms }"
+							@click="aquaticWorms = !aquaticWorms"
+						>
 							<label for="aquaticWorms">Aquatic Worms</label>
 							<img src="@/assets/form_icons/aquatic_worms.png" alt="Aquatic Worms" />
 						</div>
-						<div :class="{ 'bg-lime-500': otherAquaticBeetles }" @click="otherAquaticBeetles = !otherAquaticBeetles">
+						<div
+							class="p-2"
+							:class="{ 'bg-lime-500 text-gray-900': otherAquaticBeetles }"
+							@click="otherAquaticBeetles = !otherAquaticBeetles"
+						>
 							<label for="otherAquaticBeetles">Other Aquatic Beetles (adults and larvae)</label>
 							<img src="@/assets/form_icons/other_aquatic_beetles-adults_and_larvae.png" alt="Other Aquatic Beetles" />
 						</div>
@@ -305,7 +360,7 @@ const weatherConditionOptions = [
 				</div>
 				<div>
 					<h2
-						class="border-2 border-gray-900 text-xl text-gray-900 text-center"
+						class="border-2 border-gray-900 text-xl text-gray-900 text-center p-2"
 						:class="{
 							'bg-red-500': habitatScore < 19,
 							'bg-orange-500': habitatScore >= 19 && habitatScore <= 32,
@@ -334,7 +389,7 @@ const weatherConditionOptions = [
 				</div>
 			</div>
 			<div class="flex justify-end mt-6">
-				<UButton class="text-gray-900" variant="solid">Submit</UButton>
+				<UButton class="text-gray-900" variant="solid" @click="submitData">Submit</UButton>
 			</div>
 		</Form>
 	</div>

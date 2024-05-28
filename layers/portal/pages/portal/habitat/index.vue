@@ -1,5 +1,10 @@
 <script setup lang="ts">
 const { user } = useDirectusAuth();
+const { query } = useRoute();
+// Access the query parameters
+const siteId = ref(query?.siteId || '');
+const latitude = ref(query?.latitude || '');
+const longitude = ref(query?.longitude || '');
 
 const items = [
 	{
@@ -123,6 +128,14 @@ const landUseOpen = ref();
 const landUseAgricultural = ref();
 const landUseOther = ref();
 const landUseOtherDetail = ref();
+
+const submittedAlert = () => {
+	alert('Submitted');
+};
+
+const submitData = () => {
+	submittedAlert();
+};
 </script>
 <template>
 	<div>
@@ -134,8 +147,8 @@ const landUseOtherDetail = ref();
 					href: '/portal',
 				},
 				{
-					title: 'Samples',
-					href: '/portal/samples',
+					title: 'Habitat',
+					href: '/portal/habitat',
 				},
 			]"
 		></PortalPageHeader>
@@ -206,7 +219,9 @@ const landUseOtherDetail = ref();
 					</div>
 				</div>
 				<div class="border-b-4 border-l-4 border-r-4 border-collapse border-gray-900">
-					<h2 class="text-2xl text-center border-b-2 border-gray-900 bg-lime-500">Pollutant Indicators</h2>
+					<h2 class="text-2xl text-center border-b-2 border-gray-900 bg-lime-500 text-gray-900">
+						Pollutant Indicators
+					</h2>
 					<p class="text-center border-b-2 border-gray-900">
 						Provide a brief description of any potential pollutant indicators you notice. These indicators may range
 						from strange odors, unusual colors, or floatables (suds, sewage, or petroleum). Refer to guidance, if
@@ -270,7 +285,7 @@ const landUseOtherDetail = ref();
 							v-for="index in 4"
 							:key="index"
 							class="grid-item"
-							:class="{ 'selected bg-lime-500': selectedOptions[groupIndex - 1] === index }"
+							:class="{ 'selected bg-lime-500 text-gray-900': selectedOptions[groupIndex - 1] === index }"
 							@click="selectedOptions[groupIndex - 1] = index"
 						>
 							<div class="clickable">
@@ -310,7 +325,7 @@ const landUseOtherDetail = ref();
 			</div>
 
 			<div class="flex justify-end mt-6">
-				<UButton class="text-gray-900" variant="solid">Submit</UButton>
+				<UButton class="text-gray-900" variant="solid" @click="submitData">Submit</UButton>
 			</div>
 		</Form>
 	</div>

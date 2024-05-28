@@ -43,9 +43,6 @@ const { user } = useDirectusAuth();
 		<TypographyTitle class="normal-case">{{ greetUser() }} {{ user?.first_name ?? 'friend' }},</TypographyTitle>
 		<TypographyHeadline :content="getTodaysMessage()" size="xl" />
 		<VDivider class="my-8" />
-		<div class="grid w-full grid-cols-1 gap-6 md:grid-cols-2">
-			<PortalInvoiceWidget />
-			<PortalTaskWidget />
-		</div>
+		<div class="grid w-full grid-cols-1 gap-6 md:grid-cols-2"></div>
 	</PageContainer>
 </template>
