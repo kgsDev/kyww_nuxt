@@ -1,6 +1,12 @@
 <script setup lang="ts">
 const { user } = useDirectusAuth();
 
+const { query } = useRoute();
+// Access the query parameters
+const siteId = ref(query?.siteId || '');
+const latitude = ref(query?.latitude || '');
+const longitude = ref(query?.longitude || '');
+
 const currentWeatherOptions = [
 	{
 		value: 'sunny',
@@ -113,9 +119,6 @@ const streamFlowVisualOptions = [
 const sampler = ref(user?.value?.first_name + ' ' + user?.value?.last_name);
 const adults = ref();
 const youths = ref();
-const siteId = ref();
-const latitude = ref();
-const longitude = ref();
 const date = ref();
 const startTime = ref();
 const totalVolunteerMinutes = ref();
@@ -123,6 +126,20 @@ const milesDriven = ref();
 const currentWeather = ref();
 const rainfall = ref();
 const waterColor = ref();
+const odorNone = ref();
+const odorRottenEggs = ref();
+const odorChlorine = ref();
+const odorRancidSour = ref();
+const odorGasPetro = ref();
+const odorMusty = ref();
+const odorSweetFruity = ref();
+const odorSharpPungent = ref();
+const waterSurfaceNone = ref();
+const waterSurfaceOilSheen = ref();
+const waterSurfaceAlgae = ref();
+const waterSurfaceSoapSuds = ref();
+const waterSurfaceSewage = ref();
+const waterSurfaceErosion = ref();
 const streamFlowVisual = ref();
 const streamFlowMeasured = ref();
 const waterTemperature = ref();
@@ -146,17 +163,25 @@ const sampleVolB = ref();
 const ecoliC = ref();
 const sampleVolC = ref();
 
-const averageEcoli = ref(
-	computed(() => {
-		let a = ecoliA.value && sampleVolA.value ? (ecoliA.value * 100) / sampleVolA.value : 0;
-		let b = ecoliB.value && sampleVolB.value ? (ecoliB.value * 100) / sampleVolB.value : 0;
-		let c = ecoliC.value && sampleVolC.value ? (ecoliC.value * 100) / sampleVolC.value : 0;
-
-		return (a + b + c) / 3;
-	}),
-);
+const averageEcoli = computed(() => {
+	let a = ecoliA.value && sampleVolA.value ? (ecoliA.value * 100) / sampleVolA.value : -1;
+	let b = ecoliB.value && sampleVolB.value ? (ecoliB.value * 100) / sampleVolB.value : -1;
+	let c = ecoliC.value && sampleVolC.value ? (ecoliC.value * 100) / sampleVolC.value : -1;
+	if (a === -1 || b === -1 || c === -1) return 'Please enter all measurements.';
+	return (a + b + c) / 3;
+});
 
 const other = ref();
+
+const submittedAlert = () => {
+	alert('Submitted');
+};
+
+const submitData = () => {
+	submittedAlert();
+};
+
+const isOpen = ref(false);
 </script>
 <template>
 	<div>
@@ -190,13 +215,16 @@ const other = ref();
 						</UFormGroup>
 					</div>
 					<div class="flex">
-						<UFormGroup class="p-2 basis-1/3" label="Site ID" required>
+						<UFormGroup class="p-2 basis-1/4" label="Select a Site">
+							<UButton label="Open Map" @click="isOpen = true" />
+						</UFormGroup>
+						<UFormGroup class="p-2 basis-1/4" label="Site ID" required>
 							<UInput v-model="siteId" icon="bxs:been-here" />
 						</UFormGroup>
-						<UFormGroup class="p-2 basis-1/3" label="Latitude" required>
+						<UFormGroup class="p-2 basis-1/4" label="Latitude" required>
 							<UInput v-model="latitude" icon="ri:globe-fill" />
 						</UFormGroup>
-						<UFormGroup class="p-2 basis-1/3" label="Longitude" required>
+						<UFormGroup class="p-2 basis-1/4" label="Longitude" required>
 							<UInput v-model="longitude" icon="ri:globe-fill" />
 						</UFormGroup>
 					</div>
@@ -350,8 +378,8 @@ const other = ref();
 							<UInput v-model="ecoliC" type="number" />
 							<UInput v-model="sampleVolC" type="number" />
 
-							<label>Average E.coli/100mL</label>
-							<UInput v-model="averageEcoli" class="col-span-2" type="number" disabled />
+							<label>Average E.&nbsp;coli/100mL</label>
+							<UInput v-model="averageEcoli" class="col-span-2" disabled />
 							<div></div>
 						</div>
 					</div>
@@ -364,10 +392,10 @@ const other = ref();
 						</UFormGroup>
 					</div>
 					<div class="border-4 p-1 border-gray-900 w-1/2 flex">
-						<div class="basis-1/3">
+						<div class="basis-1/3 pt-4">
 							<img src="assets/KyWW_logo.png" alt="Kentucky Watershed Watch Logo" class="h-fit" />
 						</div>
-						<div class="basis-2/3 p-4">
+						<div class="basis-2/3 p-3">
 							<h2 class="text-lg">
 								Visit
 								<a href="www.kywater.org">www.kywater.org</a>
@@ -380,10 +408,52 @@ const other = ref();
 						</div>
 					</div>
 				</div>
+				<div>
+					<UModal v-model="isOpen">
+						<div class="p-4">
+							<div class="embed-container">
+								<iframe
+									width="800"
+									height="600"
+									frameborder="0"
+									scrolling="no"
+									marginheight="0"
+									marginwidth="0"
+									title="WWKY Pick A Site"
+									src="//kygs.maps.arcgis.com/apps/Embed/index.html?webmap=0b9b8080cf574324847adcf99fb84c93&extent=-93.2364,33.5842,-77.0536,41.2751&zoom=true&previewImage=false&scale=true&disable_scroll=true&theme=light"
+								></iframe>
+							</div>
+						</div>
+					</UModal>
+				</div>
 				<div class="flex justify-end mt-6">
-					<UButton class="text-gray-900" variant="solid">Submit</UButton>
+					<UButton class="text-gray-900" variant="solid" @click="submitData">Submit</UButton>
 				</div>
 			</div>
 		</Form>
 	</div>
 </template>
+
+<style>
+.embed-container {
+	position: relative;
+	padding-bottom: 80%;
+	height: 0;
+	max-width: 100%;
+}
+.embed-container iframe,
+.embed-container object,
+.embed-container iframe {
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+}
+small {
+	position: absolute;
+	z-index: 40;
+	bottom: 0;
+	margin-bottom: -15px;
+}
+</style>
