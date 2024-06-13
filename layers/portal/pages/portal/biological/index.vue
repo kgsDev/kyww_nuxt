@@ -13,10 +13,7 @@ const streamName = ref('');
 const basin = ref('');
 const date = ref('');
 const time = ref('');
-const samplerId = ref('');
 const samplerName = ref(user?.value?.display_name);
-const county = ref('');
-const samplingLocationDescription = ref('');
 const weatherConditions = ref('');
 const riffle = ref(false);
 const leafPacks = ref(false);
@@ -49,6 +46,7 @@ const leeches = ref(false);
 const damselflies = ref(false);
 const aquaticWorms = ref(false);
 const otherAquaticBeetles = ref(false);
+const isOpen = ref(false);
 
 const habitatScore = computed(
 	() =>
@@ -95,17 +93,33 @@ const submitData = () => {
 };
 </script>
 <template>
+						<UModal v-model="isOpen">
+						<div class="p-4">
+							<div class="embed-container">
+								<iframe
+									width="800"
+									height="600"
+									frameborder="0"
+									scrolling="yes"
+									marginheight="0"
+									marginwidth="0"
+									title="WWKY Pick A Site"
+									src="//kygs.maps.arcgis.com/apps/Embed/index.html?webmap=0b9b8080cf574324847adcf99fb84c93&extent=-93.2364,33.5842,-77.0536,41.2751&zoom=true&scale=true&disable_scroll=false&theme=light"
+								></iframe>
+							</div>
+						</div>
+					</UModal>
 	<div>
 		<PortalPageHeader
-			title="New Biological Sample"
+			title="New Biological Assessment"
 			:breadcrumbs="[
 				{
 					title: 'Portal',
 					href: '/portal',
 				},
 				{
-					title: 'Samples',
-					href: '/portal/samples',
+					title: 'Biological',
+					href: '/portal/biological',
 				},
 			]"
 		></PortalPageHeader>
@@ -113,16 +127,16 @@ const submitData = () => {
 
 		<Form>
 			<div class="relative items-start">
-				<div class="border-4 p-1 border-gray-900">
+				<div class="border-4 p-1-4a72-bf16-cd2d1e67829b border-gray-900">
 					<div class="flex">
+						<UFormGroup class="p-2 basis-1/4" label="Sampler Name">
+							<UInput v-model="samplerName" />
+						</UFormGroup>
 						<UFormGroup class="p-2 basis-1/6" label="Site Number">
 							<UInput v-model="siteNumber" type="number" />
 						</UFormGroup>
-						<UFormGroup class="p-2 basis-2/6" label="Stream Name">
-							<UInput v-model="streamName" />
-						</UFormGroup>
-						<UFormGroup class="p-2 basis-1/6" label="Basin">
-							<UInput v-model="basin" />
+						<UFormGroup class="p-2 basis-1/4" label="Select a Site">
+							<UButton label="Open Map" @click="isOpen = true" />
 						</UFormGroup>
 						<UFormGroup class="p-2 basis-1/6" label="Date">
 							<UInput v-model="date" type="date" />
@@ -132,18 +146,6 @@ const submitData = () => {
 						</UFormGroup>
 					</div>
 					<div class="flex">
-						<UFormGroup class="p-2 basis-1/6" label="Sampler ID #">
-							<UInput v-model="samplerId" />
-						</UFormGroup>
-						<UFormGroup class="p-2 basis-2/6" label="Sampler Name">
-							<UInput v-model="samplerName" disabled />
-						</UFormGroup>
-						<UFormGroup class="p-2 basis-1/6" label="County">
-							<UInput v-model="county" />
-						</UFormGroup>
-						<UFormGroup class="p-2 basis-2/6" label="Sampling Location Description">
-							<UInput v-model="samplingLocationDescription" />
-						</UFormGroup>
 					</div>
 					<div class="flex">
 						<h3 class="p-2 basis-2/6 border-2 border-gray-900 text-center text-xl">Weather Conditions</h3>
@@ -262,16 +264,15 @@ const submitData = () => {
 							:class="{ 'bg-lime-500 text-gray-900': blackFlyLarva }"
 							@click="blackFlyLarva = !blackFlyLarva"
 						>
-							<label for="blackFlyLarva">Black Fly Larva</label>
+							<label for="blackFlyLarva">Black Fly Larvae</label>
 							<img src="@/assets/form_icons/black_fly_larva.png" alt="Black Fly Larva" />
 						</div>
-						const landUseOtherDetail = ref();
 						<div
 							class="p-2"
 							:class="{ 'bg-lime-500 text-gray-900': craneFlyLarva }"
 							@click="craneFlyLarva = !craneFlyLarva"
 						>
-							<label for="craneFlyLarva">Crane Fly Larva</label>
+							<label for="craneFlyLarva">Crane Fly Larvae</label>
 							<img src="@/assets/form_icons/crane_fly_larva.png" alt="Crane Fly Larva" />
 						</div>
 					</div>
@@ -281,7 +282,7 @@ const submitData = () => {
 							:class="{ 'bg-lime-500 text-gray-900': hellgrammites }"
 							@click="hellgrammites = !hellgrammites"
 						>
-							<label for="hellgrammites">Hellgrammites / Dobsonfly larvae</label>
+							<label for="hellgrammites">Hellgrammites / Dobsonfly Larvae</label>
 							<img src="@/assets/form_icons/hellgrammites-dobsonfly_larvae.png" alt="Hellgrammites" />
 						</div>
 						<div

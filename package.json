@@ -11,6 +11,7 @@
 		"lint": "eslint --cache .",
 		"format": "prettier --write \"**/*.{md,y?(a)ml,json,vue}\""
 	},
+	"type": "module",
 	"devDependencies": {
 		"@directus/sdk": "14.0.0",
 		"@directus/types": "11.0.3",
@@ -19,7 +20,7 @@
 		"@iconify/json": "2.2.166",
 		"@nuxt/devtools": "^1.0.6",
 		"@nuxt/ui": "2.11.1",
-		"@nuxtjs/color-mode": "3.3.2",
+		"@nuxtjs/color-mode": "^3.4.1",
 		"@nuxtjs/eslint-config-typescript": "12.1.0",
 		"@nuxtjs/eslint-module": "4.1.0",
 		"@nuxtjs/google-fonts": "3.1.3",

@@ -162,6 +162,9 @@ const ecoliB = ref();
 const sampleVolB = ref();
 const ecoliC = ref();
 const sampleVolC = ref();
+const conductivityMeterCalibrationDate = ref();
+const streamMeter = ref();
+const bacterialSourceOther = ref();
 
 const averageEcoli = computed(() => {
 	let a = ecoliA.value && sampleVolA.value ? (ecoliA.value * 100) / sampleVolA.value : -1;
@@ -279,8 +282,15 @@ const isOpen = ref(false);
 						<UFormGroup class="p-2 basis-1/2" label="Stream Flow (Visual)">
 							<URadioGroup v-model="streamFlowVisual" :options="streamFlowVisualOptions" name="streamFlowVisual" />
 						</UFormGroup>
-						<UFormGroup class="p-2 basis-1/2" label="Stream Flow (Measured Cubic Ft/Sec)">
-							<UInput v-model="streamFlowMeasured" icon="mdi:water" />
+						<UFormGroup class="p-2 basis-1/2">
+							<UCheckbox
+								v-model="streamMeter"
+								label="Check here if using a stream flow meter? (optional)"
+								icon="mdi:water"
+								placeholder="CuFt/Sec"
+								@click="!streamMeter"
+							/>
+							<UInput v-if="streamMeter" v-model="streamFlowMeasured" icon="mdi:water" />
 						</UFormGroup>
 					</div>
 					<div class="border-4 p-1 border-gray-900 w-1/2">
@@ -317,12 +327,15 @@ const isOpen = ref(false);
 					</div>
 					<div class="border-4 p-1 border-gray-900 w-1/2">
 						<img src="assets/form_icons/field_multimeter.png" alt="Water Quality" class="w-10 inline" label="stuff" />
-						If Field Multimeter is Used:
-						<UFormGroup class="p-2" label="Manufacturer">
-							<UInput v-model="manufacturer" />
+						Meter Calibration
+						<br />
+						Conductivity Meter
+						<UFormGroup class="p-2" label="Calibration Date">
+							<UInput v-model="conductivityMeterCalibrationDate" type="date" />
 						</UFormGroup>
-						<UFormGroup class="p-2" label="Model">
-							<UInput v-model="model" />
+						Other electronic meters
+						<UFormGroup class="p-2" label=" Calibration Date">
+							<UInput v-model="elecDates" type="date" />
 						</UFormGroup>
 						<UFormGroup class="p-2">
 							<UCheckbox
@@ -349,6 +362,9 @@ const isOpen = ref(false);
 						<UFormGroup class="p-2" label="Time OUT Incubator" required>
 							<UInput v-model="timeOUTIncubator" icon="mdi:clock-outline" type="time" />
 						</UFormGroup>
+						<UFormGroup class="p-2" label="Initials of R-Card Reader">
+							<UInput v-model="manufacturer" label="Initials of R-Card Reader" />
+						</UFormGroup>
 					</div>
 					<div class="border-4 p-1 border-gray-900 basis-1/6">
 						<h2 class="text-lg">Possible Bacterial Sources:</h2>
@@ -358,6 +374,8 @@ const isOpen = ref(false);
 							<UCheckbox v-model="bacterialSourceLivestock" label="Livestock" />
 							<UCheckbox v-model="bacterialSourcePetWaste" label="Pet Waste" />
 							<UCheckbox v-model="bacterialSourceWildlife" label="Wildlife" />
+							<UCheckbox v-model="bacterialSourceOther" label="Other" @click="!bacterialSourceOther" />
+							<UInput v-if="bacterialSourceOther" v-model="bacterialSourceOtherData" />
 						</UFormGroup>
 					</div>
 					<div class="border-4 p-1 border-gray-900 basis-1/2">
@@ -399,12 +417,8 @@ const isOpen = ref(false);
 							<h2 class="text-lg">
 								Visit
 								<a href="www.kywater.org">www.kywater.org</a>
-								to view and enter data.
+								to view and enter data. For questions or feedback, email contact@kywater.org.
 							</h2>
-							<p class="text-md">Kentucky Watershed Watch</p>
-							<p class="text-md">P.O. Box 1245</p>
-							<p class="text-md">Frankfort, KY 40602</p>
-							<p class="text-md">(502) 782-7032</p>
 						</div>
 					</div>
 				</div>
@@ -416,11 +430,11 @@ const isOpen = ref(false);
 									width="800"
 									height="600"
 									frameborder="0"
-									scrolling="no"
+									scrolling="yes"
 									marginheight="0"
 									marginwidth="0"
 									title="WWKY Pick A Site"
-									src="//kygs.maps.arcgis.com/apps/Embed/index.html?webmap=0b9b8080cf574324847adcf99fb84c93&extent=-93.2364,33.5842,-77.0536,41.2751&zoom=true&previewImage=false&scale=true&disable_scroll=true&theme=light"
+									src="//kygs.maps.arcgis.com/apps/Embed/index.html?webmap=0b9b8080cf574324847adcf99fb84c93&extent=-93.2364,33.5842,-77.0536,41.2751&zoom=true&scale=true&disable_scroll=false&theme=light"
 								></iframe>
 							</div>
 						</div>

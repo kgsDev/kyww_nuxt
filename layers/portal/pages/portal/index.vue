@@ -14,7 +14,7 @@ function useGreetings() {
 		"As we tackle today's tasks, know that our <em>commitment</em> to your success is unwavering.",
 		'Every step with you is a step towards <em>brilliance</em>. Thanks for making this journey shine brighter.',
 		*/
-		'Watershed Watch thanks <em>you</em> for your data contributions',
+		'We appreciate your sampling efforts and data contributions.',
 	];
 
 	function getTodaysMessage(): Message {
@@ -39,7 +39,7 @@ const { user } = useDirectusAuth();
 </script>
 <template>
 	<PageContainer>
-		<img class="w-48 ml-auto mr-0" src="~/assets/illustrations/tokyo-luminous-table-lamp-on-boxes.svg" />
+		<img class="w-48 ml-auto mr-0" src="~/assets/KyWW_logo.png" />
 		<TypographyTitle class="normal-case">{{ greetUser() }} {{ user?.first_name ?? 'friend' }},</TypographyTitle>
 		<TypographyHeadline :content="getTodaysMessage()" size="xl" />
 		<VDivider class="my-8" />
