@@ -14,7 +14,7 @@ function useGreetings() {
 		"As we tackle today's tasks, know that our <em>commitment</em> to your success is unwavering.",
 		'Every step with you is a step towards <em>brilliance</em>. Thanks for making this journey shine brighter.',
 		*/
-		'We appreciate your sampling efforts and data contributions.',
+		'We appreciate your sampling efforts and data contributions. We love you.',
 	];
 
 	function getTodaysMessage(): Message {

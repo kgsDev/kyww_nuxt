@@ -31,6 +31,7 @@ const sidebarNavigation = {
 	top: [
 		{ name: 'Dashboard', href: '/portal', icon: 'material-symbols:home-outline-rounded' },
 		...(user.value.isTrainer ? [{ name: 'Train', href: '/portal/train', icon: 'oui:training' }] : []),
+		...(user.value.role == "50100bb7-c7d0-4678-911b-0f60724db62f" ? [{ name: 'New Hub', href: '/portal/hub', icon: 'material-symbols:hub-outline' }] : []),
 		{ name: 'Stream Sample', href: '/portal/sample', icon: 'mdi:eyedropper' },
 		{ name: 'Biological Assessment', href: '/portal/biological', icon: 'mdi:fish' },
 		{ name: 'Habitat Assessment', href: '/portal/habitat', icon: 'mdi:leaf' },
