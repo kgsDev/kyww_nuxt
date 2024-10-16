@@ -65,8 +65,8 @@ const error = ref(null);
 
 // You'll want to remove these preset credentials before you deploy your site
 const credentials = reactive({
-	email: 'ashley@example.com',
-	password: 'password',
+	email: '',
+	password: '',
 });
 
 async function attemptLogin() {

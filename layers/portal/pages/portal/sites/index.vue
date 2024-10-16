@@ -1,130 +1,107 @@
 <script setup lang="ts">
-const { path, query } = useRoute();
-const router = useRouter();
+import {onMounted} from 'vue';
+
+const sites = ref(null);
+const sitesLoading = ref(false);
+const sitesError = ref(null);
+const mapElement = ref(null);
+const map = ref(null);
+const newSite = ref({
+  description: '',
+  stream_name: '',
+  wwkybasin: '',
+  countyname: '',
+  comments: '',
+});
+const error = ref(null);
+
+const fetchSites = async () => {
+  sitesLoading.value = true;
+  try {
+    const response = useDirectus(
+      readItems('wwkysites', {
+        fields: ['wwkyid', 'latitude', 'longitude', 'description'],
+      })
+    );
+    console.log('Fetched sites:', response.data); // Debugging log
+    sites.value = response.data;
+  } catch (err) {
+    console.error('Error fetching sites:', err); // Debugging log
+    sitesError.value = err;
+  } finally {
+    sitesLoading.value = false;
+  }
+};
+
+const initLeaflet = async () => {
+  try {
+    const L = await import('leaflet');
+    await import('leaflet/dist/leaflet.css');
+    window.$L = L;
+    initMap();
+  } catch (e) {
+    console.error('Failed to load Leaflet:', e); // Debugging log
+    error.value = 'Failed to load map library';
+  }
+};
+
+const initMap = () => {
+  if (!mapElement.value || !window.$L) return;
+
+  try {
+    map.value = window.$L.map(mapElement.value).setView([37.8, -85.8], 7); // Center on Kentucky
+    window.$L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map.value);
+    addMarkersToMap();
+    map.value.on('click', onMapClick);
+  } catch (e) {
+    console.error('Error initializing map:', e); // Debugging log
+    error.value = 'Failed to initialize map';
+  }
+};
+
+const addMarkersToMap = () => {
+  if (!map.value || !window.$L || !sites.value) {
+    console.log('Map or sites data not ready'); // Debugging log
+    return;
+  }
+  sites.value.forEach(site => {
+    console.log('Adding marker for site:', site); // Debugging log
+    window.$L.marker([site.latitude, site.longitude])
+      .addTo(map.value)
+      .bindPopup(`ID: ${site.wwkyid}<br>Description: ${site.description}`)
+      .on('click', () => selectSite(site.wwkyid));
+  });
+};
+
+const selectSite = (wwkyid) => {
+  emit('update:modelValue', wwkyid);
+  emit('close');
+};
+
+const onMapClick = (e) => {
+  newSite.value.latitude = e.latlng.lat;
+  newSite.value.longitude = e.latlng.lng;
+  // Open a form or modal to enter new site details
+};
+
+onMounted(async () => {
+  if (process.client) {
+    await fetchSites();
+    await initLeaflet();
+  }
+});
 </script>
+
 <template>
-	<div>
-		<PortalPageHeader
-			title="Sites"
-			:breadcrumbs="[
-				{
-					title: 'Portal',
-					href: '/portal',
-				},
-				{
-					title: 'Sampling',
-				},
-			]"
-		>
-			<template #actions>
-				<UButton
-					color="primary"
-					variant="outline"
-					size="xl"
-					:loading="stripeLoading"
-					@click="getPortalLink('cus_OlTbJKVanSb1zN')"
-				>
-					Update Payment Settings
-				</UButton>
-			</template>
-		</PortalPageHeader>
-		<UCard class="mt-6">
-			<template #header>
-				<!-- Filters -->
-				<div class="flex items-center justify-between gap-3">
-					<UInput v-model="search" icon="i-heroicons-magnifying-glass-20-solid" placeholder="Search..." type="text" />
-					<div class="flex gap-3">
-						<USelect v-model="status" :options="statusOptions" placeholder="Invoice Status" />
-						<UButton
-							color="white"
-							size="xs"
-							:disabled="!search && !status"
-							icon="material-symbols:filter-alt-off-outline-rounded"
-							@click="clearFilters"
-						>
-							Reset
-						</UButton>
-					</div>
-				</div>
-			</template>
-			<!-- Table -->
-			<UTable v-auto-animate :columns="columns" :rows="invoices" column-attribute="label" :loading="pending">
-				<!-- Empty State -->
-				<template #empty-state>
-					<div class="w-1/4 mx-auto text-center">
-						<img src="~/assets/illustrations/tokyo-attention-sign.svg" alt="Empty State" />
-						<TypographyHeadline content="Looks like there's nothing here." size="xs" />
-						<UButton
-							v-if="search || status"
-							color="white"
-							size="xs"
-							icon="material-symbols:filter-alt-off-outline-rounded"
-							class="mt-4"
-							@click="clearFilters"
-						>
-							Reset Filters
-						</UButton>
-					</div>
-				</template>
-				<!-- Columns -->
-				<template #invoice_number-data="{ row }">
-					<UButton variant="outline" :to="`/portal/billing/invoices/${row.id}`" :padding="false">
-						{{ row.invoice_number }}
-					</UButton>
-				</template>
-				<template #amount_due-data="{ row }">
-					{{ row.amount_due }}
-				</template>
-				<template #total-data="{ row }">
-					{{ row.total }}
-				</template>
-				<template #contact-data="{ row }">
-					<UserBadge :user="row.contact" size="sm" />
-				</template>
-				<template #status-data="{ row }">
-					<UBadge
-						:label="row.status"
-						:color="row.status === 'unpaid' ? 'rose' : 'primary'"
-						size="xs"
-						class="capitalize"
-					/>
-				</template>
-				<template #due_date-data="{ row }">
-					<VText size="xs">
-						{{
-							getFriendlyDate(row.due_date, {
-								monthAbbr: true,
-							})
-						}}
-					</VText>
-					<VText size="xs" text-color="light">{{ getRelativeTime(row.due_date) }}</VText>
-				</template>
-				<template #actions-data="{ row }">
-					<UButton
-						:to="`/portal/billing/invoices/${row.id}`"
-						color="primary"
-						variant="outline"
-						icon="i-heroicons-arrow-right"
-					/>
-				</template>
-			</UTable>
-			<!-- Number of rows & Pagination -->
-			<template #footer>
-				<div class="flex flex-wrap items-center justify-between">
-					<VText>
-						<span class="text-sm leading-5">
-							Showing
-							<span class="font-medium">{{ pageFrom }}</span>
-							to
-							<span class="font-medium">{{ pageTo }}</span>
-							of
-							<span class="font-medium">{{ totalCount }}</span>
-							results
-						</span>
-					</VText>
-					<UPagination v-model="page" :page-count="rowsPerPage" :total="totalCount" />
-				</div>
-			</template>
-		</UCard>
-	</div>
+  <div class="map-selector">
+    <div v-if="error || sitesError" class="error">{{ error || sitesError }}</div>
+    <div v-else-if="sitesLoading" class="loading">Loading...</div>
+    <div v-else>
+      <div ref="mapElement" style="height: 400px;"></div>
+    </div>
+  </div>
 </template>
+
+<style scoped>
+/* Your styles here */
+</style>

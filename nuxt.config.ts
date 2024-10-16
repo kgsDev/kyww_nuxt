@@ -4,17 +4,12 @@ import { theme } from './theme';
 export default defineNuxtConfig({
 	// https://nuxt.com/docs/api/configuration/nuxt-config
 
-	routeRules: {
-		// '/**': {
-		// 	prerender: true,
-		// },
-	},
-
 	extends: [
 		'./layers/proposals', // Proposals module
 		'./layers/portal', // Client portal module
 	],
 
+	// Global page headers: https://go.nuxtjs.dev/config-head
 	components: [
 		// Disable prefixing base components with `Base`
 		{ path: '~/components/base', pathPrefix: false },
@@ -22,20 +17,35 @@ export default defineNuxtConfig({
 		'~/components',
 	],
 
-	css: ['~/assets/css/tailwind.css', '~/assets/css/main.css'],
-
-	modules: [
-		'@nuxt/devtools', // https://devtools.nuxtjs.org/
-		'@nuxt/image',
-		'@nuxt/ui',
-		'@nuxtjs/color-mode',
-		'@nuxtjs/google-fonts',
-		'@vueuse/motion/nuxt', // https://motion.vueuse.org/nuxt.html
-		'@vueuse/nuxt', // https://vueuse.org/
-		'nuxt-icon', // https://github.com/nuxt-modules/icon
-		'nuxt-og-image',
-		'nuxt-schema-org', // https://nuxtseo.com/schema-org/guides/quick-setup
+	css: [
+		'~/assets/css/tailwind.css', 
+		'~/assets/css/main.css',
 	],
+
+	modules: [// https://devtools.nuxtjs.org/
+		'@nuxt/devtools', 
+		'@nuxt/image', 
+		'@nuxt/ui', 
+		'@nuxtjs/color-mode', 
+		'@nuxtjs/google-fonts', // https://motion.vueuse.org/nuxt.html
+		'@vueuse/motion/nuxt', // https://vueuse.org/
+		'@vueuse/nuxt', // https://github.com/nuxt-modules/icon
+		'nuxt-icon', 
+		'nuxt-og-image', // https://nuxtseo.com/schema-org/guides/quick-setup
+		'nuxt-schema-org',
+		'nuxt-file-storage',
+	],
+
+	fileStorage: {
+		storages: {
+		  local: {
+			driver: 'local',
+			config: {
+			  root: process.env.FILE_STORAGE_MOUNT
+			}
+		  }
+		}
+	},
 
 	experimental: {
 		componentIslands: true,
@@ -44,6 +54,7 @@ export default defineNuxtConfig({
 
 	runtimeConfig: {
 		public: {
+			directusPublicUrl: process.env.DIRECTUS_PUBLIC_URL,
 			siteUrl: process.env.NUXT_PUBLIC_SITE_URL || 'http://localhost:3000',
 		},
 	},
@@ -84,7 +95,7 @@ export default defineNuxtConfig({
 	image: {
 		provider: 'directus',
 		directus: {
-			baseURL: `${process.env.DIRECTUS_URL}/assets/`,
+			baseURL: `${process.env.DIRECTUS_PUBLIC_URL}/assets/`,
 		},
 	},
 
@@ -92,7 +103,7 @@ export default defineNuxtConfig({
 	googleFonts: {
 		families: theme.googleFonts,
 		display: 'swap',
-		download: true,
+		download: true,	
 	},
 
 	site: {
@@ -103,9 +114,9 @@ export default defineNuxtConfig({
 	// OG Image Configuration - https://nuxtseo.com/og-image/getting-started/installation
 	ogImage: {
 		defaults: {
-			component: 'OgImageTemplate',
-			width: 1200,
-			height: 630,
+						component: 'OgImageTemplate',
+						width: 1200,
+						height: 630,
 		},
 		// @TODO: Fix font families for OG Image
 		// fonts: formatFonts(fontFamilies),
@@ -115,8 +126,9 @@ export default defineNuxtConfig({
 		plugins: {
 			'postcss-import': {},
 			'tailwindcss/nesting': {},
-			tailwindcss: {},
-			autoprefixer: {},
+			'tailwindcss': {},
+			'autoprefixer': {},
 		},
 	},
+
 });
