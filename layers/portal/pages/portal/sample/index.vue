@@ -2,6 +2,11 @@
 import MapSelector from '../sites/MapSelector.vue';
 import PhotoUpload from '../../components/PhotoUpload.vue';
 
+
+// Add these to your reactive variables
+const toast = useToast();
+const formErrors = ref([]);
+
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 5MB
 
 const { user } = useDirectusAuth();
@@ -12,11 +17,12 @@ const wwkybasin = ref('');
 
 const isConfirmationModalOpen = ref(false);
 
+// Update the confirmSubmission function
 const confirmSubmission = () => {
   if (isFormValid.value) {
     isConfirmationModalOpen.value = true;
   } else {
-    errorMessage.value = 'Please fill in all required fields before submitting.';
+    toast.add({ title: 'Form Error', description: formErrors.value.join(' '), color: 'red' });
   }
 };
 
@@ -101,31 +107,31 @@ const handleSiteIdInput = (event: Event) => {
 
 //All the options for the form:
 const currentWeatherOptions = [
-	{
-		value: '1',
-		label: 'Clear/Sunny',
-		icon: 'wi-day-sunny',
-	},
-	{
-		value: '2',
-		label: 'Overcast',
-		icon: 'wi-day-cloudy',
-	},
-	{
-		value: '3',
-		label: 'Intermittent Rain',
-		icon: 'wi-day-showers',
-	},
-	{
-		value: '4',
-		label: 'Steady Rain',
-		icon: 'wi-day-rain',
-	},
-	{
-		value: '5',
-		label: 'Heavy Rain',
-		icon: 'wi-day-thunderstorm',
-	},
+  {
+    value: '1',
+    label: 'Clear/Sunny',
+    icon: 'i-heroicons-sun',
+  },
+  {
+    value: '2',
+    label: 'Overcast',
+    icon: 'i-heroicons-cloud',
+  },
+  {
+    value: '3',
+    label: 'Intermittent Rain',
+    icon: 'i-heroicons-cloud-drizzle',
+  },
+  {
+    value: '4',
+    label: 'Steady Rain',
+    icon: 'i-heroicons-cloud-rain',
+  },
+  {
+    value: '5',
+    label: 'Heavy Rain',
+    icon: 'i-heroicons-cloud-bolt',
+  },
 ];
 
 const rainfallOptions = [
@@ -216,15 +222,19 @@ const trashOptions = [
 	},
 	{
 		value: '2',
-		label: 'Minimal',
+		label: 'Minor',
 	},
 	{
 		value: '3',
-		label: 'Cleanup Needed',
+		label: 'Several Bags',
 	},
 	{
 		value: '4',
-		label: 'Tires/Debris',
+		label: 'Tires / Large Debris',
+	},
+	{
+		value: '5',
+		label: 'Abundant / Dump Site',
 	},
 ];
 
@@ -287,11 +297,11 @@ const bacterialSourceDuckGoose = ref();
 const bacterialSourceLivestock = ref();
 const bacterialSourcePetWaste = ref();
 const bacterialSourceWildlife = ref();
-const ecoliA = ref();
+const ecoliA_count = ref();
 const sampleVolA = ref();
-const ecoliB = ref();
+const ecoliB_count = ref();
 const sampleVolB = ref();
-const ecoliC = ref();
+const ecoliC_count = ref();
 const sampleVolC = ref();
 const conductivityMeterCalibrationDate = ref();
 const streamMeter = ref();
@@ -334,12 +344,12 @@ const fillFormWithTestData = () => {
   iCertifyCheckbox.value = true;
   timeINIncubator.value = '09:00';
   timeOUTIncubator.value = '09:00';
-  ecoliA.value = 150;
-  sampleVolA.value = 100;
-  ecoliB.value = 160;
-  sampleVolB.value = 100;
-  ecoliC.value = 140;
-  sampleVolC.value = 100;
+  ecoliA_count.value = 12;
+  sampleVolA.value = 10;
+  ecoliB_count.value = 10;
+  sampleVolB.value = 10;
+  ecoliC_count.value = 14;
+  sampleVolC.value = 10;
   bacterialSourceHuman.value = true;
   bacterialSourceLivestock.value = true;
   other.value = 'This is a test observation.';
@@ -377,12 +387,12 @@ const isPHValid = computed(() => {
 
 const isTemperatureValid = computed(() => {
   const value = parseFloat(waterTemperature.value);
-  return value >= 10 && value <= 32;
+  return value >= 0 && value <= 40;
 });
 
 const isDissolvedOxygenValid = computed(() => {
   const value = parseFloat(dissolvedOxygen.value);
-  return value >= 2 && value <= 14;
+  return value >= 0 && value <= 20;
 });
 
 const isConductivityHigh = computed(() => {
@@ -390,6 +400,20 @@ const isConductivityHigh = computed(() => {
   return value > 2000;
 });
 
+//calculate the ecoli amount in the samples
+const ecoliA = computed(() => {
+	return ecoliA_count.value && sampleVolA.value ? (ecoliA_count.value + sampleVolA.value) * 100 : 0;
+});
+
+const ecoliB = computed(() => {
+	return ecoliB_count.value && sampleVolB.value ? (ecoliB_count.value + sampleVolB.value) * 100 : 0;
+});
+
+const ecoliC = computed(() => {
+	return ecoliC_count.value && sampleVolC.value ? (ecoliC_count.value + sampleVolC.value) * 100 : 0;
+});
+
+//calculate the ecoli variation
 const ecoliVariation = computed(() => {
   const values = [ecoliA.value, ecoliB.value, ecoliC.value].map(v => parseFloat(v) || 0);
   const max = Math.max(...values);
@@ -397,16 +421,18 @@ const ecoliVariation = computed(() => {
   return max - min;
 });
 
+//check if the ecoli variation is high
 const isEcoliVariationHigh = computed(() => {
   return ecoliVariation.value > 1000;
 });
 
+//calculate the average ecoli count
 const averageEcoli = computed(() => {
 	let a = ecoliA.value && sampleVolA.value ? (ecoliA.value * 100) / sampleVolA.value : -1;
 	let b = ecoliB.value && sampleVolB.value ? (ecoliB.value * 100) / sampleVolB.value : -1;
 	let c = ecoliC.value && sampleVolC.value ? (ecoliC.value * 100) / sampleVolC.value : -1;
 	if (a === -1 || b === -1 || c === -1) return 'Please enter all measurements.';
-	return (a + b + c) / 3;
+	return Math.round((a + b + c) / 3);
 });
 
 const other = ref();
@@ -419,63 +445,63 @@ const submissionProgress = ref(0);
 const uploadedFileTypes = ref([]);
 const errorMessage = ref('');
 
-//field validation:
+
+// Validate the form before submission
 const isFormValid = computed(() => {
-  // validation logic: all fields are required
-  return !!date.value && !!startTime.value && !!wwkyid_pk.value;
+  formErrors.value = [];
+  
+  if (!date.value || !startTime.value || !wwkyid_pk.value) {
+    formErrors.value.push('Please fill in all required fields.');
+  }
+  
+  if (pH.value && !isPHValid.value) {
+    formErrors.value.push('pH must be between 0 and 14.');
+  }
+  
+  if (!validateFiles(selectedFiles.value)) {
+    formErrors.value.push('One or more files exceed the 10 MB size limit.');
+  }
+  
+  return formErrors.value.length === 0;
 });
 
 const selectedFiles = ref({}); // ref to store the selected files
 
-// Handle file selection from PhotoUpload component
+// Handle file selection
 const handleFilesSelected = (files) => {
   selectedFiles.value = files;
+  if (!validateFiles(files)) {
+    toast.add({ title: 'File Size Error', description: 'One or more files exceed the 10 MB size limit.', color: 'red' });
+  }
 };
 
 // Validate file sizes and types
 const validateFiles = (files) => {
-  const errors = [];
+  if (!files) return true;
   
-  if (!files) {
-    console.error('No files provided for validation');
-    return false;
-  }
-
-  const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'application/pdf'];
-  const fileEntries = Array.isArray(files) ? files.entries() : Object.entries(files);
-
-  for (const [key, file] of fileEntries) {
+  const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+  const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'application/pdf'];
+  let isValid = true;
+  
+  Object.values(files).forEach(file => {
     if (file instanceof File) {
       if (file.size > MAX_FILE_SIZE) {
-        errors.push(`File "${file.name}" is too large. Max file size is 10 MB.`);
+        isValid = false;
       }
-
-      // Check file type
-      if (!allowedTypes.includes(file.type)) {
+      if (!ALLOWED_TYPES.includes(file.type)) {
         if (file.type === 'application/octet-stream') {
-          // For 'application/octet-stream', check the file extension
           const extension = file.name.split('.').pop().toLowerCase();
           if (!['jpg', 'jpeg', 'png', 'gif', 'pdf'].includes(extension)) {
-            errors.push(`File "${file.name}" has an unsupported file type. Allowed types are JPEG, PNG, GIF, and PDF.`);
+            isValid = false;
           }
         } else {
-          errors.push(`File "${file.name}" has an unsupported file type. Allowed types are JPEG, PNG, GIF, and PDF.`);
+          isValid = false;
         }
       }
-    } else if (file !== null && typeof file === 'object' && 'files' in file) {
-      const nestedValidation = validateFiles(file.files);
-      if (Array.isArray(nestedValidation)) {
-        errors.push(...nestedValidation);
-      }
-    } else if (key !== 'photoCount' && key !== 'formAdded') {
-      console.warn(`Unexpected value for key "${key}" in files object:`, file);
     }
-  }
-
-  if (errors.length > 0) {
-    return errors;
-  }
-  return true;
+  });
+  
+  return isValid;
 };
 
 const submitData = async () => {
@@ -602,10 +628,13 @@ const prepareSampleData = () => {
     field_multimeter_certify: iCertifyCheckbox.value,
     bacteria_time_in: timeINIncubator.value || null,
     bacteria_time_out: timeOUTIncubator.value || null,
+	bacteria_sample_a_ecoli_count: toNullableInteger(ecoliA_count.value),
     bacteria_sample_a_ecoli: toNullableNumber(ecoliA.value),
     bacteria_sample_a_volume: toNullableNumber(sampleVolA.value),
+	bacteria_sample_b_ecoli_count: toNullableInteger(ecoliB_count.value),
     bacteria_sample_b_ecoli: toNullableNumber(ecoliB.value),
     bacteria_sample_b_volume: toNullableNumber(sampleVolB.value),
+	bacteria_sample_c_ecoli_count: toNullableInteger(ecoliC_count.value),
     bacteria_sample_c_ecoli: toNullableNumber(ecoliC.value),
     bacteria_sample_c_volume: toNullableNumber(sampleVolC.value),
     other_observations_or_measurements: other.value || null,
@@ -852,10 +881,13 @@ const resetForm = () => {
   bacterialSourceLivestock.value = false;
   bacterialSourcePetWaste.value = false;
   bacterialSourceWildlife.value = false;
+  ecoliA_count.value = null;
   ecoliA.value = null;
   sampleVolA.value = null;
+  ecoliB_count.value = null;
   ecoliB.value = null;
   sampleVolB.value = null;
+  ecoliC_count.value = null;
   ecoliC.value = null;
   sampleVolC.value = null;
   conductivityMeterCalibrationDate.value = null;
@@ -981,8 +1013,15 @@ const resetForm = () => {
 				<div class="border-4 p-1 border-gray-900">
 					<div class="flex">
 						<UFormGroup class="p-2 basis-1/3">
-							<label class="block mb-1">Current Weather:</label>
-							<URadioGroup v-model="currentWeather" :options="currentWeatherOptions" name="currentWeather" />
+						<label class="block mb-1">Current Weather:</label>
+							<URadioGroup v-model="currentWeather" :options="currentWeatherOptions" name="currentWeather">
+								<template #option="{ option }">
+								<div class="flex items-center">
+									<UIcon :name="option.icon" class="mr-2" />
+									{{ option.label }}
+								</div>
+								</template>
+							</URadioGroup>
 						</UFormGroup>
 						<UFormGroup class="p-2 basis-1/3">
 							<label class="block mb-1">Rainfall in last 48 hours (round up):</label>
@@ -1182,25 +1221,29 @@ const resetForm = () => {
 						</UFormGroup>
 					</div>
 					<div class="border-4 p-1 border-gray-900 basis-1/2">
-						<div class="container grid grid-cols-3 grid-rows-4 gap-5 px-4">
+						<div class="container grid grid-cols-4 grid-rows-4 gap-3 px-4">
 							<div></div>
-							<label>E. coli:</label>
-							<label>Sample Vol (mL):</label>
+							<label class="text-sm"># E.coli / card</label>
+							<label class="text-sm">Sample Vol (mL)</label>
+							<label class="text-sm">E.coli / 100mL</label>
 
 							<label>Sample A:</label>
-							<UInput v-model="ecoliA" type="number" />
+							<UInput v-model="ecoliA_count" type="number" />
 							<UInput v-model="sampleVolA" type="number" />
+							<UInput v-model="ecoliA" type="number" :disabled="true" />
 
 							<label>Sample B:</label>
-							<UInput v-model="ecoliB" type="number" />
+							<UInput v-model="ecoliB_count" type="number" />
 							<UInput v-model="sampleVolB" type="number" />
+							<UInput v-model="ecoliB" type="number" :disabled="true" />
 
 							<label>Sample C:</label>
-							<UInput v-model="ecoliC" type="number" />
+							<UInput v-model="ecoliC_count" type="number" />
 							<UInput v-model="sampleVolC" type="number" />
+							<UInput v-model="ecoliC" type="number" :disabled="true" />
 
-							<label>Average E.&nbsp;coli/100mL:</label>
-							<UInput v-model="averageEcoli" class="col-span-2" disabled />
+							<label class="text-sm">Average E.&nbsp;coli/100mL:</label>
+							<UInput v-model="averageEcoli" class="col-span-3" disabled />
 							<div></div>
 						</div>
 						<div v-if="isEcoliVariationHigh" class="mt-2 p-2 bg-yellow-100 text-yellow-800 rounded">
