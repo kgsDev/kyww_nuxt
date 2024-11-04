@@ -211,6 +211,7 @@ onMounted(async () => {
                 :name="status ? 'i-heroicons-check-circle' : 'i-heroicons-x-circle'"
                 :class="status ? 'text-green-500' : 'text-gray-400'"
                 class="text-3xl mb-2"
+                size="32"
               />
               <div class="text-sm">{{ type }}</div>
             </div>
@@ -230,6 +231,7 @@ onMounted(async () => {
                 :name="samplerData.equip_ph ? 'i-heroicons-check-circle' : 'i-heroicons-x-circle'"
                 :class="samplerData.equip_ph ? 'text-blue-500' : 'text-gray-400'"
                 class="text-3xl mb-2"
+                size="32"
               />
               <div class="text-sm">pH Meter</div>
               <div v-if="samplerData.equip_ph && samplerData.PH_expire" 
@@ -244,6 +246,7 @@ onMounted(async () => {
                 :name="samplerData.equip_do ? 'i-heroicons-check-circle' : 'i-heroicons-x-circle'"
                 :class="samplerData.equip_do ? 'text-blue-500' : 'text-gray-400'"
                 class="text-3xl mb-2"
+                size="32"
               />
               <div class="text-sm">DO Meter</div>
               <div v-if="samplerData.equip_do && samplerData.DO_expire" 
@@ -266,6 +269,7 @@ onMounted(async () => {
                 :name="has ? 'i-heroicons-check-circle' : 'i-heroicons-x-circle'"
                 :class="has ? 'text-blue-500' : 'text-gray-400'"
                 class="text-3xl mb-2"
+                size="32"
               />
               <div class="text-sm">{{ equipment }}</div>
             </div>
