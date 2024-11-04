@@ -89,23 +89,19 @@
 
         <div class="form-group read-group">
           <div class="form-group">
-            <label>pH kit: <input type="checkbox" :checked="equip_ph"/></label>
+            <label>pH kit: <input type="checkbox" :checked="equip_ph" v-model="equip_ph"/></label>
           </div>
           <div v-if="equip_ph" class="form-group">
             <label>pH Kit Expiration Date:
-            <input type="text" :value="equip_ph_expiration" class="readonly-field"/></label>
+            <input type="date"/></label>
           </div> 
-          <div v-if="equip_ph" class="form-group">
-            <label for="phKitDetails">pH Kit Details:
-            <input type="date" v-model="phKitDetails" id="phKitDetails" class="readonly-field"/></label>
-          </div>
           <div class="form-group">
             <label>Dissolved oxygen kit:
-            <input type="checkbox" :checked="equip_do"/></label>
+            <input type="checkbox" :checked="equip_do" v-model="equip_do"/></label>
           </div>
           <div v-if="equip_do" class="form-group">
             <label>DO Kit Expiration Date:
-            <input type="date" v-model="equip_do_expiration" class="readonly-field"/></label>
+            <input type="date"/></label>
             </div>
           <div class="form-group">
             <label>Conductivity meter:
@@ -205,9 +201,6 @@
   });
   
   const config = useRuntimeConfig();
-
-  console.log("Recptcha key - config:",config.public.RECAPTCHA_PUBLIC_KEY)
-  console.log("google maps - config:",config.public.GOOGLE_MAPS_API_KEY)
 
   const route = useRoute();
   const token = route.query.token;
