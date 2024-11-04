@@ -4,7 +4,7 @@
       <div class="logo-container">
         <img class="logo" src="~/assets/KyWW_logo.png" alt="KyWW Logo" />
       </div>
-      
+      <LoadingOverlay :isLoading="isLoading" />
       <p v-if="message" v-html="message" class="message"></p>
 
 
@@ -93,39 +93,49 @@
           </div>
           <div v-if="equip_ph" class="form-group">
             <label>pH Kit Expiration Date:
-            <input type="date"/></label>
-          </div> 
+            <input type="date" v-model="equip_ph_expiration" id="equip_ph_expiration"/></label>
+          </div>
           <div class="form-group">
             <label>Dissolved oxygen kit:
             <input type="checkbox" :checked="equip_do" v-model="equip_do"/></label>
           </div>
           <div v-if="equip_do" class="form-group">
             <label>DO Kit Expiration Date:
-            <input type="date"/></label>
-            </div>
+            <input type="date" v-model="equip_do_expiration" id="equip_do_expiration"/></label>
+          </div>
           <div class="form-group">
-            <label>Conductivity meter:
-            <input type="checkbox" :checked="equip_cond"/></label>
+            <label>
+              Conductivity meter:
+              <input type="checkbox" v-model="equip_cond" />
+            </label>
           </div>
           <div class="form-group">
             <label>Thermometer:
-            <input type="checkbox" :checked="equip_thermo"/></label>
+              <input type="checkbox" v-model="equip_thermo" />
+            </label>
           </div>
           <div class="form-group">
             <label>Waste container:
-            <input type="checkbox" :checked="equip_waste"/></label>
+              <input type="checkbox" v-model="equip_waste" />
+            </label>
           </div>
           <div class="form-group">
-            <label>White pan:
-            <input type="checkbox" :checked="equip_pan"/></label>
+            <label>
+              White pan:
+              <input type="checkbox" v-model="equip_pan" />
+            </label>
           </div>
           <div class="form-group">
-            <label>Instructional flip cards:
-            <input type="checkbox" :checked="equip_flip"/></label>
+            <label>
+              Instructional flip cards:
+              <input type="checkbox" v-model="equip_flip" />
+            </label>
           </div>
           <div class="form-group">
-            <label>Incubator:
-            <input type="checkbox" :checked="equip_incubator"/></label>
+            <label>
+              Incubator:
+              <input type="checkbox" v-model="equip_incubator" />
+            </label>
           </div>
         </div>
 
@@ -195,11 +205,14 @@
   
 <script setup>
   import { useRoute, useFetch } from '#app';
-  
+  import LoadingOverlay from '/components/LoadingOverlay.vue'
+
   definePageMeta({
     layout: 'blank'
   });
   
+  const isLoading = ref(true)
+
   const config = useRuntimeConfig();
 
   const route = useRoute();
@@ -478,8 +491,8 @@ function handleReCaptchaResponse(captchaToken) {
       equip_pan: equip_pan.value,
       equip_flip: equip_flip.value,
       equip_incubator: equip_incubator.value,
-      equip_do_expiration: equip_do_expiration.value,
-      equip_ph_expiration: equip_ph_expiration.value,
+      DO_expire: equip_do_expiration.value,
+      PH_expire: equip_ph_expiration.value,
     }
   }).then(({ data, error }) => {
     if (error.value) {
@@ -505,6 +518,7 @@ function handleReCaptchaResponse(captchaToken) {
 
   // Initialize form and set up reCAPTCHA and check if a user is found with the token
   onMounted(async () => {
+    isLoading.value = true;
     //capture the form and reCAPTCHA container
     window.handleReCaptchaResponse = handleReCaptchaResponse;
     const interval = setInterval(() => {
@@ -526,6 +540,7 @@ function handleReCaptchaResponse(captchaToken) {
   // No token, no dice
   if (!token) {
     message.value = 'No user invite found. Please check your email for the correct link.';
+    isLoading.value = false;
     return;
   }
 
@@ -552,16 +567,6 @@ function handleReCaptchaResponse(captchaToken) {
       training_r_card.value = data.training_r_card;
       training_habitat.value = data.training_habitat;
       training_biological.value = data.training_biological;
-      equip_ph.value = data.equip_ph;
-      equip_do.value = data.equip_do;
-      equip_cond.value = data.equip_cond;
-      equip_thermo.value = data.equip_thermo;
-      equip_waste.value = data.equip_waste;
-      equip_pan.value = data.equip_pan;
-      equip_flip.value = data.equip_flip;
-      equip_incubator.value = data.equip_incubator;
-      equip_do_expiration.value = data.equip_do_expiration;
-      equip_ph_expiration.value = data.equip_ph_expiration;
     } else {
       // Token not found
       message.value = 'Invalid or expired signup link. Please check your email for the correct link. You can also ask your coordinator to resend the invite.<br><br>You may also already have a login. If you have forgotten your password, you can reset it at the login page: <a href="https://kyww.uky.edu">kyww.uky.edu</a>.';
@@ -588,6 +593,7 @@ function handleReCaptchaResponse(captchaToken) {
           mailing_address.value = place.formatted_address;
         }
       });
+      isLoading.value = false;
     } else {
       // Retry if google is not yet available
       setTimeout(initializeAutocomplete, 500);

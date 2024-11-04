@@ -32,8 +32,8 @@ export default eventHandler(async (event) => {
     equip_waste,
     equip_pan,
     equip_flip,
-    equip_do_expiration,
-    equip_ph_expiration,
+    DO_expire,
+    PH_expire,
     equip_incubator,
   } = await readBody(event);
 
@@ -158,8 +158,8 @@ export default eventHandler(async (event) => {
         equip_pan,
         equip_flip,
         equip_incubator,
-        equip_do_expiration,
-        equip_ph_expiration}),
+        DO_expire,
+        PH_expire}),
     });
 
     if (!samplerDataResponse.ok) throw new Error("Failed to create sampler data");
