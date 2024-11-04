@@ -48,7 +48,6 @@ export default function useDirectusAuth<DirectusSchema extends object>() {
 
 	async function fetchUser(params?: object) {
 		const fields = config.public?.directus?.auth?.userFields || ['*'];
-
 		const response = await $directus.request(
 			readMe({
 				// @ts-ignore

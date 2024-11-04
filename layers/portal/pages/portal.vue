@@ -27,14 +27,23 @@ function useCommandPalette() {
 	};
 }
 
+const configPublic = useRuntimeConfig().public;
+const roles = {
+	sampler: configPublic.SAMPLER_ROLE_ID,
+	trainer: configPublic.TRAINER_ROLE_ID,
+	basin_lead: configPublic.BASIN_LEAD_ROLE_ID,
+	admin: configPublic.ADMIN_ROLE_ID,
+};
+
+const user_role = user.value.role;
 const sidebarNavigation = {
 	top: [
 		{ name: 'Dashboard', href: '/portal', icon: 'material-symbols:home-outline-rounded' },
-		...(user.value.isTrainer ? [{ name: 'Train', href: '/portal/train', icon: 'oui:training' }] : []),
-		...(user.value.role == "50100bb7-c7d0-4678-911b-0f60724db62f" ? [{ name: 'New Hub', href: '/portal/hub', icon: 'material-symbols:hub-outline' }] : []),
-		{ name: 'Stream Sample', href: '/portal/sample', icon: 'mdi:eyedropper' },
-		{ name: 'Biological Assessment', href: '/portal/biological', icon: 'mdi:fish' },
-		{ name: 'Habitat Assessment', href: '/portal/habitat', icon: 'mdi:leaf' },
+		...(user_role == roles.admin || user_role == roles.trainer || user_role == roles.basin_lead ? [{ name: 'Add Trainees', href: '/portal/train', icon: 'oui:training' }] : []),
+		...(user_role == roles.admin || user_role == roles.basin_lead ? [{ name: 'New Hub', href: '/portal/hub', icon: 'material-symbols:hub-outline' }] : []),
+		...(user_role == roles.sampler || user_role == roles.admin || user_role == roles.trainer || user_role == roles.basin_lead ? [{ name: 'Stream Sample', href: '/portal/sample', icon: 'mdi:eyedropper' }] : []),
+		...(user_role == roles.admin ? [{ name: 'Biological Assessment', href: '/portal/biological', icon: 'mdi:fish' }] : []),
+		...(user_role == roles.admin ? [{ name: 'Habitat Assessment', href: '/portal/habitat', icon: 'mdi:leaf' }] : []),
 	],
 	bottom: [{ name: 'Help', href: '/portal/help', icon: 'material-symbols:help-outline-rounded' }],
 };

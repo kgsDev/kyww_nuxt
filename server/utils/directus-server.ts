@@ -1,6 +1,6 @@
 import {
 	createDirectus,
-	readItem,
+	//readItem,
 	readItems,
 	readSingleton,
 	rest,

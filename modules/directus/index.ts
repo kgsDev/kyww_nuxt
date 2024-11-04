@@ -25,8 +25,10 @@ export default defineNuxtModule({
 
 		defaults: {
 			rest: {
-				baseUrl: 'http://localhost:8055',
-				nuxtBaseUrl: 'http://localhost:3000',
+				//baseUrl: 'http://localhost:8055',
+				//nuxtBaseUrl: 'http://localhost:3000',
+				baseUrl: 'https://kyww.uky.edu/backend/',
+				nuxtBaseUrl: 'https://kyww.uky.edu/',
 			},
 			auth: {
 				enabled: true,

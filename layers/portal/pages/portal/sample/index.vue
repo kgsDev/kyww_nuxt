@@ -2,12 +2,9 @@
 import MapSelector from '../sites/MapSelector.vue';
 import PhotoUpload from '../../components/PhotoUpload.vue';
 
-
 // Add these to your reactive variables
 const toast = useToast();
 const formErrors = ref([]);
-
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 5MB
 
 const { user } = useDirectusAuth();
 
@@ -110,27 +107,27 @@ const currentWeatherOptions = [
   {
     value: '1',
     label: 'Clear/Sunny',
-    icon: 'i-heroicons-sun',
+    icon: 'fas fa-sun',
   },
   {
     value: '2',
     label: 'Overcast',
-    icon: 'i-heroicons-cloud',
+    icon: 'mdi mdi-weather-cloudy',
   },
   {
     value: '3',
     label: 'Intermittent Rain',
-    icon: 'i-heroicons-cloud-drizzle',
+    icon: 'mdi mdi-weather-partly-rainy',
   },
   {
     value: '4',
     label: 'Steady Rain',
-    icon: 'i-heroicons-cloud-rain',
+    icon: 'mdi mdi-weather-rainy',
   },
   {
     value: '5',
     label: 'Heavy Rain',
-    icon: 'i-heroicons-cloud-bolt',
+    icon: 'mdi mdi-weather-pouring',
   },
 ];
 
@@ -390,9 +387,16 @@ const isTemperatureValid = computed(() => {
   return value >= 0 && value <= 40;
 });
 
+//outside these and DO is allowed but you get a warning
 const isDissolvedOxygenValid = computed(() => {
   const value = parseFloat(dissolvedOxygen.value);
-  return value >= 0 && value <= 20;
+  return value >= 0 && value <= 14;
+});
+
+//above 25 and you can't be doing that
+const isDOValid = computed(() => {
+  const value = parseFloat(dissolvedOxygen.value);
+  return value <= 25;
 });
 
 const isConductivityHigh = computed(() => {
@@ -402,15 +406,15 @@ const isConductivityHigh = computed(() => {
 
 //calculate the ecoli amount in the samples
 const ecoliA = computed(() => {
-	return ecoliA_count.value && sampleVolA.value ? (ecoliA_count.value + sampleVolA.value) * 100 : 0;
+	return ecoliA_count.value && sampleVolA.value ? (ecoliA_count.value / sampleVolA.value) * 100 : 0;
 });
 
 const ecoliB = computed(() => {
-	return ecoliB_count.value && sampleVolB.value ? (ecoliB_count.value + sampleVolB.value) * 100 : 0;
+	return ecoliB_count.value && sampleVolB.value ? (ecoliB_count.value / sampleVolB.value) * 100 : 0;
 });
 
 const ecoliC = computed(() => {
-	return ecoliC_count.value && sampleVolC.value ? (ecoliC_count.value + sampleVolC.value) * 100 : 0;
+	return ecoliC_count.value && sampleVolC.value ? (ecoliC_count.value / sampleVolC.value) * 100 : 0;
 });
 
 //calculate the ecoli variation
@@ -428,9 +432,9 @@ const isEcoliVariationHigh = computed(() => {
 
 //calculate the average ecoli count
 const averageEcoli = computed(() => {
-	let a = ecoliA.value && sampleVolA.value ? (ecoliA.value * 100) / sampleVolA.value : -1;
-	let b = ecoliB.value && sampleVolB.value ? (ecoliB.value * 100) / sampleVolB.value : -1;
-	let c = ecoliC.value && sampleVolC.value ? (ecoliC.value * 100) / sampleVolC.value : -1;
+	let a = ecoliA.value && sampleVolA.value ? (ecoliA.value) : -1;
+	let b = ecoliB.value && sampleVolB.value ? (ecoliB.value) : -1;
+	let c = ecoliC.value && sampleVolC.value ? (ecoliC.value) : -1;
 	if (a === -1 || b === -1 || c === -1) return 'Please enter all measurements.';
 	return Math.round((a + b + c) / 3);
 });
@@ -455,9 +459,13 @@ const isFormValid = computed(() => {
   }
   
   if (pH.value && !isPHValid.value) {
-    formErrors.value.push('pH must be between 0 and 14.');
+    formErrors.value.push('pH must be between 0 and 14. Please check your measurement/value.');
   }
   
+  if (dissolvedOxygen.value && !isDOValid.value) {
+    formErrors.value.push('Dissolved oxygen value is too high (>25). Please check your measurement/value.');
+  }
+
   if (!validateFiles(selectedFiles.value)) {
     formErrors.value.push('One or more files exceed the 10 MB size limit.');
   }
@@ -532,6 +540,7 @@ const submitData = async () => {
     // Remove relationship fields from initial submission
     const { odor, water_surface, bacterial_sources, water_color, ...baseData } = sampleData;
     const createdSample = await useDirectus(createItem('base_samples', baseData));
+
     createdSampleId = createdSample.id;
 
     // Step 2: Update join tables
@@ -1017,21 +1026,21 @@ const resetForm = () => {
 							<URadioGroup v-model="currentWeather" :options="currentWeatherOptions" name="currentWeather">
 								<template #option="{ option }">
 								<div class="flex items-center">
-									<UIcon :name="option.icon" class="mr-2" />
+									<i :class="[option.icon, 'mr-2']"></i>
 									{{ option.label }}
 								</div>
 								</template>
 							</URadioGroup>
 						</UFormGroup>
-						<UFormGroup class="p-2 basis-1/3">
+						<UFormGroup class="p-2 basis-1/3 border-l border-gray-500">
 							<label class="block mb-1">Rainfall in last 48 hours (round up):</label>
 							<URadioGroup v-model="rainfall" :options="rainfallOptions" name="rainfall" />
 						</UFormGroup>
-						<UFormGroup class="p-2 basis-1/3">
+						<UFormGroup class="p-2 basis-1/3 border-l border-gray-500">
 							<label class="block mb-1">Water Color:</label>
 							<URadioGroup v-model="waterColor" :options="waterColorOptions" name="waterColor" />
 						</UFormGroup>
-						<UFormGroup class="p-2 basis-1/3">
+						<UFormGroup class="p-2 basis-1/3 border-l border-gray-500">
 							<label class="block mb-1">Odor:</label>
 							<UCheckbox v-model="odorNone" name="odorNone" label="None" value="1" />
 							<UCheckbox v-model="odorRottenEggs" name="odorRottenEggs" label="Rotten Eggs" value="2"/>
@@ -1042,7 +1051,7 @@ const resetForm = () => {
 							<UCheckbox v-model="odorSweetFruity" name="odorSweetFruity" label="Sweet/Fruity" value="8"/>
 							<UCheckbox v-model="odorSharpPungent" name="odorSharpPungent" label="Sharp/Pungent" value="9"/>
 						</UFormGroup>
-						<UFormGroup class="p-2 basis-1/3">
+						<UFormGroup class="p-2 basis-1/3 border-l border-gray-500">
 							<label class="block mb-1">Water Surface:</label>
 							<UCheckbox v-model="waterSurfaceNone" name="waterSurfaceNone" label="None" value="1" />
 							<UCheckbox v-model="waterSurfaceOilSheen" name="waterSurfaceOilSheen" label="Oil Sheen" value="2" />
@@ -1126,7 +1135,7 @@ const resetForm = () => {
 							<label class="block mb-1">Water Temperature:</label>
 							<UInput v-model="waterTemperature" icon="mdi:thermometer" placeholder="°C" />
 							<div v-if="waterTemperature && !isTemperatureValid" class="mt-2 p-2 bg-yellow-100 text-yellow-800 rounded">
-								Please ensure the temperature is between 10 and 32 degrees Celsius.
+								Please ensure the temperature is between 0 and 40 degrees Celsius (and you're not using Farenheit).
 							</div>
 							</UFormGroup>
 
@@ -1141,8 +1150,11 @@ const resetForm = () => {
 							<UFormGroup class="p-2">
 							<label class="block mb-1">Dissolved Oxygen:</label>
 							<UInput v-model="dissolvedOxygen" icon="mdi:cloud" placeholder="mg/L" />
-							<div v-if="dissolvedOxygen && !isDissolvedOxygenValid" class="mt-2 p-2 bg-yellow-100 text-yellow-800 rounded">
-								This dissolved oxygen value may be out of range (expected: 2-14 mg/L).
+							<div v-if="dissolvedOxygen && !isDissolvedOxygenValid && isDOValid" class="mt-2 p-2 bg-yellow-100 text-yellow-800 rounded">
+								Are you sure this value is correct? Expected DO values are 0 - 14 ppm.
+							</div>
+							<div v-if="dissolvedOxygen && !isDOValid" class="mt-2 p-2 bg-red-100 text-red-800 rounded">
+								This value is too high (>25) and outside of the possible range for dissolved oxygen.
 							</div>
 							</UFormGroup>
 
@@ -1155,7 +1167,6 @@ const resetForm = () => {
 						</UFormGroup>
 					</div>
 					<div class="border-4 p-1 border-gray-900 w-1/2">
-						<br />
 						Read thermometer in water or quickly after removing. Take reading in shade.
 						<br />
 						<br />
@@ -1187,30 +1198,84 @@ const resetForm = () => {
 						</UFormGroup>
 					</div>
 				</div>
-				<div class="flex">
-					<div class="border-4 p-1 border-gray-900 basis-1/3">
-						<img
+				<div class="border-4 p-5 border-gray-900">
+					<div class="flex items-center mb-4">
+						<div class="flex items-center">
+							<img
 							src="assets/form_icons/bacteria.png"
 							alt="Bacteria"
-							class="w-20 float-left"
-							label="Incubation should be for 20-24 hrs at 35-38°C"
-						/>
-						<h2 class="text-lg">Bacteria: R-Card Method</h2>
-						<p class="p-2">Incubation should be for 20-24 hrs at 35-38°C</p>
-						<br />
-						<UFormGroup class="p-2" label="Time IN Incubator" required>
-							<UInput v-model="timeINIncubator" icon="mdi:clock-outline" type="time" />
-						</UFormGroup>
-						<UFormGroup class="p-2" label="Time OUT Incubator" required>
-							<UInput v-model="timeOUTIncubator" icon="mdi:clock-outline" type="time" />
-						</UFormGroup>
-						<UFormGroup class="p-2" label="Initials of R-Card Reader">
-							<UInput v-model="manufacturer" label="Initials of R-Card Reader" />
-						</UFormGroup>
+							class="w-20 mr-4"
+							/>
+						</div>
+						<h2 class="text-xl font-bold mr-4 flex-shrink-0">Bacteria: R-Card Method</h2>
+						
 					</div>
-					<div class="border-4 p-1 border-gray-900 basis-1/6">
-						<h2 class="text-lg">Possible Bacterial Sources:</h2>
-						<UFormGroup class="p-2">
+					<div class="flex items-center mb-4">
+						<p class="text-center">Incubation should be for 20-24 hrs at 35-38°C</p>
+					</div>
+					<div class="flex items-start">
+						<!-- Left Column -->
+						<div class="flex-2 pr-4">
+							<UFormGroup class="mb-2" label="Time IN Incubator" required>
+							<UInput v-model="timeINIncubator" icon="mdi:clock-outline" type="time" />
+							</UFormGroup>
+							<UFormGroup class="mb-2" label="Time OUT Incubator" required>
+							<UInput v-model="timeOUTIncubator" icon="mdi:clock-outline" type="time" />
+							</UFormGroup>
+							<UFormGroup class="mb-2" label="Initials of R-Card Reader">
+							<UInput v-model="manufacturer" />
+							</UFormGroup>
+						</div>
+
+						<!-- Middle Column -->
+						<div class="flex-1 px-6">
+							<div class="grid grid-cols-[auto_1fr_auto_1fr_auto_1fr] gap-2">
+								<!-- Headers -->
+								<div></div>
+								<label class="text-sm font-semibold whitespace-nowrap"># E.coli/card</label>
+								<div></div>
+								<label class="text-sm font-semibold whitespace-nowrap">Sample Vol (mL)</label>
+								<div></div>
+								<label class="text-sm font-semibold whitespace-nowrap">E.coli/100mL</label>
+
+								<!-- Sample A -->
+								<label class="self-center text-sm whitespace-nowrap">Sample A:</label>
+								<UInput v-model="ecoliA_count" type="number" />
+								<span class="self-center text-sm font-semibold px-1">÷</span>
+								<UInput v-model="sampleVolA" type="number"/>
+								<span class="self-center text-sm font-semibold px-1 whitespace-nowrap">× 100 =</span>
+								<UInput v-model="ecoliA" type="number" :disabled="true" />
+
+								<!-- Sample B -->
+								<label class="self-center text-sm whitespace-nowrap">Sample B:</label>
+								<UInput v-model="ecoliB_count" type="number" />
+								<span class="self-center text-sm font-semibold px-1">÷</span>
+								<UInput v-model="sampleVolB" type="number"/>
+								<span class="self-center text-sm font-semibold px-1 whitespace-nowrap">× 100 =</span>
+								<UInput v-model="ecoliB" type="number" :disabled="true" />
+
+								<!-- Sample C -->
+								<label class="self-center text-sm whitespace-nowrap">Sample C:</label>
+								<UInput v-model="ecoliC_count" type="number" />
+								<span class="self-center text-sm font-semibold px-1">÷</span>
+								<UInput v-model="sampleVolC" type="number"/>
+								<span class="self-center text-sm font-semibold px-1 whitespace-nowrap">× 100 =</span>
+								<UInput v-model="ecoliC" type="number" :disabled="true" />
+
+								<!-- Average -->
+								<label class="text-sm font-semibold col-span-3 self-center px-1">Average E.&nbsp;coli/100mL:</label>
+								<UInput v-model="averageEcoli" class="col-span-3 px-1" disabled />
+							</div>
+							
+							<div v-if="isEcoliVariationHigh" class="mt-2 p-2 bg-yellow-100 text-yellow-800 rounded">
+								The variation between E. Coli samples is high (> 1000).
+							</div>
+						</div>
+
+						<!-- Right Column -->
+						<div class="flex-3 pl-4 border-l border-gray-500">
+							<h3 class="text-m font-semibold mb-2 whitespace-nowrap">Possible Bacterial Sources:</h3>
+							<UFormGroup>
 							<UCheckbox v-model="bacterialSourceDuckGoose" label="Duck/Goose" value="1" />
 							<UCheckbox v-model="bacterialSourceHuman" label="Human" value="2" />
 							<UCheckbox v-model="bacterialSourceLivestock" label="Livestock" value="3" />
@@ -1218,38 +1283,8 @@ const resetForm = () => {
 							<UCheckbox v-model="bacterialSourceWildlife" label="Wildlife" value="5" />
 							<UCheckbox v-model="bacterialSourceOther" label="Other" @click="!bacterialSourceOther" value="6" />
 							<UInput v-if="bacterialSourceOther" v-model="bacterialSourceOtherData" />
-						</UFormGroup>
-					</div>
-					<div class="border-4 p-1 border-gray-900 basis-1/2">
-						<div class="container grid grid-cols-4 grid-rows-4 gap-3 px-4">
-							<div></div>
-							<label class="text-sm"># E.coli / card</label>
-							<label class="text-sm">Sample Vol (mL)</label>
-							<label class="text-sm">E.coli / 100mL</label>
-
-							<label>Sample A:</label>
-							<UInput v-model="ecoliA_count" type="number" />
-							<UInput v-model="sampleVolA" type="number" />
-							<UInput v-model="ecoliA" type="number" :disabled="true" />
-
-							<label>Sample B:</label>
-							<UInput v-model="ecoliB_count" type="number" />
-							<UInput v-model="sampleVolB" type="number" />
-							<UInput v-model="ecoliB" type="number" :disabled="true" />
-
-							<label>Sample C:</label>
-							<UInput v-model="ecoliC_count" type="number" />
-							<UInput v-model="sampleVolC" type="number" />
-							<UInput v-model="ecoliC" type="number" :disabled="true" />
-
-							<label class="text-sm">Average E.&nbsp;coli/100mL:</label>
-							<UInput v-model="averageEcoli" class="col-span-3" disabled />
-							<div></div>
+							</UFormGroup>
 						</div>
-						<div v-if="isEcoliVariationHigh" class="mt-2 p-2 bg-yellow-100 text-yellow-800 rounded">
-							The variation between E. Coli samples is high (> 1000).
-						</div>
-
 					</div>
 				</div>
 				<div class="flex">
@@ -1266,8 +1301,8 @@ const resetForm = () => {
 						<div class="basis-2/3 p-3">
 							<h2 class="text-lg">
 								Visit
-								<a href="www.kywater.org">www.kywater.org</a>
-								to view and enter data. For questions or feedback, email contact@kywater.org.
+								<a href="https://www.kywater.org" target="_blank">www.kywater.org</a>
+								to view data. For questions or feedback, email contact@kywater.org.
 							</h2>
 						</div>
 					</div>
