@@ -141,7 +141,7 @@ onMounted(async () => {
               </div>
               <div>
                 <label class="text-sm text-gray-500">Mailing Address</label>
-                <p>{{ userData?.location || 'Not specified' }}</p>
+                <p>{{ userData?.mailing_address || 'Not specified' }}</p>
               </div>
               <div>
                 <label class="text-sm text-gray-500">Account Status</label>
@@ -168,15 +168,11 @@ onMounted(async () => {
             <div v-if="samplerData" class="space-y-4">
               <div>
                 <label class="text-sm text-gray-500">Phone</label>
-                <p>{{ formatPhoneNumber(samplerData.phone) }}</p>
+                <p>{{ formatPhoneNumber(userData?.phone) }}</p>
               </div>
               <div>
                 <label class="text-sm text-gray-500">County</label>
-                <p>{{ formatCounty(samplerData.county_residence) }}</p>
-              </div>
-              <div>
-                <label class="text-sm text-gray-500">Basin</label>
-                <p>{{ samplerData.basin || 'Not specified' }}</p>
+                <p>{{ formatCounty(userData?.county_residence) }}</p>
               </div>
               <div>
                 <label class="text-sm text-gray-500">Original Training Location</label>
@@ -214,7 +210,7 @@ onMounted(async () => {
               <UIcon
                 :name="status ? 'i-heroicons-check-circle' : 'i-heroicons-x-circle'"
                 :class="status ? 'text-green-500' : 'text-gray-400'"
-                class="text-xl mb-2"
+                class="text-3xl mb-2"
               />
               <div class="text-sm">{{ type }}</div>
             </div>
@@ -228,9 +224,36 @@ onMounted(async () => {
           </template>
           
           <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <!-- Special handling for pH Meter with expiration -->
+            <div class="text-center">
+              <UIcon
+                :name="samplerData.equip_ph ? 'i-heroicons-check-circle' : 'i-heroicons-x-circle'"
+                :class="samplerData.equip_ph ? 'text-blue-500' : 'text-gray-400'"
+                class="text-3xl mb-2"
+              />
+              <div class="text-sm">pH Meter</div>
+              <div v-if="samplerData.equip_ph && samplerData.PH_expire" 
+                  class="text-xs text-gray-500 mt-1">
+                Expires: {{ formatDate(samplerData.PH_expire) }}
+              </div>
+            </div>
+
+            <!-- Special handling for DO Meter with expiration -->
+            <div class="text-center">
+              <UIcon
+                :name="samplerData.equip_do ? 'i-heroicons-check-circle' : 'i-heroicons-x-circle'"
+                :class="samplerData.equip_do ? 'text-blue-500' : 'text-gray-400'"
+                class="text-3xl mb-2"
+              />
+              <div class="text-sm">DO Meter</div>
+              <div v-if="samplerData.equip_do && samplerData.DO_expire" 
+                  class="text-xs text-gray-500 mt-1">
+                Expires: {{ formatDate(samplerData.DO_expire) }}
+              </div>
+            </div>
+
+            <!-- Rest of equipment -->
             <div v-for="(has, equipment) in {
-              'pH Meter': samplerData.equip_ph,
-              'DO Meter': samplerData.equip_do,
               'Conductivity': samplerData.equip_cond,
               'Thermometer': samplerData.equip_thermo,
               'Waste Container': samplerData.equip_waste,
@@ -242,7 +265,7 @@ onMounted(async () => {
               <UIcon
                 :name="has ? 'i-heroicons-check-circle' : 'i-heroicons-x-circle'"
                 :class="has ? 'text-blue-500' : 'text-gray-400'"
-                class="text-xl mb-2"
+                class="text-3xl mb-2"
               />
               <div class="text-sm">{{ equipment }}</div>
             </div>
