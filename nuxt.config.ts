@@ -57,6 +57,7 @@ export default defineNuxtConfig({
 
 	runtimeConfig: {
 		SENDGRID_API_KEY: process.env.SENDGRID_API_KEY,
+		RECAPTCHA_SECRET_KEY : process.env.RECAPTCHA_SECRET_KEY,
 		public: {
 			directusPublicUrl: process.env.DIRECTUS_PUBLIC_URL || 'https://kyww.uky.edu/backend',
 			siteUrl: process.env.NUXT_PUBLIC_SITE_URL || 'https://kyww.uky.edu',
@@ -65,6 +66,9 @@ export default defineNuxtConfig({
 			SAMPLER_ROLE_ID:"b232228a-1df5-49f2-ace2-b3931ceb2bfe",
 			ADMIN_ROLE_ID:"50100bb7-c7d0-4678-911b-0f60724db62f",
 			WEB_API_ROLE_ID:"9ecc2969-8b38-4088-9dc1-78334a206445",
+			GOOGLE_MAPS_API_KEY : process.env.GOOGLE_MAPS_API_KEY,
+			RECAPTCHA_PUBLIC_KEY : process.env.RECAPTCHA_PUBLIC_KEY,
+			MAPBOX_ACCESS_TOKEN : process.env.MAPBOX_ACCESS_TOKEN,
 		},
 	},
 

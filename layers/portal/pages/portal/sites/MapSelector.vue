@@ -9,6 +9,8 @@ const emit = defineEmits<{
 }>();
 
 const { user } = useDirectusAuth();
+const config = useRuntimeConfig();
+
 const geoJsonData: Ref<any> = ref(null);
 const sites: Ref<any[]> = ref([]);
 const sitesLoading = ref(false);
@@ -173,7 +175,8 @@ const initializeMap = () => {
     return;
   }
 
-  mapboxgl.accessToken = 'pk.eyJ1IjoiZG91Z2N1cmwiLCJhIjoiY20xcWh0cHo4MDA3dTJqbjRscDdkZ2k5cyJ9.qY7F8QzGokUJTL1rUT8yeA';
+  mapboxgl.accessToken = config.public.MAPBOX_ACCESS_TOKEN;
+  
   map.value = new mapboxgl.Map({
     container: 'mapElement',
     style: 'mapbox://styles/mapbox/streets-v11',

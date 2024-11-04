@@ -91,10 +91,22 @@
           <div class="form-group">
             <label>pH kit: <input type="checkbox" :checked="equip_ph"/></label>
           </div>
+          <div v-if="equip_ph" class="form-group">
+            <label>pH Kit Expiration Date:
+            <input type="text" :value="equip_ph_expiration" class="readonly-field"/></label>
+          </div> 
+          <div v-if="equip_ph" class="form-group">
+            <label for="phKitDetails">pH Kit Details:
+            <input type="date" v-model="phKitDetails" id="phKitDetails" class="readonly-field"/></label>
+          </div>
           <div class="form-group">
             <label>Dissolved oxygen kit:
             <input type="checkbox" :checked="equip_do"/></label>
           </div>
+          <div v-if="equip_do" class="form-group">
+            <label>DO Kit Expiration Date:
+            <input type="date" v-model="equip_do_expiration" class="readonly-field"/></label>
+            </div>
           <div class="form-group">
             <label>Conductivity meter:
             <input type="checkbox" :checked="equip_cond"/></label>
@@ -119,25 +131,6 @@
             <label>Incubator:
             <input type="checkbox" :checked="equip_incubator"/></label>
           </div>
-          <!--
-        
-          <div class="form-group read-group">
-            <label>Replacement chemicals - Dissolved oxygen:
-            <input type="checkbox" :checked="equip_chem_do" disabled readonly class="readonly-checkbox"/></label>
-          </div>
-          <div class="form-group read-group">
-            <label>Replacement chemicals - pH:
-            <input type="checkbox" :checked="equip_chem_ph" disabled readonly class="readonly-checkbox"/></label>
-          </div>
-          <div class="form-group read-group">
-            <label># R-Cards Issued:
-            <input type="text" :value="equip_rcard" disabled readonly class="readonly-field"/></label>
-          </div>
-          <div class="form-group read-group">
-            <label># Pipettes Issued:
-            <input type="text" :value="equip_pipette" disabled readonly class="readonly-field"/></label>
-          </div>
-          -->
         </div>
 
         <!-- Phone with validation message -->
@@ -211,6 +204,11 @@
     layout: 'blank'
   });
   
+  const config = useRuntimeConfig();
+
+  console.log("Recptcha key - config:",config.public.RECAPTCHA_PUBLIC_KEY)
+  console.log("google maps - config:",config.public.GOOGLE_MAPS_API_KEY)
+
   const route = useRoute();
   const token = route.query.token;
 
@@ -247,11 +245,9 @@
   const equip_waste = ref(false);
   const equip_pan = ref(false);
   const equip_flip = ref(false);
-  const equip_chem_do = ref(false);
-  const equip_chem_ph = ref(false);
   const equip_incubator = ref(false);
-  const equip_rcard = ref();
-  const equip_pipette = ref();
+  const equip_do_expiration = ref('');
+  const equip_ph_expiration = ref('');
 
   // Phone and email validation messages
   const phoneMessage = ref('');
@@ -488,11 +484,9 @@ function handleReCaptchaResponse(captchaToken) {
       equip_waste: equip_waste.value,
       equip_pan: equip_pan.value,
       equip_flip: equip_flip.value,
-      equip_chem_do: equip_chem_do.value,
-      equip_chem_ph: equip_chem_ph.value,
       equip_incubator: equip_incubator.value,
-      equip_rcard: equip_rcard.value,
-      equip_pipette: equip_pipette.value
+      equip_do_expiration: equip_do_expiration.value,
+      equip_ph_expiration: equip_ph_expiration.value,
     }
   }).then(({ data, error }) => {
     if (error.value) {
@@ -525,7 +519,7 @@ function handleReCaptchaResponse(captchaToken) {
         if (recaptchaContainer.value) {
           if (recaptchaContainer.value.innerHTML === '') {
             grecaptcha.render(recaptchaContainer.value, {
-              sitekey: process.env.RECAPTCHA_PUBLIC_KEY,
+              sitekey: config.public.RECAPTCHA_PUBLIC_KEY,
               size: 'invisible',
               callback: handleReCaptchaResponse,
             });
@@ -572,11 +566,9 @@ function handleReCaptchaResponse(captchaToken) {
       equip_waste.value = data.equip_waste;
       equip_pan.value = data.equip_pan;
       equip_flip.value = data.equip_flip;
-      equip_chem_do.value = data.equip_chem_do;
-      equip_chem_ph.value = data.equip_chem_ph;
       equip_incubator.value = data.equip_incubator;
-      equip_rcard.value = data.equip_rcard;
-      equip_pipette.value = data.equip_pipette;
+      equip_do_expiration.value = data.equip_do_expiration;
+      equip_ph_expiration.value = data.equip_ph_expiration;
     } else {
       // Token not found
       message.value = 'Invalid or expired signup link. Please check your email for the correct link. You can also ask your coordinator to resend the invite.<br><br>You may also already have a login. If you have forgotten your password, you can reset it at the login page: <a href="https://kyww.uky.edu">kyww.uky.edu</a>.';
@@ -622,7 +614,7 @@ useHead({
       defer: true,
     },
     {
-      src: `https://maps.googleapis.com/maps/api/js?key=${process.env.GOOGLE_MAPS_API_KEY}&libraries=places`,
+      src: `https://maps.googleapis.com/maps/api/js?key=${config.public.GOOGLE_MAPS_API_KEY}&libraries=places`,
       async: true,
       defer: true,
     },
