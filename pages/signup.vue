@@ -525,7 +525,7 @@ function handleReCaptchaResponse(captchaToken) {
         if (recaptchaContainer.value) {
           if (recaptchaContainer.value.innerHTML === '') {
             grecaptcha.render(recaptchaContainer.value, {
-              sitekey: '6LeSlG4qAAAAAKo9KheTqBdOD1HhHGxjCAvt9Seg',
+              sitekey: process.env.RECAPTCHA_PUBLIC_KEY,
               size: 'invisible',
               callback: handleReCaptchaResponse,
             });
@@ -622,7 +622,7 @@ useHead({
       defer: true,
     },
     {
-      src: `https://maps.googleapis.com/maps/api/js?key=AIzaSyD5P3_x4TTfesD20bA7Zky3NRgN6a4OcGk&libraries=places`,
+      src: `https://maps.googleapis.com/maps/api/js?key=${process.env.GOOGLE_MAPS_API_KEY}&libraries=places`,
       async: true,
       defer: true,
     },
