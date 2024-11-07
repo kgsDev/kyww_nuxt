@@ -22,39 +22,36 @@ export default defineEventHandler(async (event) => {
     form.parse(event.node.req, async (err, fields, files) => {
       if (err) {
         console.error('Form parsing error:', err);
-        return reject(createError({ statusCode: 400, message: 'File parsing failed or file is too large.' }));
+        return reject(
+          createError({ statusCode: 400, message: 'File parsing failed or file is too large.' })
+        );
       }
 
       try {
-        //console.log('Fields received:', fields);
-        //console.log('Files received:', files);
-
         const sampleId = fields.sampleId?.[0];
         const formType = fields.formType?.[0];
-        const formAdded = fields.formAdded?.[0] === 'true';
-
-        //console.log(`Processing upload for sampleId: ${sampleId}, formType: ${formType}, formAdded: ${formAdded}`);
+        const siteID = fields.siteId?.[0];
 
         if (!sampleId || !formType) {
-          throw new Error('Sample ID and Form Type are required.');
+          console.warn('Missing required fields: Sample ID or Form Type');
+          throw createError({ statusCode: 400, message: 'Sample ID and Form Type are required.' });
         }
 
         const folderMap = { base: 'base', bio: 'bio', hab: 'hab' };
         const folderName = folderMap[formType] || 'base';
-        const folderPath = path.join('/webshare/kyww_images', folderName, String(sampleId));
+        const folderPath = path.join('/webshare/kyww_images', folderName, siteID, String(sampleId));
+        
+        // Ensure the folder path exists
         await fs.mkdir(folderPath, { recursive: true });
-        //console.log(`Created folder: ${folderPath}`);
 
         const uploadedFileTypes = [];
         let formUploaded = false;
 
         const processFile = async (key, file) => {
           if (!file) {
-            console.log(`No file found for key: ${key}`);
+            console.warn(`No file found for key: ${key}`);
             return;
           }
-
-          //console.log(`Processing file: ${key}, Mimetype: ${file.mimetype}, Size: ${file.size} bytes`);
 
           const isPDF = file.mimetype === 'application/pdf';
           const isImage = file.mimetype.startsWith('image/');
@@ -74,8 +71,7 @@ export default defineEventHandler(async (event) => {
 
             await fs.unlink(file.filepath);
             formUploaded = true;
-            uploadedFileTypes.push("form");
-            //console.log(`Processed form file: ${formFileName}`);
+            uploadedFileTypes.push('form');
           } else if (isImage) {
             const newFileName = `${key}_${sampleId}.png`;
             const newFilePath = path.join(folderPath, newFileName);
@@ -86,9 +82,8 @@ export default defineEventHandler(async (event) => {
 
             await fs.unlink(file.filepath);
             uploadedFileTypes.push(key);
-            //console.log(`Processed image file: ${newFileName}`);
           } else {
-            console.log(`Unsupported file type for key: ${key}, mimetype: ${file.mimetype}`);
+            console.warn(`Unsupported file type for key: ${key}, mimetype: ${file.mimetype}`);
           }
         };
 
@@ -99,7 +94,12 @@ export default defineEventHandler(async (event) => {
           }
         }
 
-        resolve({ status: 200, uploadedFileTypes, formUploaded });
+        resolve({
+          status: 200,
+          message: 'Files uploaded successfully.',
+          uploadedFileTypes,
+          formUploaded,
+        });
       } catch (error) {
         console.error('Error during file upload:', error);
         reject(createError({ statusCode: 500, message: 'File upload failed.' }));

@@ -1,27 +1,68 @@
 <template>
-  <h3 class="text-md mb-2">Photos / Sample Form:</h3>
-  <div class="space-y-4 text-sm">
-    <div v-for="field in fields" :key="field">
-      <label :for="field">{{ capitalizeFirstLetter(field) }} Image (10 MB limit):</label>
-      <input
-        type="file"
-        :id="field"
-        :ref="el => { if (el) fileRefs[field] = el }"
-        @change="handleFileChange(field)"
-        accept="image/*"
-        required
-      >
-    </div>
+  <div class="bg-blue-50 p-4 rounded-lg border-2 border-blue-200">
+    <h3 class="text-lg font-bold mb-3 text-blue-800">Photos & Sample Form</h3>
     
-    <div>
-      <label for="sampleForm">Upload Sample Form<br>(PDF/Image, 10 MB limit):</label>
-      <input
-        type="file"
-        id="sampleForm"
-        ref="sampleFormRef"
-        @change="handleSampleFormChange"
-        accept="application/pdf,image/*"
-      >
+    <!-- Sample Form Upload - Most Prominent -->
+    <div class="mb-6">
+      <label for="sampleForm" class="block mb-2 font-bold text-emerald-800 text-sm">
+        Upload Sample Form<br>(PDF/Image, 10 MB limit):
+      </label>
+      <div class="relative">
+        <input
+          type="file"
+          id="sampleForm"
+          ref="sampleFormRef"
+          @change="handleSampleFormChange"
+          accept="application/pdf,image/*"
+          class="hidden"
+        >
+        <label
+          for="sampleForm"
+          class="flex items-center justify-center w-full px-4 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg cursor-pointer transition-all shadow-lg hover:shadow-xl"
+        >
+          <i class="fas fa-file-upload text-xl mr-2"></i>
+          <span class="text-base font-bold">Click to Upload Sample Form</span>
+        </label>
+      </div>
+    </div>
+
+    <!-- Photo Uploads -->
+    <div class="space-y-4">
+      <div v-for="field in fields" :key="field" class="bg-white p-3 rounded-lg shadow-sm">
+        <label :for="field" class="block mb-2 font-semibold text-gray-700 text-sm">
+          {{ capitalizeFirstLetter(field) }} Image (10 MB limit):
+        </label>
+        <div class="relative">
+          <input
+            type="file"
+            :id="field"
+            :ref="el => { if (el) fileRefs[field] = el }"
+            @change="handleFileChange(field)"
+            accept="image/*"
+            required
+            class="hidden"
+          >
+          <label
+            :for="field"
+            class="flex items-center justify-center w-full px-3 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg cursor-pointer transition-all shadow-md hover:shadow-lg"
+          >
+            <i class="fas fa-camera text-lg mr-2"></i>
+            <span class="font-semibold text-sm">Upload {{ capitalizeFirstLetter(field) }} Photo</span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <!-- File Preview Area -->
+    <div class="mt-4 space-y-1">
+      <div v-if="sampleFormFile" class="flex items-center text-xs text-emerald-700 bg-emerald-50 p-2 rounded">
+        <i class="fas fa-check-circle mr-2"></i>
+        <span>Sample Form: {{ sampleFormFile.name }}</span>
+      </div>
+      <div v-for="(file, field) in files" :key="field" class="flex items-center text-xs text-blue-700 bg-blue-50 p-2 rounded">
+        <i class="fas fa-check-circle mr-2"></i>
+        <span>{{ capitalizeFirstLetter(field) }} Photo: {{ file.name }}</span>
+      </div>
     </div>
   </div>
 </template>
@@ -106,3 +147,27 @@ const getFiles = () => files;
 
 defineExpose({ getFiles });
 </script>
+
+<style scoped>
+.hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Optional: Add animation for hover states */
+.transition-all {
+  transition: all 0.2s ease-in-out;
+}
+
+/* Optional: Add scale effect on hover */
+label:hover {
+  transform: translateY(-1px);
+}
+</style>

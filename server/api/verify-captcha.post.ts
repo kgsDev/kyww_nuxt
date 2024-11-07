@@ -4,6 +4,10 @@ export default defineEventHandler(async (event) => {
     const body = await readBody(event);
     const token = body.token;
 
+    const config = useRuntimeConfig();
+    const secretKey = config.RECAPTCHA_SECRET_KEY;
+
+
     if (!token) {
       return { success: false, error: 'No CAPTCHA token provided' };
     }
@@ -14,7 +18,7 @@ export default defineEventHandler(async (event) => {
         'Content-Type': 'application/x-www-form-urlencoded',
       },
       body: new URLSearchParams({
-        secret: process.env.RECAPTCHA_SECRET_KEY,
+        secret: secretKey,
         response: token,
       }),
     });

@@ -1,9 +1,10 @@
 // server/api/request-password.post.ts
 import { v4 as uuidv4 } from 'uuid';
 import sendgrid from '@sendgrid/mail';
+import { defineEventHandler, readBody, sendError } from 'h3';
 
-// Configure SendGrid
-sendgrid.setApiKey(process.env.SENDGRID_API_KEY);
+const config = useRuntimeConfig();
+sendgrid.setApiKey(config.SENDGRID_API_KEY);
 
 export default defineEventHandler(async (event) => {
   try {
@@ -12,9 +13,10 @@ export default defineEventHandler(async (event) => {
     const { email, captchaToken } = body;
 
     if (!captchaToken) {
+      console.warn('CAPTCHA token is missing');
       throw createError({
         statusCode: 400,
-        message: 'CAPTCHA token is required'
+        message: 'CAPTCHA token is required',
       });
     }
 
@@ -22,52 +24,53 @@ export default defineEventHandler(async (event) => {
     const recaptchaResponse = await $fetch('https://www.google.com/recaptcha/api/siteverify', {
       method: 'POST',
       body: new URLSearchParams({
-        secret: process.env.RECAPTCHA_SECRET_KEY,
+        secret: config.RECAPTCHA_SECRET_KEY,
         response: captchaToken,
       }),
     });
 
     if (!recaptchaResponse.success) {
+      console.warn('Invalid CAPTCHA response');
       throw createError({
         statusCode: 400,
-        message: 'Invalid CAPTCHA'
+        message: 'Invalid CAPTCHA',
       });
     }
 
-    // Find user by email
+    // Find user by email without revealing user existence
     const userResponse = await fetch(
-      `${process.env.DIRECTUS_URL}/users?filter[email][_eq]=${encodeURIComponent(email)}`,
+      `${config.public.DIRECTUS_URL}/users?filter[email][_eq]=${encodeURIComponent(email)}`,
       {
         headers: {
-          Authorization: `Bearer ${process.env.DIRECTUS_SERVER_TOKEN}`,
+          Authorization: `Bearer ${config.DIRECTUS_SERVER_TOKEN}`,
           'Content-Type': 'application/json',
         },
       }
     );
 
     if (!userResponse.ok) {
-      console.error('Failed to fetch user:', await userResponse.text());
+      console.error('Failed to fetch user data:', await userResponse.text());
       return { message: 'If an account exists, a reset link has been sent.' };
     }
 
     const userData = await userResponse.json();
-    
-    // Don't reveal if user doesn't exist
+
     if (!userData.data || userData.data.length === 0) {
+      console.warn('No account found with the provided email');
       return { message: 'If an account exists, a reset link has been sent.' };
     }
 
     const user = userData.data[0];
     const resetToken = uuidv4();
-    const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1-hour expiration
 
     // Update user with reset token
     const updateResponse = await fetch(
-      `${process.env.DIRECTUS_URL}/users/${user.id}`,
+      `${config.public.DIRECTUS_URL}/users/${user.id}`,
       {
         method: 'PATCH',
         headers: {
-          Authorization: `Bearer ${process.env.DIRECTUS_SERVER_TOKEN}`,
+          Authorization: `Bearer ${config.DIRECTUS_SERVER_TOKEN}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
@@ -78,17 +81,20 @@ export default defineEventHandler(async (event) => {
     );
 
     if (!updateResponse.ok) {
-      console.error('Failed to update user:', await updateResponse.text());
-      throw new Error('Failed to update user with reset token');
+      console.error('Failed to update user with reset token:', await updateResponse.text());
+      throw createError({
+        statusCode: 500,
+        message: 'Failed to update user with reset token',
+      });
     }
 
-    // Send email
+    // Send password reset email
     const resetLink = `https://kyww.uky.edu/reset-password?token=${resetToken}`;
     await sendgrid.send({
       to: email,
       from: {
         email: 'contact@kywater.org',
-        name: 'Kentucky Watershed Watch'
+        name: 'Kentucky Watershed Watch',
       },
       subject: 'Password Reset Request - Kentucky Watershed Watch',
       html: `
@@ -107,17 +113,18 @@ export default defineEventHandler(async (event) => {
           <div style="margin-top: 30px; padding: 20px; background-color: #f8f8f8; border-radius: 4px;">
             <p style="color: #666; margin-bottom: 10px;"><strong>Important Security Notice:</strong></p>
             <ul style="color: #666; margin: 0; padding-left: 20px;">
-              <li>Kentucky Water Watch will never ask you for your password via email or phone.</li>
+              <li>Kentucky Watershed Watch will never ask you for your password via email or phone.</li>
               <li>If you didn't request this password reset, please ignore this email.</li>
               <li>If you're concerned about the security of your account, please contact us (contact@kywater.org) immediately.</li>
             </ul>
           </div>
           <p style="margin-top: 30px;">Best regards,<br>Kentucky Watershed Watch Team</p>
         </div>
-      `
+      `,
     });
 
     return { message: 'If an account exists, a reset link has been sent.' };
+
   } catch (error) {
     console.error('Password reset error:', error);
     throw createError({

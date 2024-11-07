@@ -37,24 +37,6 @@ const { data: navigation } = await useAsyncData('footerNav', () => {
 		}),
 	);
 });
-
-const { data: form } = await useAsyncData(
-	'newsletterForm',
-	() => {
-		return useDirectus(
-			readItems('forms', {
-				filter: {
-					key: {
-						_eq: 'newsletter',
-					},
-				},
-			}),
-		);
-	},
-	{
-		transform: (data) => data[0],
-	},
-);
 </script>
 <template>
 	<footer
@@ -92,13 +74,6 @@ const { data: form } = await useAsyncData(
 						</li>
 					</ul>
 				</div>
-
-				<div v-if="form" class="relative">
-					<TypographyHeadline :content="`<p>Subscribe to our <em>newsletter</em></p>`" size="sm">
-						Subscribe to our newsletter
-					</TypographyHeadline>
-					<UForm class="mt-4 mb-8" :form="form" />
-				</div>
 			</nav>
 		</div>
 
@@ -121,29 +96,6 @@ const { data: form } = await useAsyncData(
 					Copyright © 1988 - {{ new Date().getFullYear() }}
 					<NuxtLink href="/" class="mx-2 hover:text-primary" rel="noopener noreferrer">{{ globals.title }}.</NuxtLink>
 					All rights reserved.
-				</span>
-				<!-- You're free to remove this footer if you want. But we'd appreciate it if you keep the credits. -->
-				<span class="block mt-2 text-gray-600 dark:text-gray-400">
-					<Icon name="heroicons:bolt" class="w-4 h-4 text-primary" />
-					Site powered by
-					<NuxtLink
-						href="https://www.directus.io?ref=agencyos_footer"
-						target="_blank"
-						rel="noopener noreferrer"
-						class="border-b dark:border-b-gray-700 hover:text-primary"
-					>
-						Directus
-					</NuxtLink>
-					and
-					<NuxtLink
-						href="https://www.nuxt.com?ref=agencyos_footer"
-						target="_blank"
-						rel="noopener noreferrer"
-						class="border-b dark:border-b-gray-700 hover:text-primary"
-					>
-						Nuxt
-					</NuxtLink>
-					.
 				</span>
 			</div>
 		</div>

@@ -529,6 +529,7 @@ const submitData = async () => {
 	isSubmitting.value = true;
   	errorMessage.value = '';
 	let createdSampleId = null;
+	let sampleSiteId = null;
 
   try {
    // Submit form data
@@ -542,6 +543,7 @@ const submitData = async () => {
     const createdSample = await useDirectus(createItem('base_samples', baseData));
 
     createdSampleId = createdSample.id;
+	sampleSiteId = createdSample.wwky_id;
 
     // Step 2: Update join tables
     submissionStatus.value = 'Updating relationships...';
@@ -557,10 +559,10 @@ const submitData = async () => {
     submissionProgress.value = 75;
 
     const formType = "base";
-    const uploadedFileTypes = await uploadFiles(createdSampleId, files, formType);
+    const uploadedFileTypes = await uploadFiles(createdSampleId, sampleSiteId, files, formType);
 
     // Step 4: Create records in lu_sample_photos
-    await createPhotoRecords(createdSampleId, uploadedFileTypes);
+    await createPhotoRecords(createdSampleId, sampleSiteId, uploadedFileTypes);
 
     // Step 5: Update base_samples with photo information
     await updateSampleWithPhotoInfo(createdSampleId, files);
@@ -712,9 +714,10 @@ const getSelectedBacterialSources = () => {
 
 
 // File upload handler
-const uploadFiles = async (sampleId, files, formType) => {
+const uploadFiles = async (sampleId, siteId, files, formType) => {
   const formData = new FormData();
   formData.append('sampleId', sampleId);
+  formData.append('siteId', siteId);
   formData.append('formType', formType);
   formData.append('formAdded', files.formAdded ? 'true' : 'false');
 
@@ -756,9 +759,9 @@ const uploadFiles = async (sampleId, files, formType) => {
   }
 };
 
-const createPhotoRecords = async (sampleId, uploadedFileTypes) => {
+const createPhotoRecords = async (sampleId, siteId, uploadedFileTypes) => {
   for (const type of uploadedFileTypes) {
-    const filePath = `/webshare/kyww_images/base/${sampleId}/${type}_${sampleId}.jpg`;
+    const filePath = `/webshare/kyww_images/base/${sampleId}/${siteId}/${type}_${sampleId}.jpg`;
     await useDirectus(
       createItem('lu_sample_photos', {
         sample_id: sampleId,
@@ -1042,7 +1045,7 @@ const resetForm = () => {
 						</UFormGroup>
 						<UFormGroup class="p-2 basis-1/3 border-l border-gray-500">
 							<label class="block mb-1">Odor:</label>
-							<UCheckbox v-model="odorNone" name="odorNone" label="None" value="1" />
+							<UCheckbox v-model="odorNone" name="odorNone" label="None" value="1"/>
 							<UCheckbox v-model="odorRottenEggs" name="odorRottenEggs" label="Rotten Eggs" value="2"/>
 							<UCheckbox v-model="odorChlorine" name="odorChlorine" label="Chlorine" value="3"/>
 							<UCheckbox v-model="odorRancidSour" name="odorRancidSour" label="Rancid/Sour" value="4"/>
@@ -1117,12 +1120,6 @@ const resetForm = () => {
 							icon="i-mdi-water"
 							placeholder="cm"
 							/>
-						</UFormGroup>
-					</div>
-					<div class="border-4 p-1 border-gray-900 w-1/2">
-						<UFormGroup class="p-2">
-							<!-- Integrated PhotoUpload component -->
-    						<PhotoUpload ref="photoUpload" @filesSelected="handleFilesSelected" />
 						</UFormGroup>
 					</div>
 				</div>
@@ -1291,19 +1288,30 @@ const resetForm = () => {
 					<div class="border-4 p-1 border-gray-900 w-1/2">
 						<h2 class="text-lg">Other Observations or Measurements</h2>
 						<UFormGroup class="p-2">
-							<UTextarea v-model="other" />
+						<UTextarea v-model="other" />
 						</UFormGroup>
 					</div>
-					<div class="border-4 p-1 border-gray-900 w-1/2 flex">
-						<div class="basis-1/3 pt-4">
-							<img src="assets/KyWW_logo.png" alt="Kentucky Watershed Watch Logo" class="h-fit" />
+					<div class="border-4 p-1 border-gray-900 w-1/2">
+						<UFormGroup class="p-2">
+						<PhotoUpload ref="photoUpload" @filesSelected="handleFilesSelected" />
+						</UFormGroup>
+					</div>
+					<div class="border-4 p-1 border-gray-900 w-1/2">
+						<div class="flex flex-col items-center text-center">
+						<div class="p-4">
+							<img 
+							src="assets/KyWW_logo.png" 
+							alt="Kentucky Watershed Watch Logo" 
+							class="w-48 h-auto"
+							/>
 						</div>
-						<div class="basis-2/3 p-3">
+						<div class="p-4">
 							<h2 class="text-lg">
-								Visit
-								<a href="https://www.kywater.org" target="_blank">www.kywater.org</a>
-								to view data. For questions or feedback, email contact@kywater.org.
+							Visit
+							<a href="https://www.kywater.org" target="_blank" class="text-blue-600 hover:text-blue-800">www.kywater.org</a>
+							to view data. For questions or feedback, email contact@kywater.org.
 							</h2>
+						</div>
 						</div>
 					</div>
 				</div>
@@ -1389,4 +1397,32 @@ const resetForm = () => {
 .fade-leave-to {
   opacity: 0;
 }
+
+.icon-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.icon-label i {
+  font-size: 1.25rem;
+  width: 1.5rem;
+  text-align: center;
+}
+
+/* Water color specific styles */
+.water-color-icon {
+  position: relative;
+}
+
+.water-color-icon::before {
+  color: currentColor;
+  opacity: 0.7;
+}
+
+/* Color-specific styles */
+.water-color-brown i { color: #8B4513; }
+.water-color-green i { color: #228B22; }
+.water-color-grey i { color: #808080; }
+.water-color-orange i { color: #FFA500; }
 </style>

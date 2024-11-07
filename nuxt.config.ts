@@ -2,11 +2,14 @@
 import { theme } from './theme';
 
 export default defineNuxtConfig({
-	// https://nuxt.com/docs/api/configuration/nuxt-config
-	devServer: {
-		port: 3000,
-		host: '0.0.0.0',  // Optional: makes it accessible from the network
+	server: {
+		port: 3001,       // Ensure this matches your Nginx proxy configuration
+		host: '0.0.0.0',  // Ensure it's accessible externally
 	},
+	devServer: process.env.NODE_ENV === 'development' ? {
+		port: 3000,
+		host: '0.0.0.0',
+	} : {},
 
 	extends: [
 		'./layers/portal', // Client portal module
@@ -23,6 +26,7 @@ export default defineNuxtConfig({
 	css: [
 		'~/assets/css/tailwind.css', 
 		'~/assets/css/main.css',
+		'@/assets/css/font-awesome.css'
 	],
 
 	modules: [// https://devtools.nuxtjs.org/
@@ -34,7 +38,6 @@ export default defineNuxtConfig({
 		'@vueuse/motion/nuxt', // https://vueuse.org/
 		'@vueuse/nuxt', // https://github.com/nuxt-modules/icon
 		'nuxt-icon', 
-		'nuxt-og-image', // https://nuxtseo.com/schema-org/guides/quick-setup
 		'nuxt-schema-org',
 		'nuxt-file-storage',
 	],
@@ -56,11 +59,14 @@ export default defineNuxtConfig({
 	},
 
 	runtimeConfig: {
-		SENDGRID_API_KEY: process.env.SENDGRID_API_KEY,
-		RECAPTCHA_SECRET_KEY : process.env.RECAPTCHA_SECRET_KEY,
+		SENDGRID_API_KEY: process.env.EMAIL_SENDGRID_API_KEY, //mail client - under dccurl2@g.uky.edu account
+		RECAPTCHA_SECRET_KEY : process.env.RECAPTCHA_SECRET_KEY, //captcha - under dccurl2@g.uky.edu
+		DIRECTUS_SERVER_TOKEN: process.env.DIRECTUS_SERVER_TOKEN,
 		public: {
 			directusPublicUrl: process.env.DIRECTUS_PUBLIC_URL || 'https://kyww.uky.edu/backend',
 			siteUrl: process.env.NUXT_PUBLIC_SITE_URL || 'https://kyww.uky.edu',
+			API_URL: process.env.API_URL || 'not set',
+			DIRECTUS_URL: process.env.DIRECTUS_URL || 'https://kyww.uky.edu/backend',
 			TRAINER_ROLE_ID:process.env.TRAINER_ROLE_ID,
 			BASIN_LEAD_ROLE_ID:process.env.BASIN_LEAD_ROLE_ID,
 			SAMPLER_ROLE_ID:process.env.SAMPLER_ROLE_ID,
@@ -68,7 +74,7 @@ export default defineNuxtConfig({
 			WEB_API_ROLE_ID:process.env.WEB_API_ROLE_ID,
 			GOOGLE_MAPS_API_KEY : process.env.GOOGLE_MAPS_API_KEY,
 			RECAPTCHA_PUBLIC_KEY : process.env.RECAPTCHA_PUBLIC_KEY,
-			MAPBOX_ACCESS_TOKEN : process.env.MAPBOX_ACCESS_TOKEN,
+			MAPBOX_ACCESS_TOKEN : process.env.MAPBOX_ACCESS_TOKEN, //mapbox - under doug@uky.edu
 		},
 	},
 
@@ -77,14 +83,16 @@ export default defineNuxtConfig({
 		  '/api/**': {
 			cors: true,
 			credentials: true
-		  }
+		  },
+		  '/': { redirect: '/auth/signin' }, // Redirect root to your desired path
+		  '/auth': { redirect: '/auth/signin' }, // Redirect root to your desired path
 		}
 	  },
 
 	// Directus Configuration
 	directus: {
 		rest: {
-			baseUrl: process.env.DIRECTUS_URL,
+			baseUrl: process.env.DIRECTUS_URL || 'https://kyww.uky.edu/backend',
 			nuxtBaseUrl: process.env.NUXT_PUBLIC_SITE_URL || 'https://kyww.uky.edu',
 		},
 		auth: {
@@ -114,7 +122,9 @@ export default defineNuxtConfig({
 	image: {
 		provider: 'directus',
 		directus: {
-			baseURL: `${process.env.DIRECTUS_PUBLIC_URL}/assets/`,
+			baseURL: process.env.DIRECTUS_PUBLIC_URL 
+            ? `${process.env.DIRECTUS_PUBLIC_URL}/assets/`
+            : 'https://kyww.uky.edu/backend/assets/',
 		},
 	},
 
@@ -130,17 +140,6 @@ export default defineNuxtConfig({
 		name: 'KY Watershed Watch',
 	},
 
-	// OG Image Configuration - https://nuxtseo.com/og-image/getting-started/installation
-	ogImage: {
-		defaults: {
-						component: 'OgImageTemplate',
-						width: 1200,
-						height: 630,
-		},
-		// @TODO: Fix font families for OG Image
-		// fonts: formatFonts(fontFamilies),
-	},
-
 	postcss: {
 		plugins: {
 			'postcss-import': {},
@@ -149,5 +148,4 @@ export default defineNuxtConfig({
 			'autoprefixer': {},
 		},
 	},
-
 });

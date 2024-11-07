@@ -1,44 +1,47 @@
-// server/api/reset-password.post.ts
 import sendgrid from '@sendgrid/mail';
+import { defineEventHandler, readBody, createError } from 'h3';
 
-sendgrid.setApiKey(process.env.SENDGRID_API_KEY);
+const config = useRuntimeConfig();
+sendgrid.setApiKey(config.SENDGRID_API_KEY);
 
 export default defineEventHandler(async (event) => {
   try {
     const { token, password } = await readBody(event);
 
     if (!token || !password) {
+      console.warn('Token and password are required fields');
       throw createError({
         statusCode: 400,
-        message: 'Token and password are required'
+        message: 'Token and password are required',
       });
     }
 
-    // Find user with valid token
+    // Find user with valid token and expiration
     const userResponse = await fetch(
-      `${process.env.DIRECTUS_URL}/users?filter[reset_token][_eq]=${encodeURIComponent(token)}&filter[reset_token_expires][_gt]=${encodeURIComponent(new Date().toISOString())}`,
+      `${config.public.DIRECTUS_URL}/users?filter[reset_token][_eq]=${encodeURIComponent(token)}&filter[reset_token_expires][_gt]=${encodeURIComponent(new Date().toISOString())}`,
       {
         headers: {
-          Authorization: `Bearer ${process.env.DIRECTUS_SERVER_TOKEN}`,
+          Authorization: `Bearer ${config.DIRECTUS_SERVER_TOKEN}`,
           'Content-Type': 'application/json',
         },
       }
     );
 
     if (!userResponse.ok) {
-      console.error('Failed to fetch user:', await userResponse.text());
+      console.error('Failed to fetch user with reset token:', await userResponse.text());
       throw createError({
         statusCode: 400,
-        message: 'Invalid or expired reset token'
+        message: 'Invalid or expired reset token',
       });
     }
 
     const userData = await userResponse.json();
 
     if (!userData.data || userData.data.length === 0) {
+      console.warn('No user found with valid reset token');
       throw createError({
         statusCode: 400,
-        message: 'Invalid or expired reset token'
+        message: 'Invalid or expired reset token',
       });
     }
 
@@ -46,11 +49,11 @@ export default defineEventHandler(async (event) => {
 
     // Update user's password and clear reset token
     const updateResponse = await fetch(
-      `${process.env.DIRECTUS_URL}/users/${user.id}`,
+      `${config.public.DIRECTUS_URL}/users/${user.id}`,
       {
         method: 'PATCH',
         headers: {
-          Authorization: `Bearer ${process.env.DIRECTUS_SERVER_TOKEN}`,
+          Authorization: `Bearer ${config.DIRECTUS_SERVER_TOKEN}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
@@ -62,10 +65,10 @@ export default defineEventHandler(async (event) => {
     );
 
     if (!updateResponse.ok) {
-      console.error('Failed to update password:', await updateResponse.text());
+      console.error('Failed to update password for user:', await updateResponse.text());
       throw createError({
         statusCode: 500,
-        message: 'Failed to update password'
+        message: 'Failed to update password',
       });
     }
 
@@ -74,7 +77,7 @@ export default defineEventHandler(async (event) => {
       to: user.email,
       from: {
         email: 'contact@kywater.org',
-        name: 'Kentucky Watershed Watch'
+        name: 'Kentucky Watershed Watch',
       },
       subject: 'Password Successfully Reset - Kentucky Watershed Watch',
       html: `
@@ -98,7 +101,7 @@ export default defineEventHandler(async (event) => {
             please contact us at contact@kywater.org
           </p>
         </div>
-      `
+      `,
     });
 
     return { success: true };
