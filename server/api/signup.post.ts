@@ -17,6 +17,7 @@ export default eventHandler(async (event) => {
       county_residence,
       desiredHub,
       mailing_address,
+      address,
       kitOption,
       originalTrainingDate,
       trainingDateLatest,
@@ -37,6 +38,14 @@ export default eventHandler(async (event) => {
       equip_incubator,
     } = await readBody(event);
 
+    
+    const createErrorResponse = (message, code, statusCode = 500) => ({
+      status: 'error',
+      message,
+      code,
+      timestamp: new Date().toISOString()
+    });
+   
     const respondWithJSON = (data, statusCode = 200) => {
       event.node.res.setHeader('Content-Type', 'application/json');
       event.node.res.statusCode = statusCode;
@@ -45,8 +54,11 @@ export default eventHandler(async (event) => {
 
     // Check required fields
     if (!captchaToken || !token || !firstName || !lastName || !email) {
-      console.warn('Required fields missing');
-      return respondWithJSON({ message: 'Missing required fields.' }, 400);
+      return respondWithJSON(createErrorResponse(
+        'Please fill in all required fields.',
+        'MISSING_FIELDS',
+        400
+      ));
     }
 
     // Verify CAPTCHA with Google
@@ -61,7 +73,11 @@ export default eventHandler(async (event) => {
 
       if (!captchaResult.success) {
         console.warn('CAPTCHA verification failed');
-        return respondWithJSON({ message: 'CAPTCHA verification failed.' }, 400);
+        return respondWithJSON(createErrorResponse(
+          'Please verify that you are human and try again.',
+          'CAPTCHA_FAILED',
+          400
+        ));
       }
     } catch (error) {
       console.error('CAPTCHA verification error:', error);
@@ -76,17 +92,32 @@ export default eventHandler(async (event) => {
           'Content-Type': 'application/json',
         },
       });
-      if (!existingUserResponse.ok) throw new Error('Failed to check existing user');
+      
+      if (!existingUserResponse.ok) {
+        console.error('Failed to check existing user:', await existingUserResponse.text());
+        return respondWithJSON({ 
+          status: 'error',
+          message: 'Unable to verify account status. Please try again later.',
+          code: 'USER_VERIFICATION_ERROR' 
+        }, 500);
+      }
 
       const existingUserData = await existingUserResponse.json();
       if (existingUserData.data && existingUserData.data.length > 0) {
         return respondWithJSON({
-          message: 'An account with this email already exists. Please log in instead.',
+          status: 'error',
+          message: 'An account with this email already exists. You can reset your password at the login page if needed.',
+          code: 'USER_EXISTS',
+          redirect: '/auth/signin'
         }, 409);
       }
     } catch (error) {
       console.error('User verification error:', error);
-      return respondWithJSON({ message: 'Internal error during user verification' }, 500);
+      return respondWithJSON({ 
+        status: 'error',
+        message: 'Unable to complete registration. Please try again later.',
+        code: 'INTERNAL_ERROR'
+      }, 500);
     }
 
     // Validate token and fetch invite data
@@ -103,7 +134,11 @@ export default eventHandler(async (event) => {
       inviteData = await inviteResponse.json();
       if (!inviteData.data || inviteData.data.length === 0) {
         console.warn('Invalid or expired token');
-        return respondWithJSON({ message: 'Invalid or expired token.' }, 400);
+        return respondWithJSON(createErrorResponse(
+          'This invitation link has expired or is invalid. Please request a new invitation.',
+          'INVALID_TOKEN',
+          400
+        ));
       }
     } catch (error) {
       console.error('Token validation error:', error);
@@ -128,6 +163,11 @@ export default eventHandler(async (event) => {
           phone,
           county_residence,
           mailing_address,
+          address_street: address.street,
+          address_city: address.city,
+          address_state: address.state,
+          address_zip: address.zip,
+          hub_id: desiredHub,
           role: config.public.SAMPLER_ROLE_ID,
           isSampler: true,
         }),
@@ -138,7 +178,11 @@ export default eventHandler(async (event) => {
       userId = userData.data.id;
     } catch (error) {
       console.error('User creation error:', error);
-      return respondWithJSON({ message: 'Failed to create user' }, 500);
+      return respondWithJSON(createErrorResponse(
+        'Unable to create your account. Please try again later.',
+        'USER_CREATION_FAILED',
+        500
+      ));
     }
 
     // Populate `sampler_data` with sampler-specific information
@@ -151,9 +195,10 @@ export default eventHandler(async (event) => {
         },
         body: JSON.stringify({
           user_id: userId,
+          last_name: lastName,
           original_training_date: originalTrainingDate,
           training_date_latest: trainingDateLatest,
-          desired_hub: desiredHub,
+          hub_id: desiredHub,
           kitOption,
           training_location_original: trainingLocation,
           training_location_latest: trainingLocation,

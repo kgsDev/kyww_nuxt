@@ -59,11 +59,14 @@ onMounted(async () => {
     userData.value = user;
 
     if (user?.id) {
-      // Get the sampler data for this user
+      // Get the sampler data for this user, now including hub relation
       const samplerResponse = await useDirectus(readItems('sampler_data', {
         filter: {
           user_id: { _eq: user.id }
         },
+        fields: ['*', {
+          hub_id: ['id', 'Basin', 'Description']  // Include the fields you want from wwky_hubs
+        }],
         limit: 1
       }));
 
@@ -173,6 +176,13 @@ onMounted(async () => {
               <div>
                 <label class="text-sm text-gray-500">County</label>
                 <p>{{ formatCounty(userData?.county_residence) }}</p>
+              </div>
+              <div>
+                <label class="text-sm text-gray-500">Support Hub</label>
+                <p v-if="samplerData.hub_id">
+                  {{ samplerData.hub_id.Basin }} - {{ samplerData.hub_id.Description }}
+                </p>
+                <p v-else>Not assigned</p>
               </div>
               <div>
                 <label class="text-sm text-gray-500">Original Training Location</label>

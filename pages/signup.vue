@@ -40,7 +40,7 @@
         <div class="form-group">
           <label for="password">Create a Password:</label>
           <input type="password" v-model="password" id="password" required @input="validatePassword" />
-          <small class="info-text">Password must be at least 8 characters and include uppercase, lowercase, number, and special character.</small>
+          <small class="info-text">Password must be at least 8 characters and include uppercase, lowercase, number, and special character. Password can contain spaces.</small>
           <p v-if="passwordMessage" class="password-message">{{ passwordMessage }}</p>
         </div>
 
@@ -148,16 +148,49 @@
         </div>
         
         <div class="form-group">
-          <label for="mailing_address">Mailing Address:</label>
+          <label for="mailing_address">Street Address:</label>
           <input
             type="text"
-            v-model="mailing_address"
+            v-model="address.street"
             id="mailing_address"
             ref="mailingAddressInput"
             required
           />
           <small class="info-text">Required.</small>
-      </div>
+        </div>
+
+        <div class="address-group">
+          <div class="form-group">
+            <label for="city">City:</label>
+            <input
+              type="text"
+              v-model="address.city"
+              id="city"
+              required
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="state">State:</label>
+            <input
+              type="text"
+              v-model="address.state"
+              id="state"
+              readonly
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="zip">ZIP Code:</label>
+            <input
+              type="text"
+              v-model="address.zip"
+              id="zip"
+              required
+              pattern="[0-9]{5}"
+            />
+          </div>
+        </div>
         
         <div class="form-group">
           <label for="county_residence">County of Residence:</label>
@@ -181,8 +214,13 @@
         </div>
 
         <div class="form-group">
-          <label for="desiredHub">Support Hub location (if known):</label>
-          <input type="text" v-model="desiredHub" id="desiredHub" placeholder="Enter location" />
+          <label for="desiredHub">Support Hub location:</label>
+          <select v-model="desiredHub" id="desiredHub" required>
+            <option value="">Select a Support Hub</option>
+            <option v-for="hub in hubs" :key="hub.id" :value="hub.id">
+              {{ hub.Basin }} - {{ hub.Description }}
+            </option>
+          </select>
         </div>
 
           <!-- Submit Button -->
@@ -202,26 +240,24 @@
     </div>
   </div>
 </template>
-  
 <script setup>
   import { useRoute, useFetch } from '#app';
   import LoadingOverlay from '/components/LoadingOverlay.vue'
 
   definePageMeta({
-    layout: 'blank'
+    layout: 'blank',
+    ssr: false  // Add this to prevent SSR issues
   });
-  
-  const isLoading = ref(true)
 
+  const isLoading = ref(true);
   const config = useRuntimeConfig();
-
   const route = useRoute();
   const token = route.query.token;
 
-  // Form data fields
+  // Form data refs
   const showForm = ref(false);
   const message = ref('');
-  const message_submit = ref(''); // for submit message
+  const message_submit = ref('');
   const firstName = ref('');
   const lastName = ref('');
   const email = ref('');
@@ -232,11 +268,18 @@
   const phone = ref('');
   const mailing_address = ref('');
   const mailingAddressInput = ref(null);
+  const address = ref({
+    street: '',
+    city: '',
+    state: '',
+    zip: ''
+  });
   const county_residence = ref('');
   const desiredHub = ref('');
+  const hubs = ref([]);
   const kitOption = ref('');
 
-  // Read-only fields populated from user_invites
+  // Training and equipment refs
   const originalTrainingDate = ref('');
   const trainingDateLatest = ref('');
   const trainingLocation = ref('');
@@ -255,11 +298,14 @@
   const equip_do_expiration = ref('');
   const equip_ph_expiration = ref('');
 
-  // Phone and email validation messages
+  // Form validation refs
   const phoneMessage = ref('');
-  const emailMessage = ref(''); // Initial message
+  const emailMessage = ref('');
+  const signupForm = ref(null);
+  const recaptchaContainer = ref(null);
+  const hasRecaptchaRendered = ref(false);
 
-  // Data for dropdowns
+  // Counties data array
   const counties = [
     { id: '', name: 'Select a county' }, // Default option
     { id: 'adair', name: 'Adair' },
@@ -383,19 +429,18 @@
     { id: 'woodford', name: 'Woodford' }
   ];
 
-    // Email validation
+  // Validation functions
   const validateEmail = () => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (email.value && emailRegex.test(email.value)) {
-      emailMessage.value = ''; // Clear the message if the email is valid
+      emailMessage.value = '';
     } else if (!email.value) {
-      emailMessage.value = 'Email is required'; // Show message if email is empty
+      emailMessage.value = 'Email is required';
     } else {
       emailMessage.value = 'Invalid email format';
     }
   };
 
-  // Phone validation
   const validatePhone = () => {
     const phoneRegex = /^(\(\d{3}\)\s?|\d{3}-?)\d{3}-?\d{4}$/;
     if (phoneRegex.test(phone.value)) {
@@ -405,9 +450,8 @@
     }
   };
 
-  // Password validation
   const validatePassword = () => {
-    const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+    const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?& ]{8,}$/;
     if (regex.test(password.value)) {
       passwordMessage.value = '';
     } else {
@@ -415,7 +459,6 @@
     }
   };
 
-  // Confirm Password validation
   const validatePasswordMatch = () => {
     if (confirmPassword.value !== password.value) {
       passwordMatchMessage.value = 'Passwords do not match.';
@@ -424,7 +467,7 @@
     }
   };
 
-  // Computed property to disable the submit button if any field is invalid
+  // Computed properties
   const isFormValid = computed(() => {
     return (
       !emailMessage.value &&
@@ -436,90 +479,192 @@
       confirmPassword.value
     );
   });
+  // Fetch hubs data
+  const fetchHubs = async () => {
+    try {
+      const response = await fetch(`${config.public.DIRECTUS_URL}/items/wwky_hubs`, {
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
 
-  const signupForm = ref(null);        // Reference to the form
-  const recaptchaContainer = ref(null); // New reference for reCAPTCHA container
-  const hasRecaptchaRendered = ref(false); // Track if reCAPTCHA has rendered
-
-// Function to handle form submission and trigger reCAPTCHA
-const onSubmit = () => {
-  validatePhone();
-  validateEmail();
-  validatePassword();
-  validatePasswordMatch();
-
-  // Prevent submission if there are validation errors
-  if (emailMessage.value || phoneMessage.value || passwordMessage.value || passwordMatchMessage.value) {
-    message_submit.value = 'Please fix validation errors before submitting.';
-    return;
-  }
-
-  if (typeof grecaptcha !== 'undefined') {
-    grecaptcha.execute();
-  } else {
-    message.value = 'reCAPTCHA could not load. Please refresh the page.';
-  }
-};
-
-function handleReCaptchaResponse(captchaToken) {
-  useFetch('/api/signup', {
-    method: 'POST',
-    body: {
-      captchaToken,
-      token,
-      firstName: firstName.value,
-      lastName: lastName.value,
-      email: email.value,
-      password: password.value,
-      phone: phone.value,
-      county_residence: county_residence.value,
-      desiredHub: desiredHub.value,
-      mailing_address: mailing_address.value,
-      kitOption: kitOption.value,
-      originalTrainingDate: originalTrainingDate.value,
-      trainingDateLatest: trainingDateLatest.value,
-      trainingLocation: trainingLocation.value,
-      training_field_chemistry: training_field_chemistry.value,
-      training_r_card: training_r_card.value,
-      training_habitat: training_habitat.value,
-      training_biological: training_biological.value,
-      equip_ph: equip_ph.value,
-      equip_do: equip_do.value,
-      equip_cond: equip_cond.value,
-      equip_thermo: equip_thermo.value,
-      equip_waste: equip_waste.value,
-      equip_pan: equip_pan.value,
-      equip_flip: equip_flip.value,
-      equip_incubator: equip_incubator.value,
-      DO_expire: equip_do_expiration.value,
-      PH_expire: equip_ph_expiration.value,
+      if (!response.ok) throw new Error('Failed to fetch hubs');
+      
+      const data = await response.json();
+      hubs.value = data.data.sort((a, b) => {
+        if (a.Basin === b.Basin) {
+          return a.Description.localeCompare(b.Description);
+        }
+        return a.Basin.localeCompare(b.Basin);
+      });
+    } catch (error) {
+      console.error('Error fetching hubs:', error);
     }
-  }).then(({ data, error }) => {
-    if (error.value) {
-      console.error('API error:', error.value);
-      message_submit.value = error.value.message || 'An error occurred. Please try again.';
-    } else if (data.value?.message) { //Success!
-      //make the form go away and show a message
-      showForm.value = false;
-      message.value = data.value.message;
-      // Redirect after a delay
-      setTimeout(() => {
-        window.location.href = 'https://kyww.uky.edu';
-      }, 4000); // 3 seconds
+  };
+
+  // Initialize Google Places Autocomplete
+  const initializeAutocomplete = () => {
+    if (typeof google !== 'undefined' && google.maps && google.maps.places) {
+      const autocomplete = new google.maps.places.Autocomplete(
+        mailingAddressInput.value,
+        { 
+          types: ['address'],
+          componentRestrictions: { country: 'us' }
+        }
+      );
+
+      autocomplete.addListener('place_changed', () => {
+        const place = autocomplete.getPlace();
+        
+        // Reset address fields
+        address.value = {
+          street: '',
+          city: '',
+          state: '',
+          zip: ''
+        };
+
+        if (place.address_components) {
+          for (const component of place.address_components) {
+            const type = component.types[0];
+            
+            switch (type) {
+              case 'street_number':
+                address.value.street = component.long_name;
+                break;
+              case 'route':
+                address.value.street += ' ' + component.long_name;
+                break;
+              case 'locality':
+                address.value.city = component.long_name;
+                break;
+              case 'administrative_area_level_1':
+                address.value.state = component.short_name;
+                break;
+              case 'postal_code':
+                address.value.zip = component.long_name;
+                break;
+            }
+          }
+        }
+      });
     } else {
-      console.error('Unexpected response format:', data);
-      message_submit.value = 'An unexpected error occurred during signup.';
+      setTimeout(initializeAutocomplete, 500);
     }
-  }).catch(err => {
-    console.error('Fetch failed:', err);
-    message_submit.value = 'Failed to reach server. Please try again later.';
-  });
-}
+  };
 
-  // Initialize form and set up reCAPTCHA and check if a user is found with the token
+  // Form submission handler
+  const onSubmit = () => {
+    validatePhone();
+    validateEmail();
+    validatePassword();
+    validatePasswordMatch();
+
+    if (emailMessage.value || phoneMessage.value || passwordMessage.value || passwordMatchMessage.value) {
+      message_submit.value = 'Please fix validation errors before submitting.';
+      return;
+    }
+
+    if (typeof grecaptcha !== 'undefined') {
+      grecaptcha.execute();
+    } else {
+      message.value = 'reCAPTCHA could not load. Please refresh the page.';
+    }
+  };
+
+  // reCAPTCHA response handler
+  const handleReCaptchaResponse = async (captchaToken) => {
+    try {
+      const fullAddress = `${address.value.street}, ${address.value.city}, ${address.value.state} ${address.value.zip}`.trim();
+
+      const { data, error } = await useFetch('/api/signup', {
+        method: 'POST',
+        body: {
+          captchaToken,
+          token,
+          firstName: firstName.value,
+          lastName: lastName.value,
+          email: email.value,
+          password: password.value,
+          phone: phone.value,
+          county_residence: county_residence.value,
+          desiredHub: desiredHub.value,
+          mailing_address: fullAddress,
+          address: {
+            street: address.value.street,
+            city: address.value.city,
+            state: address.value.state,
+            zip: address.value.zip
+          },
+          kitOption: kitOption.value,
+          originalTrainingDate: originalTrainingDate.value,
+          trainingDateLatest: trainingDateLatest.value,
+          trainingLocation: trainingLocation.value,
+          training_field_chemistry: training_field_chemistry.value,
+          training_r_card: training_r_card.value,
+          training_habitat: training_habitat.value,
+          training_biological: training_biological.value,
+          equip_ph: equip_ph.value,
+          equip_do: equip_do.value,
+          equip_cond: equip_cond.value,
+          equip_thermo: equip_thermo.value,
+          equip_waste: equip_waste.value,
+          equip_pan: equip_pan.value,
+          equip_flip: equip_flip.value,
+          equip_incubator: equip_incubator.value,
+          DO_expire: equip_do_expiration.value,
+          PH_expire: equip_ph_expiration.value,
+        }
+      });
+
+      if (error.value) {
+        console.error('API error:', error.value);
+        
+        if (error.value.statusCode === 409) {
+          message_submit.value = 'An account with this email already exists. You can reset your password at the login page if needed.';
+          setTimeout(() => {
+            navigateTo('/auth/signin');
+          }, 3000);
+          return;
+        }
+        
+        switch(error.value.statusCode) {
+          case 400:
+            message_submit.value = 'Please check your form entries and try again.';
+            break;
+          case 401:
+            message_submit.value = 'Your session has expired. Please refresh the page and try again.';
+            break;
+          case 403:
+            message_submit.value = 'You do not have permission to perform this action.';
+            break;
+          case 500:
+            message_submit.value = 'A server error occurred. Please try again later.';
+            break;
+          default:
+            message_submit.value = error.value.data?.message || 'An unexpected error occurred. Please try again.';
+        }
+      } else if (data.value?.message) {
+        showForm.value = false;
+        message.value = data.value.message;
+        setTimeout(() => {
+          window.location.href = 'https://kyww.uky.edu';
+        }, 2000);
+      } else {
+        console.error('Unexpected response format:', data);
+        message_submit.value = 'An unexpected error occurred during signup.';
+      }
+    } catch (err) {
+      console.error('Fetch failed:', err);
+      message_submit.value = 'Failed to reach server. Please try again later.';
+    }
+  };
+
+  // Component mounted lifecycle hook
   onMounted(async () => {
     isLoading.value = true;
-    //capture the form and reCAPTCHA container
+    await fetchHubs();
+
     window.handleReCaptchaResponse = handleReCaptchaResponse;
     const interval = setInterval(() => {
       if (typeof grecaptcha !== 'undefined' && !hasRecaptchaRendered.value) {
@@ -537,92 +682,68 @@ function handleReCaptchaResponse(captchaToken) {
       }
     }, 500);
 
-  // No token, no dice
-  if (!token) {
-    message.value = 'No user invite found. Please check your email for the correct link.';
-    isLoading.value = false;
-    return;
-  }
+    if (!token) {
+      message.value = 'No user invite found. Please check your email for the correct link.';
+      isLoading.value = false;
+      return;
+    }
 
-  //token? check if user exists - use API
-  try {
-    const response = await fetch('/api/invite-lookup', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token }),
-    });
+    try {
+      const response = await fetch('/api/invite-lookup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token }),
+      });
 
-    if (!response.ok) throw new Error(`Error: ${response.statusText}`);
+      if (response.status === 404) {
+        message.value = 'Invalid or expired signup link. Please check your email for the correct link. You can also ask your coordinator to resend the invite.<br><br>You may also already have a login. If you have forgotten your password, you can reset it at the login page: <a href="https://kyww.uky.edu">kyww.uky.edu</a>.';
+        showForm.value = false;
+        return;
+      } else if (!response.ok) {
+        throw new Error(`Error: ${response.statusText}`);
+      }
 
-    const data = await response.json();
+      const data = await response.json();
 
-    // Token found - populate data
-    if (data && data.email) {
-      showForm.value = true;
-      email.value = data.email;
-      originalTrainingDate.value = data.training_date;
-      trainingDateLatest.value = data.training_date;
-      trainingLocation.value = data.training_location;
-      training_field_chemistry.value = data.training_field_chemistry;
-      training_r_card.value = data.training_r_card;
-      training_habitat.value = data.training_habitat;
-      training_biological.value = data.training_biological;
-    } else {
-      // Token not found
-      message.value = 'Invalid or expired signup link. Please check your email for the correct link. You can also ask your coordinator to resend the invite.<br><br>You may also already have a login. If you have forgotten your password, you can reset it at the login page: <a href="https://kyww.uky.edu">kyww.uky.edu</a>.';
+      if (data && data.email) {
+        showForm.value = true;
+        email.value = data.email;
+        originalTrainingDate.value = data.training_date;
+        trainingDateLatest.value = data.training_date;
+        trainingLocation.value = data.training_location;
+        training_field_chemistry.value = data.training_field_chemistry;
+        training_r_card.value = data.training_r_card;
+        training_habitat.value = data.training_habitat;
+        training_biological.value = data.training_biological;
+      }
+    } catch (error) {
+      console.error('Error during invite lookup:', error);
+      message.value = 'An error occurred while checking your signup link. Please try again later.';
       showForm.value = false;
     }
-  } catch (error) {
-    message.value = 'Invalid or expired signup link. Please check your email for the correct link. (Error)';
-    showForm.value = false;
-  }
 
-  // Wait until the next DOM update cycle to ensure the input is rendered
-  await nextTick();
+    await nextTick();
+    initializeAutocomplete();
+    isLoading.value = false;
+  });
 
-  const initializeAutocomplete = () => {
-    if (typeof google !== 'undefined' && google.maps && google.maps.places) {
-      const autocomplete = new google.maps.places.Autocomplete(
-        mailingAddressInput.value,
-        { types: ['address'], componentRestrictions: { country: 'us' } }
-      );
-
-      autocomplete.addListener('place_changed', () => {
-        const place = autocomplete.getPlace();
-        if (place.formatted_address) {
-          mailing_address.value = place.formatted_address;
-        }
-      });
-      isLoading.value = false;
-    } else {
-      // Retry if google is not yet available
-      setTimeout(initializeAutocomplete, 500);
-    }
-  };
-
-  initializeAutocomplete();
-
-});
-
-// Use head to add the reCAPTCHA script
-useHead({
-  script: [
-    {
-      src: 'https://www.google.com/recaptcha/api.js?render=explicit',
-      async: true,
-      defer: true,
-    },
-    {
-      src: `https://maps.googleapis.com/maps/api/js?key=${config.public.GOOGLE_MAPS_API_KEY}&libraries=places`,
-      async: true,
-      defer: true,
-    },
-  ],
-});
-
-</script>
-  
-  <style scoped>
+  // Head configuration
+  useHead({
+    script: [
+      {
+        src: 'https://www.google.com/recaptcha/api.js?render=explicit',
+        async: true,
+        defer: true,
+      },
+      {
+        src: `https://maps.googleapis.com/maps/api/js?key=${config.public.GOOGLE_MAPS_API_KEY}&libraries=places`,
+        async: true,
+        defer: true,
+      },
+    ],
+  });
+</script> 
+<style scoped>
   .page-container {
     display: flex;
     align-items: center;
@@ -785,5 +906,11 @@ useHead({
     font-size: 0.85rem;
     color: #dc3545; /* Red color to indicate a warning */
     margin-top: 0.25rem;
+  }
+
+  .address-group {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr;
+    gap: 1rem;
   }
   </style>

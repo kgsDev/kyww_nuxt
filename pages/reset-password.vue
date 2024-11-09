@@ -1,10 +1,8 @@
 <script setup>
 definePageMeta({
-  layout: 'blank'
+  layout: 'blank',
+  ssr: false
 });
-
-const route = useRoute();
-const router = useRouter();
 
 const password = ref('');
 const confirmPassword = ref('');
@@ -25,21 +23,15 @@ const passwordRequirements = {
   hasSpecialChar: /[!@#$%^&*(),.?":{}|<>]/
 };
 
-// Validate token on page load
-onMounted(async () => {
-  console.log('Component mounted, starting token verification');
-  const token = route.query.token;
-  
+// composable to handle token verification
+const verifyToken = async (token) => {
   if (!token) {
     console.log('No token in route query');
     message.value = 'Invalid or missing reset token.';
-    return;
+    return false;
   }
 
-  console.log('Found token in query:', token);
-
   try {
-    console.log('Making verification request...');
     const response = await fetch('/api/verify-reset-token', {
       method: 'POST',
       headers: {
@@ -48,20 +40,29 @@ onMounted(async () => {
       body: JSON.stringify({ token })
     });
 
-    console.log('Raw response:', response);
     const data = await response.json();
-    console.log('Parsed response data:', data);
-
-    if (data.valid) {
-      console.log('Token is valid');
-      tokenValid.value = true;
-    } else {
-      console.log('Token is invalid');
-      message.value = 'This reset link has expired or is invalid. Please request a new one.';
-    }
+    return data.valid;
   } catch (error) {
     console.error('Token verification error:', error);
     message.value = 'Error verifying reset token. Please try again.';
+    return false;
+  }
+};
+
+// Handle setup in a way that's safe for SSR
+const nuxtApp = useNuxtApp();
+const route = useRoute();
+const router = useRouter();
+
+// Use Nuxt's built-in lifecycle hooks
+onMounted(async () => {
+  // Ensure we're on client-side and have access to the route
+  if (process.client && route.query.token) {
+    const isValid = await verifyToken(route.query.token);
+    tokenValid.value = isValid;
+    if (!isValid) {
+      message.value = 'This reset link has expired or is invalid. Please request a new one.';
+    }
   }
 });
 
@@ -150,7 +151,7 @@ const onSubmit = async () => {
     // Redirect to login after 1 seconds
     setTimeout(() => {
       router.push('/auth/signin');
-    }, 3000);
+    }, 1000);
   } catch (error) {
     console.error('Reset error:', error);
     message.value = 'An error occurred while resetting your password. Please try again.';

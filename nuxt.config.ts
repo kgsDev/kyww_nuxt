@@ -15,6 +15,10 @@ export default defineNuxtConfig({
 		'./layers/portal', // Client portal module
 	],
 
+	dir: {
+		pages: 'pages',  // This ensures the root pages directory is recognized
+	},
+
 	// Global page headers: https://go.nuxtjs.dev/config-head
 	components: [
 		// Disable prefixing base components with `Base`
@@ -84,8 +88,13 @@ export default defineNuxtConfig({
 			cors: true,
 			credentials: true
 		  },
-		  '/': { redirect: '/auth/signin' }, // Redirect root to your desired path
-		  '/auth': { redirect: '/auth/signin' }, // Redirect root to your desired path
+		  '/': { redirect: '/auth/signin' },
+		  '/auth': { redirect: '/auth/signin' },
+		  '/reset-password': { ssr: false },
+		  '/request-password': { ssr: false },
+		  '/signup': { ssr: false },
+		  '/projects': { ssr: false },
+		  '/data': { ssr: false },
 		}
 	  },
 
