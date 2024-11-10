@@ -21,6 +21,15 @@ module.exports = {
     min_uptime: '5s',
     listen_timeout: 50000,
     kill_timeout: 3000,
-    watch: false // Set to true only if you need file watching
+    watch: false, // Set to true only if you need file watching
+    exp_backoff_restart_delay: 100,
+    max_restarts: 5,
+    post_update: ["npm install"],
+    watch: false,
+    autorestart: true,
+    max_memory_restart: '1G',
+    error_file: '/var/log/kyww/error.log',
+    out_file: '/var/log/kyww/out.log',
+    merge_logs: true,
   }]
 };

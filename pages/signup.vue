@@ -65,6 +65,10 @@
             <label>Training Location:</label>
             <input type="text" :value="trainingLocation" disabled readonly  class="readonly-field"/>
           </div>
+          <div class="form-group">
+            <label>Trainer:</label>
+            <input type="text" :value="trainer_name" disabled readonly  class="readonly-field"/>
+          </div>
 
           <label>Training Completed:</label>
 
@@ -266,7 +270,6 @@
   const passwordMessage = ref('');
   const passwordMatchMessage = ref('');
   const phone = ref('');
-  const mailing_address = ref('');
   const mailingAddressInput = ref(null);
   const address = ref({
     street: '',
@@ -281,6 +284,7 @@
 
   // Training and equipment refs
   const originalTrainingDate = ref('');
+  const trainer_name = ref('');
   const trainingDateLatest = ref('');
   const trainingLocation = ref('');
   const training_field_chemistry = ref(false);
@@ -597,6 +601,7 @@
             zip: address.value.zip
           },
           kitOption: kitOption.value,
+          trainer_name:trainer_name.value,
           originalTrainingDate: originalTrainingDate.value,
           trainingDateLatest: trainingDateLatest.value,
           trainingLocation: trainingLocation.value,

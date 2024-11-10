@@ -103,10 +103,13 @@
   		  <!-- Success Modal -->
 			<div v-if="showSuccessModal" class="modal">
 			<div class="modal-content">
-			  <p>Invitations sent successfully!</p>
-			  <UButton variant="solid" @click="closeSuccessModal">OK</UButton>
+				<p>Invitations sent successfully!</p>
+				<div class="flex gap-4 justify-center mt-4">
+				<UButton variant="solid" @click="viewReport">View Report</UButton>
+				<UButton variant="outline" @click="closeSuccessModal">Close</UButton>
+				</div>
 			</div>
-		  </div>
+			</div>
   
 		  <!-- Display Messages -->
 		  <p v-if="error" class="text-red-500">{{ error }}</p>
@@ -210,7 +213,8 @@
   
 	  async submitEmails() {
 		this.showModal = false;
-  
+		const { user } = useDirectusAuth();
+
 		try {
 		  const emailList = this.emails.split(/[ ,;]/).map(email => email.trim()).filter(Boolean);
   
@@ -228,6 +232,8 @@
 			  training_r_card: this.training_r_card,
 			  training_habitat: this.training_habitat,
 			  training_biological: this.training_biological,
+			  trainer_id: user.value.id,  // Add trainer ID
+        	  trainer_name: `${user.value.first_name} ${user.value.last_name}` // Add trainer name
 			}),
 		  });
 
@@ -255,7 +261,11 @@
 		},
 		closeSuccessModal() {
 			this.showSuccessModal = false;
-		}
+		},
+		viewReport() {
+			this.showSuccessModal = false;
+			navigateTo('/portal/train/report');
+		},
 	}
 	};
   </script>
@@ -306,9 +316,24 @@
 	padding: 20px;
 	border-radius: 8px;
 	text-align: center;
-  }
+	max-width: 400px; /* Set a max width */
+	width: 90%; /* Responsive width */
+	}
   .modal-content p {
 	margin-bottom: 20px;
+	font-size: 1.1rem;
+	color: #4CAF50; /* Green success color */
   }
-  </style>
+  .gap-4 {
+	gap: 1rem;
+ }
+
+	.justify-center {
+		justify-content: center;
+	}
+
+	.mt-4 {
+		margin-top: 1rem;
+	}
+</style>
   

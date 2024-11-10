@@ -22,6 +22,8 @@ export default eventHandler(async (event) => {
       originalTrainingDate,
       trainingDateLatest,
       trainingLocation,
+      trainer_id, 
+      trainer_name,
       training_field_chemistry,
       training_r_card,
       training_habitat,
@@ -37,7 +39,6 @@ export default eventHandler(async (event) => {
       PH_expire,
       equip_incubator,
     } = await readBody(event);
-
     
     const createErrorResponse = (message, code, statusCode = 500) => ({
       status: 'error',
@@ -145,35 +146,43 @@ export default eventHandler(async (event) => {
       return respondWithJSON({ message: 'Internal error during token validation' }, 500);
     }
 
-    // Create user in `directus_users` and set sampler role
     let userId;
     try {
+      const userRequestBody = {
+        email,
+        password,
+        first_name: firstName,
+        last_name: lastName,
+        display_name: `${firstName} ${lastName}`,
+        phone: phone || null,  // Ensure phone is explicitly set
+        county_residence,
+        mailing_address,
+        street: address?.street || null,
+        city: address?.city || null,
+        state: address?.state || null,
+        zip: address?.zip || null,
+        hub_id: desiredHub,
+        trainer_id: trainer_id || inviteData.data[0].trainer_id, // Get from invite if not in request
+        trainer_name: trainer_name || inviteData.data[0].trainer_name, // Get from invite if not in request
+        role: config.public.SAMPLER_ROLE_ID,
+        isSampler: true,
+      };
+
       const userResponse = await fetch(`${config.public.DIRECTUS_URL}/users`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${config.DIRECTUS_SERVER_TOKEN}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          email,
-          password,
-          first_name: firstName,
-          last_name: lastName,
-          display_name: `${firstName} ${lastName}`,
-          phone,
-          county_residence,
-          mailing_address,
-          address_street: address.street,
-          address_city: address.city,
-          address_state: address.state,
-          address_zip: address.zip,
-          hub_id: desiredHub,
-          role: config.public.SAMPLER_ROLE_ID,
-          isSampler: true,
-        }),
+        body: JSON.stringify(userRequestBody),
       });
 
-      if (!userResponse.ok) throw new Error('Failed to create user');
+      if (!userResponse.ok) {
+        const errorText = await userResponse.text();
+        console.error('User creation error response:', errorText);
+        throw new Error('Failed to create user: ' + errorText);
+      }
+
       const userData = await userResponse.json();
       userId = userData.data.id;
     } catch (error) {

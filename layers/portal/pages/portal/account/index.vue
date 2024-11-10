@@ -197,6 +197,10 @@ onMounted(async () => {
                 <p>{{ formatDate(samplerData.original_training_date) }}</p>
               </div>
               <div>
+                <label class="text-sm text-gray-500">Original Trainer</label>
+                <p>{{ formatDate(userData?.trainer_name) }}</p>
+              </div>
+              <div>
                 <label class="text-sm text-gray-500">Latest Training Date</label>
                 <p>{{ formatDate(samplerData.training_date_latest) }}</p>
               </div>

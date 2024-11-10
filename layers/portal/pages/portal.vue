@@ -37,15 +37,33 @@ const roles = {
 
 const user_role = user.value.role;
 const sidebarNavigation = {
-	top: [
-		{ name: 'Dashboard', href: '/portal', icon: 'material-symbols:home-outline-rounded' },
-		...(user_role == roles.admin || user_role == roles.trainer || user_role == roles.basin_lead ? [{ name: 'Add Trainees', href: '/portal/train', icon: 'oui:training' }] : []),
-		...(user_role == roles.admin || user_role == roles.basin_lead ? [{ name: 'New Hub', href: '/portal/hub', icon: 'material-symbols:hub-outline' }] : []),
-		...(user_role == roles.sampler || user_role == roles.admin || user_role == roles.trainer || user_role == roles.basin_lead ? [{ name: 'Stream Sample', href: '/portal/sample', icon: 'mdi:eyedropper' }] : []),
-		...(user_role == roles.admin ? [{ name: 'Biological Assessment', href: '/portal/biological', icon: 'mdi:fish' }] : []),
-		...(user_role == roles.admin ? [{ name: 'Habitat Assessment', href: '/portal/habitat', icon: 'mdi:leaf' }] : []),
-	],
-	bottom: [{ name: 'Help', href: '/portal/help', icon: 'material-symbols:help-outline-rounded' }],
+  top: [
+    { name: 'Dashboard', href: '/portal', icon: 'material-symbols:home-outline-rounded' },
+    ...(user_role == roles.admin || user_role == roles.trainer || user_role == roles.basin_lead 
+      ? [
+          { name: 'Add Trainees', href: '/portal/train', icon: 'oui:training' },
+          { name: 'Training Report', href: '/portal/train/report', icon: 'mdi:file-document-outline' }
+        ] 
+      : []
+    ),
+    ...(user_role == roles.admin || user_role == roles.basin_lead 
+      ? [{ name: 'New Hub', href: '/portal/hub', icon: 'material-symbols:hub-outline' }] 
+      : []
+    ),
+    ...(user_role == roles.sampler || user_role == roles.admin || user_role == roles.trainer || user_role == roles.basin_lead 
+      ? [{ name: 'Stream Sample', href: '/portal/sample', icon: 'mdi:eyedropper' }] 
+      : []
+    ),
+    ...(user_role == roles.admin 
+      ? [{ name: 'Biological Assessment', href: '/portal/biological', icon: 'mdi:fish' }] 
+      : []
+    ),
+    ...(user_role == roles.admin 
+      ? [{ name: 'Habitat Assessment', href: '/portal/habitat', icon: 'mdi:leaf' }] 
+      : []
+    ),
+  ],
+  bottom: [{ name: 'Help', href: '/portal/help', icon: 'material-symbols:help-outline-rounded' }],
 };
 
 const userNavigation = [
