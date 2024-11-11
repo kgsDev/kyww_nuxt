@@ -111,7 +111,7 @@ setImmediate(async () => {
             <p>Thank you for attending the Kentucky Watershed Watch Sampler Training. We're excited to have you join our network of citizen scientists working to protect Kentucky's water resources!</p>
             <div style="margin: 30px 0;">
               <h3 style="color: #4CAF50;">Next Step: Create Your Data Portal Account</h3>
-              <p>You're now invited to create your account in the KWW data portal where you'll be able to enter and track your stream sample data.</p>
+              <p>You're now invited to create your account in the KYWW data portal where you'll be able to enter and track your stream sample data.</p>
               <div style="text-align: center; margin: 25px 0;">
                 <a href="${signupLink}" 
                    style="background-color: #4CAF50; color: white; padding: 12px 25px; 

@@ -923,6 +923,10 @@ const resetForm = () => {
   // For example, you might want to call any methods that update computed properties based on form field values
 };
 
+const viewDashboard = () => {
+	navigateTo('/portal/');
+};
+
 </script>
 <template>
 	<div>
@@ -946,7 +950,8 @@ const resetForm = () => {
 			<h2 class="text-2xl font-bold mb-4">Thank You!</h2>
 			<p class="mb-4">Your sample (number: {{ submittedSampleId }}) has been successfully submitted.</p>
 			<p v-if="uploadedFileTypes.length > 0" class="mb-4">Photos have also been uploaded.</p>
-			<UButton @click="resetForm" label="Submit Another Sample" />
+			<UButton variant="solid" @click="viewDashboard" label="View Dashboard" />
+			<UButton variant="outline" @click="resetForm" label="Submit Another Sample" />
 			</div>
 		</div>
 

@@ -309,7 +309,7 @@ export default eventHandler(async (event) => {
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <h2>Welcome to Kentucky Watershed Watch!</h2>
           <p>Hello ${firstName} ${lastName},</p>
-          <p>Thank you for joining Kentucky Watershed Watch as a volunteer water sampler. We're excited to have you as part of our community of dedicated citizens working to monitor and protect Kentucky's water resources.</p>
+          <p>Thank you for joining Kentucky Watershed Watch as a volunteer water sampler. We're excited to have you as part of our community of dedicated volunteers working to monitor and protect Kentucky's water resources.</p>
           
           <div style="margin: 30px 0;">
             <h3 style="color: #4CAF50;">Getting Started</h3>

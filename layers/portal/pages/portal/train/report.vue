@@ -50,13 +50,16 @@
         <!-- Pending Invites Card -->
         <UCard>
           <template #header>
-            <div class="flex justify-between items-center">
-              <h2 class="text-lg font-semibold">Pending Invites</h2>
-              <UInput
-                v-model="inviteSearch"
-                placeholder="Search invites..."
-                class="w-64"
-              />
+            <div class="flex justify-between items-center gap-4">
+              <h2 class="text-lg font-semibold flex-shrink-0">Pending Invites</h2>
+              <div class="relative flex-grow max-w-64">
+                <UInput
+                  v-model="inviteSearch"
+                  icon="i-heroicons-magnifying-glass"
+                  placeholder="Search invites..."
+                  class="w-full"
+                />
+              </div>
             </div>
           </template>
 
@@ -78,13 +81,16 @@
         <!-- Registered Users Card -->
         <UCard class="mt-6">
           <template #header>
-            <div class="flex justify-between items-center">
-              <h2 class="text-lg font-semibold">Registered Users</h2>
-              <UInput
-                v-model="userSearch"
-                placeholder="Search users..."
-                class="w-64"
-              />
+            <div class="flex justify-between items-center gap-4">
+              <h2 class="text-lg font-semibold flex-shrink-0">Registered Users</h2>
+              <div class="relative flex-grow max-w-64">
+                <UInput
+                  v-model="userSearch"
+                  icon="i-heroicons-magnifying-glass"
+                  placeholder="Search users..."
+                  class="w-full"
+                />
+              </div>
             </div>
           </template>
 
@@ -98,13 +104,13 @@
           </UTable>
         </UCard>
 
-        <!-- No Data States -->
-        <div v-if="!loading && filteredInvites.length === 0" class="text-center text-gray-500 my-4">
-          No pending invites found.
-        </div>
-        <div v-if="!loading && filteredUsers.length === 0" class="text-center text-gray-500 my-4">
-          No registered users found.
-        </div>
+      <!-- No Data States -->
+      <div v-if="!loading && filteredInvites.length === 0" class="text-center text-gray-500 my-4">
+        {{ inviteSearch ? 'No matching invites found.' : 'No pending invites found.' }}
+      </div>
+      <div v-if="!loading && filteredUsers.length === 0" class="text-center text-gray-500 my-4">
+        {{ userSearch ? 'No matching users found.' : 'No registered users found.' }}
+      </div>
       </template>
     </div>
   </div>
@@ -113,7 +119,8 @@
 <script setup>
 const loading = ref(true);
 const error = ref(null);
-const search = ref('');
+const inviteSearch = ref('');
+const userSearch = ref('');
 const invites = ref([]);
 const registeredUsers = ref([]);
 
@@ -158,20 +165,20 @@ const stats = computed(() => ({
 
 // Filtering
 const filteredInvites = computed(() => {
-  if (!search.value) return invites.value;
-  const searchTerm = search.value.toLowerCase();
+  if (!inviteSearch.value) return invites.value;
+  const searchTerm = inviteSearch.value.toLowerCase();
   return invites.value.filter(invite => 
     invite.email.toLowerCase().includes(searchTerm) ||
-    invite.training_location.toLowerCase().includes(searchTerm)
+    invite.training_location?.toLowerCase().includes(searchTerm)
   );
 });
 
 const filteredUsers = computed(() => {
-  if (!search.value) return registeredUsers.value;
-  const searchTerm = search.value.toLowerCase();
+  if (!userSearch.value) return registeredUsers.value;
+  const searchTerm = userSearch.value.toLowerCase();
   return registeredUsers.value.filter(user => 
     user.email.toLowerCase().includes(searchTerm) ||
-    user.display_name.toLowerCase().includes(searchTerm)
+    `${user.first_name} ${user.last_name}`.toLowerCase().includes(searchTerm)
   );
 });
 
