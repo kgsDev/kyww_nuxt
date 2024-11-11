@@ -54,7 +54,6 @@
               <h2 class="text-lg font-semibold">Pending Invites</h2>
               <UInput
                 v-model="inviteSearch"
-                icon="i-heroicons-magnifying-glass"
                 placeholder="Search invites..."
                 class="w-64"
               />
@@ -83,7 +82,6 @@
               <h2 class="text-lg font-semibold">Registered Users</h2>
               <UInput
                 v-model="userSearch"
-                icon="i-heroicons-magnifying-glass"
                 placeholder="Search users..."
                 class="w-64"
               />
@@ -203,45 +201,51 @@ onMounted(async () => {
       status: invite.invite_token ? 'pending' : 'completed'
     }));
 
-    // Pass trainer ID in query
+    // Get users data
     const { data: reportData } = await useFetch('/api/trainer-report', {
       query: {
         trainerId: user.value.id
       }
     });
 
-    if (!reportData.value?.users) {
-      throw new Error('Failed to fetch users');
+    // Initialize empty array if no users found
+    if (!reportData.value?.users || reportData.value.users.length === 0) {
+      registeredUsers.value = [];
+      return; // Exit early if no users
     }
 
-    // Fetch sampler data for these users
+    // Only fetch sampler data if we have users
     const userIds = reportData.value.users.map(user => user.id);
-    const samplerDataResponse = await useDirectus(readItems('sampler_data', {
-      filter: {
-        user_id: { _in: userIds }
-      },
-      fields: [
-        'user_id',
-        'original_training_date',
-        'training_location_original',
-        'training_date_latest',
-        'training_location_latest'
-      ]
-    }));
+    if (userIds.length > 0) {
+      const samplerDataResponse = await useDirectus(readItems('sampler_data', {
+        filter: {
+          user_id: { _in: userIds }
+        },
+        fields: [
+          'user_id',
+          'original_training_date',
+          'training_location_original',
+          'training_date_latest',
+          'training_location_latest'
+        ]
+      }));
 
-    // Combine user data with sampler data
-    registeredUsers.value = reportData.value.users.map(user => {
-      const samplerInfo = samplerDataResponse.find(s => s.user_id === user.id) || {};
-      return {
-        id: user.id,
-        email: user.email,
-        first_name: user.first_name,
-        last_name: user.last_name,
-        display_name: user.display_name || `${user.first_name} ${user.last_name}`,
-        training_date: samplerInfo.original_training_date || samplerInfo.training_date_latest,
-        training_location: samplerInfo.training_location_original || samplerInfo.training_location_latest
-      };
-    });
+      // Combine user data with sampler data
+      registeredUsers.value = reportData.value.users.map(user => {
+        const samplerInfo = samplerDataResponse.find(s => s.user_id === user.id) || {};
+        return {
+          id: user.id,
+          email: user.email,
+          first_name: user.first_name,
+          last_name: user.last_name,
+          display_name: user.display_name || `${user.first_name} ${user.last_name}`,
+          training_date: samplerInfo.original_training_date || samplerInfo.training_date_latest,
+          training_location: samplerInfo.training_location_original || samplerInfo.training_location_latest
+        };
+      });
+    } else {
+      registeredUsers.value = [];
+    }
 
   } catch (err) {
     error.value = 'Failed to load training data';

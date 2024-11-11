@@ -1,7 +1,4 @@
 <script setup lang="ts">
-console.log('Current route:', useRoute().path);
-console.log('Auth state:', useDirectusAuth());
-
 function useGreetings() {
   type Message = string;
 
@@ -54,8 +51,6 @@ const formatDate = (date) => {
 
 // Fetch user's sampling data
 onMounted(async () => {
-  console.log('Component mounted, user:', user.value);
-  console.log('Current route:', window.location.pathname);
   try {
     if (user.value?.id) {
       // Get user's samples - make sure we're using the complete API path

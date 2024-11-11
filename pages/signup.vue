@@ -5,8 +5,27 @@
         <img class="logo" src="~/assets/KyWW_logo.png" alt="KyWW Logo" />
       </div>
       <LoadingOverlay :isLoading="isLoading" />
-      <p v-if="message" v-html="message" class="message"></p>
 
+      <!-- Place messages here -->
+      <div 
+        v-if="message && !apiError" 
+        v-html="message" 
+        class="message success-message"
+      ></div>
+
+      <div 
+        v-if="apiError" 
+        id="error-message"
+        class="message error-message"
+      >
+        <div class="flex items-center">
+          <UIcon 
+            name="i-heroicons-exclamation-circle"
+            class="h-5 w-5 text-red-500 mr-2"
+          />
+          <span v-html="apiError"></span>
+        </div>
+      </div>
 
       <form ref="signupForm" v-if="showForm" @submit.prevent="onSubmit">
         <h2>Welcome to Kentucky Watershed Watch!</h2>
@@ -228,7 +247,6 @@
         </div>
 
           <!-- Submit Button -->
-        <p v-if="message_submit" v-html="message_submit" class="message"></p>
         <button
           type="submit"
           class="submit-button g-recaptcha"
@@ -239,6 +257,7 @@
           Sign Up
         </button>
       </form>
+
       <!-- Empty div specifically for reCAPTCHA -->
       <div ref="recaptchaContainer"></div>
     </div>
@@ -253,6 +272,7 @@
     ssr: false  // Add this to prevent SSR issues
   });
 
+  const apiError = ref('');
   const isLoading = ref(true);
   const config = useRuntimeConfig();
   const route = useRoute();
@@ -261,7 +281,6 @@
   // Form data refs
   const showForm = ref(false);
   const message = ref('');
-  const message_submit = ref('');
   const firstName = ref('');
   const lastName = ref('');
   const email = ref('');
@@ -565,7 +584,11 @@
     validatePasswordMatch();
 
     if (emailMessage.value || phoneMessage.value || passwordMessage.value || passwordMatchMessage.value) {
-      message_submit.value = 'Please fix validation errors before submitting.';
+      apiError.value = 'Please fix all validation errors before submitting.';
+      // Scroll to error message
+      nextTick(() => {
+        document.getElementById('error-message')?.scrollIntoView({ behavior: 'smooth' });
+      });
       return;
     }
 
@@ -579,13 +602,14 @@
   // reCAPTCHA response handler
   const handleReCaptchaResponse = async (captchaToken) => {
     try {
-      const fullAddress = `${address.value.street}, ${address.value.city}, ${address.value.state} ${address.value.zip}`.trim();
+    apiError.value = ''; // Clear any previous errors
+    const fullAddress = `${address.value.street}, ${address.value.city}, ${address.value.state} ${address.value.zip}`.trim();
 
-      const { data, error } = await useFetch('/api/signup', {
-        method: 'POST',
-        body: {
-          captchaToken,
-          token,
+    const { data, error } = await useFetch('/api/signup', {
+      method: 'POST',
+      body: {
+        captchaToken,
+        token,
           firstName: firstName.value,
           lastName: lastName.value,
           email: email.value,
@@ -626,42 +650,45 @@
         console.error('API error:', error.value);
         
         if (error.value.statusCode === 409) {
-          message_submit.value = 'An account with this email already exists. You can reset your password at the login page if needed.';
-          setTimeout(() => {
-            navigateTo('/auth/signin');
-          }, 3000);
+          apiError.value = 'An account with this email already exists. You can reset your password at the login page if needed.';
           return;
         }
-        
+
         switch(error.value.statusCode) {
           case 400:
-            message_submit.value = 'Please check your form entries and try again.';
+            apiError.value = 'Please check your form entries and try again.';
             break;
           case 401:
-            message_submit.value = 'Your session has expired. Please refresh the page and try again.';
+            apiError.value = 'Your session has expired. Please refresh the page and try again.';
             break;
           case 403:
-            message_submit.value = 'You do not have permission to perform this action.';
+            apiError.value = 'You do not have permission to perform this action.';
             break;
           case 500:
-            message_submit.value = 'A server error occurred. Please try again later.';
+            apiError.value = 'A server error occurred. Please try again later.';
             break;
           default:
-            message_submit.value = error.value.data?.message || 'An unexpected error occurred. Please try again.';
+            apiError.value = error.value.data?.message || 'An unexpected error occurred. Please try again.';
         }
-      } else if (data.value?.message) {
-        showForm.value = false;
-        message.value = data.value.message;
-        setTimeout(() => {
-          window.location.href = 'https://kyww.uky.edu';
-        }, 2000);
-      } else {
-        console.error('Unexpected response format:', data);
-        message_submit.value = 'An unexpected error occurred during signup.';
-      }
+        // Scroll to error message
+        nextTick(() => {
+            document.getElementById('error-message')?.scrollIntoView({ behavior: 'smooth' });
+          });
+        } else if (data.value?.message) {
+          showForm.value = false;
+          message.value = data.value.message;
+          setTimeout(() => {
+            window.location.href = '/auth/signin'; // Change to signin page
+          }, 2000); // Give them 2 seconds to see success message
+        }
     } catch (err) {
       console.error('Fetch failed:', err);
-      message_submit.value = 'Failed to reach server. Please try again later.';
+      apiError.value = 'Failed to reach server. Please try again later.';
+      
+      // Scroll to error message
+      nextTick(() => {
+        document.getElementById('error-message')?.scrollIntoView({ behavior: 'smooth' });
+      });
     }
   };
 
@@ -703,8 +730,10 @@
       if (response.status === 404) {
         message.value = 'Invalid or expired signup link. Please check your email for the correct link. You can also ask your coordinator to resend the invite.<br><br>You may also already have a login. If you have forgotten your password, you can reset it at the login page: <a href="https://kyww.uky.edu">kyww.uky.edu</a>.';
         showForm.value = false;
+        isLoading.value = false;
         return;
       } else if (!response.ok) {
+        isLoading.value = false;
         throw new Error(`Error: ${response.statusText}`);
       }
 
@@ -724,6 +753,7 @@
     } catch (error) {
       console.error('Error during invite lookup:', error);
       message.value = 'An error occurred while checking your signup link. Please try again later.';
+      isLoading.value = false;
       showForm.value = false;
     }
 
@@ -917,5 +947,24 @@
     display: grid;
     grid-template-columns: 2fr 1fr 1fr;
     gap: 1rem;
+  }
+
+  .message {
+    margin: 1rem 0;
+    padding: 1rem;
+    border-radius: 0.375rem;
+    text-align: left;
+  }
+
+  .success-message {
+    background-color: #F0FDF4;
+    border: 1px solid #86EFAC;
+    color: #166534;
+  }
+
+  .error-message {
+    background-color: #FEF2F2;
+    border: 1px solid #FCA5A5;
+    color: #B91C1C;
   }
   </style>

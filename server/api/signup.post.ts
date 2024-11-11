@@ -146,15 +146,17 @@ export default eventHandler(async (event) => {
       return respondWithJSON({ message: 'Internal error during token validation' }, 500);
     }
 
+    // Create user and sampler data
     let userId;
     try {
+      // First prepare both request bodies
       const userRequestBody = {
         email,
         password,
         first_name: firstName,
         last_name: lastName,
         display_name: `${firstName} ${lastName}`,
-        phone: phone || null,  // Ensure phone is explicitly set
+        phone: phone || null,
         county_residence,
         mailing_address,
         street: address?.street || null,
@@ -162,12 +164,47 @@ export default eventHandler(async (event) => {
         state: address?.state || null,
         zip: address?.zip || null,
         hub_id: desiredHub,
-        trainer_id: trainer_id || inviteData.data[0].trainer_id, // Get from invite if not in request
-        trainer_name: trainer_name || inviteData.data[0].trainer_name, // Get from invite if not in request
+        trainer_id: trainer_id || inviteData.data[0].trainer_id,
+        trainer_name: trainer_name || inviteData.data[0].trainer_name,
         role: config.public.SAMPLER_ROLE_ID,
         isSampler: true,
       };
 
+      const samplerDataBody = {
+        status: 'active',  // required field
+        user_id: null, // Will be set after user creation
+        last_name: lastName,
+        original_training_date: originalTrainingDate,
+        training_date_latest: trainingDateLatest,
+        hub_id: desiredHub,
+        kitOption,
+        training_location_original: trainingLocation,
+        training_location_latest: trainingLocation,
+        training_field_chemistry,
+        training_r_card,
+        training_habitat,
+        training_biological,
+        equip_ph,
+        equip_do,
+        equip_cond,
+        equip_thermo,
+        equip_waste,
+        equip_pan,
+        equip_flip,
+        equip_incubator,
+      };
+
+      // Only add expiration dates if they're set
+      if (DO_expire && DO_expire.trim() !== '') {
+        samplerDataBody.DO_expire = DO_expire;
+      }
+      if (PH_expire && PH_expire.trim() !== '') {
+        samplerDataBody.PH_expire = PH_expire;
+      }
+
+      //console.log('Creating user with:', userRequestBody);
+      
+      // Create user
       const userResponse = await fetch(`${config.public.DIRECTUS_URL}/users`, {
         method: 'POST',
         headers: {
@@ -185,58 +222,62 @@ export default eventHandler(async (event) => {
 
       const userData = await userResponse.json();
       userId = userData.data.id;
-    } catch (error) {
-      console.error('User creation error:', error);
-      return respondWithJSON(createErrorResponse(
-        'Unable to create your account. Please try again later.',
-        'USER_CREATION_FAILED',
-        500
-      ));
-    }
 
-    // Populate `sampler_data` with sampler-specific information
-    try {
+      // Update sampler data body with user ID
+      samplerDataBody.user_id = userId;
+      
+      //console.log('Creating sampler data with:', samplerDataBody);
+
+      // Create sampler data
       const samplerDataResponse = await fetch(`${config.public.DIRECTUS_URL}/items/sampler_data`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${config.DIRECTUS_SERVER_TOKEN}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          user_id: userId,
-          last_name: lastName,
-          original_training_date: originalTrainingDate,
-          training_date_latest: trainingDateLatest,
-          hub_id: desiredHub,
-          kitOption,
-          training_location_original: trainingLocation,
-          training_location_latest: trainingLocation,
-          training_field_chemistry,
-          training_r_card,
-          training_habitat,
-          training_biological,
-          equip_ph,
-          equip_do,
-          equip_cond,
-          equip_thermo,
-          equip_waste,
-          equip_pan,
-          equip_flip,
-          equip_incubator,
-          DO_expire,
-          PH_expire,
-        }),
+        body: JSON.stringify(samplerDataBody),
       });
 
-      if (!samplerDataResponse.ok) throw new Error('Failed to create sampler data');
+      if (!samplerDataResponse.ok) {
+        const errorText = await samplerDataResponse.text();
+        console.error('Sampler data creation failed:', {
+          status: samplerDataResponse.status,
+          statusText: samplerDataResponse.statusText,
+          body: errorText
+        });
+
+        // Cleanup: delete the user since sampler data failed
+        console.log('Cleaning up user due to sampler data creation failure');
+        const deleteResponse = await fetch(`${config.public.DIRECTUS_URL}/users/${userId}`, {
+          method: 'DELETE',
+          headers: {
+            Authorization: `Bearer ${config.DIRECTUS_SERVER_TOKEN}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!deleteResponse.ok) {
+          console.error('Failed to clean up user after sampler data error:', await deleteResponse.text());
+        }
+
+        throw new Error(`Failed to create sampler data: ${errorText}`);
+      }
+
     } catch (error) {
-      console.error('Sampler data creation error:', error);
-      return respondWithJSON({ message: 'Failed to create sampler data' }, 500);
+      console.error('User/Sampler creation error:', error);
+      return respondWithJSON(createErrorResponse(
+        'Unable to complete registration. Please try again or contact support.',
+        'REGISTRATION_FAILED',
+        500
+      ));
     }
 
-    // Delete the invite after successful signup
+
+    // 5. Delete the invite
     try {
+      console.log('Starting invite deletion for token:', token);
       const inviteId = inviteData.data[0].id;
+      
       const deleteInviteResponse = await fetch(`${config.public.DIRECTUS_URL}/items/user_invites/${inviteId}`, {
         method: 'DELETE',
         headers: {
@@ -244,11 +285,19 @@ export default eventHandler(async (event) => {
           'Content-Type': 'application/json',
         },
       });
-      if (!deleteInviteResponse.ok) throw new Error('Failed to delete invite');
+
+      if (!deleteInviteResponse.ok) {
+        throw new Error(`Failed to delete invite: ${await deleteInviteResponse.text()}`);
+      }
     } catch (error) {
-      console.error('Error deleting invite:', error);
-      return respondWithJSON({ message: 'Internal error during invite deletion' }, 500);
+      console.error('Failed to delete invite:', error);
+      // We've created the user and sampler data, but couldn't delete the invite
+      // We might want to handle this differently
+      return respondWithJSON({ 
+        message: 'Account created but there was an issue completing the process. Please contact support.' 
+      }, 500);
     }
+
 
     // Send a welcome email to the new user
     try {
