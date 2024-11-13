@@ -1,28 +1,20 @@
 <script setup lang="ts">
-function useGreetings() {
-  type Message = string;
+import { useGreetings } from '~/composables/useGreetings';
 
-  const messages: Message[] = [
-    'We appreciate your sampling efforts and data contributions.',
-  ];
+const { getTodaysMessage, loading: messagesLoading, error: messagesError, messages: greetingMessages } = useGreetings();
 
-  function getTodaysMessage(): Message {
-    const now = new Date();
-    const start = new Date(now.getFullYear(), 0, 0);
-    const difference = now.getTime() - start.getTime();
-    const oneDay = 1000 * 60 * 60 * 24;
-    const dayOfYear = Math.floor(difference / oneDay);
-    const messageIndex = dayOfYear % messages.length;
+// Separate evergreen and dated messages
+const evergreenMessage = computed(() => {
+  if (!greetingMessages.value) return null;
+  return greetingMessages.value.find(msg => !msg.start_date && !msg.end_date);
+});
 
-    return messages[messageIndex];
-  }
+const timedMessages = computed(() => {
+  if (!greetingMessages.value) return [];
+  return greetingMessages.value.filter(msg => msg.start_date || msg.end_date);
+});
 
-  return {
-    getTodaysMessage,
-  };
-}
 
-const { getTodaysMessage } = useGreetings();
 const { user } = useDirectusAuth();
 
 // Add sampling stats functionality
@@ -120,8 +112,36 @@ onMounted(async () => {
 <template>
   <PageContainer>
     <img class="w-48 ml-auto mr-0" src="~/assets/KyWW_logo.png" />
+    <!-- Handle loading and error states for messages -->
     <TypographyTitle class="normal-case">{{ greetUser() }} {{ user?.first_name ?? 'friend' }},</TypographyTitle>
-    <TypographyHeadline :content="getTodaysMessage()" size="xl" />
+    
+    <!-- Handle loading and error states for messages -->
+    <div v-if="messagesLoading" class="animate-pulse">
+      <div class="h-6 w-3/4 bg-gray-200 rounded"></div>
+    </div>
+    <UAlert
+      v-else-if="messagesError"
+      type="error"
+      :title="messagesError"
+      icon="i-heroicons-exclamation-triangle"
+    />
+    <div v-else class="space-y-4">
+      <!-- Evergreen Message -->
+      <div v-if="evergreenMessage" class="text-xl font-medium text-gray-700">
+        {{ evergreenMessage.message }}
+      </div>
+      
+      <!-- Timed Messages -->
+      <div v-if="timedMessages.length > 0" class="ml-4 space-y-2">
+        <div 
+          v-for="message in timedMessages" 
+          :key="message.id"
+          class="text-lg text-gray-600 border-l-4 border-blue-500 pl-4"
+        >
+          {{ message.message }}
+        </div>
+      </div>
+    </div>
     <VDivider class="my-8" />
     
     <div class="grid w-full grid-cols-1 gap-6 md:grid-cols-2">

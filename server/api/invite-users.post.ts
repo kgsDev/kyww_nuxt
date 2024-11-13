@@ -68,6 +68,24 @@ setImmediate(async () => {
         }
       }
 
+      const inviteBody = {
+        email,
+        training_location,
+        trainer_id,
+        trainer_name,
+        training_field_chemistry,
+        training_r_card,
+        training_habitat,
+        training_biological,
+        invite_token: token,
+        invite_sent_at: new Date().toISOString(),
+      }
+
+      // Only add training date if they're set
+      if (training_date && training_date.trim() !== '') {
+        inviteBody.training_date = training_date;
+      }
+
       // Create new invite
       const inviteResponse = await fetch(`${config.public.DIRECTUS_URL}/items/user_invites`, {
         method: 'POST',
@@ -75,19 +93,7 @@ setImmediate(async () => {
           Authorization: `Bearer ${config.DIRECTUS_SERVER_TOKEN}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          email,
-          training_date,
-          training_location,
-          trainer_id,
-          trainer_name,
-          training_field_chemistry,
-          training_r_card,
-          training_habitat,
-          training_biological,
-          invite_token: token,
-          invite_sent_at: new Date().toISOString(),
-        }),
+        body: JSON.stringify(inviteBody),
       });
 
       if (!inviteResponse.ok) {

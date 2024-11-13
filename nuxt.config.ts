@@ -6,10 +6,31 @@ export default defineNuxtConfig({
 		port: 3001,       // Ensure this matches your Nginx proxy configuration
 		host: '0.0.0.0',  // Ensure it's accessible externally
 	},
+
+	// Add Vite config for development
 	devServer: process.env.NODE_ENV === 'development' ? {
-		port: 3000,
-		host: '0.0.0.0',
-	} : {},
+        port: 3000,
+        host: '0.0.0.0',
+    } : {},
+
+    vite: {
+        define: {
+            'process.env.DEBUG': 'false'
+        },
+        server: {
+            hmr: process.env.NODE_ENV === 'development' ? {
+                clientPort: 3000,
+                port: 3000,
+                protocol: 'ws',
+                host: '0.0.0.0',
+                overlay: false
+            } : false
+        }
+    },
+
+	//for development:
+    //devtools: { enabled: true },
+    //debug: process.env.NODE_ENV === 'development',
 
 	extends: [
 		'./layers/portal', // Client portal module
@@ -83,27 +104,39 @@ export default defineNuxtConfig({
 	},
 
 	nitro: {
-		routeRules: {
-		  '/api/**': {
-			cors: true,
-			credentials: true
-		  },
-		  '/': { redirect: '/auth/signin' },
-		  '/auth': { redirect: '/auth/signin' },
-		  '/reset-password': { ssr: false },
-		  '/request-password': { ssr: false },
-		  '/signup': { ssr: false },
-		  '/projects': { ssr: false },
-		  '/data': { ssr: false },
-		}
-	  },
+        routeRules: {
+            '/api/**': {
+                cors: true,
+                credentials: true
+            },
+            '/': { redirect: '/auth/signin' },
+            '/auth': { redirect: '/auth/signin' },
+            '/reset-password': { ssr: false },
+            '/request-password': { ssr: false },
+            '/signup': { ssr: false },
+            '/projects': { ssr: false },
+            '/data': { ssr: false }
+        },
+        // Add development proxy for Directus
+        devProxy: process.env.NODE_ENV === 'development' ? {
+            '/backend': {
+				target: 'http://localhost:8057',
+				changeOrigin: true,
+				pathRewrite: { '^/backend': '' }
+			}
+        } : {}
+    },
 
 	// Directus Configuration
 	directus: {
 		rest: {
-			baseUrl: process.env.DIRECTUS_URL || 'https://kyww.uky.edu/backend',
-			nuxtBaseUrl: process.env.NUXT_PUBLIC_SITE_URL || 'https://kyww.uky.edu',
-		},
+            baseUrl: process.env.NODE_ENV === 'development' 
+                ? 'http://localhost:8057'
+                : (process.env.DIRECTUS_URL || 'https://kyww.uky.edu/backend'),
+            nuxtBaseUrl: process.env.NODE_ENV === 'development'
+                ? 'http://localhost:3000'
+                : (process.env.NUXT_PUBLIC_SITE_URL || 'https://kyww.uky.edu'),
+        },
 		auth: {
 			enabled: true,
 			enableGlobalAuthMiddleware: false, // Enable auth middleware on every page

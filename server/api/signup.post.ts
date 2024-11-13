@@ -174,8 +174,6 @@ export default eventHandler(async (event) => {
         status: 'active',  // required field
         user_id: null, // Will be set after user creation
         last_name: lastName,
-        original_training_date: originalTrainingDate,
-        training_date_latest: trainingDateLatest,
         hub_id: desiredHub,
         kitOption,
         training_location_original: trainingLocation,
@@ -193,6 +191,15 @@ export default eventHandler(async (event) => {
         equip_flip,
         equip_incubator,
       };
+
+      //only add dates if set
+      if (originalTrainingDate && originalTrainingDate.trim() !== '') {
+        original_training_date = originalTrainingDate;
+      }
+
+      if (trainingDateLatest && trainingDateLatest.trim() !== '') {
+        training_date_latest = trainingDateLatest;
+      }
 
       // Only add expiration dates if they're set
       if (DO_expire && DO_expire.trim() !== '') {

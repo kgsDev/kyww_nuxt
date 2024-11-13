@@ -50,7 +50,7 @@ const sidebarNavigation = {
       ? [{ name: 'New Hub', href: '/portal/hub', icon: 'material-symbols:hub-outline' }] 
       : []
     ),
-    ...(user_role == roles.sampler || user_role == roles.admin || user_role == roles.trainer || user_role == roles.basin_lead 
+    ...(user_role == roles.admin || user_role == roles.trainer || user_role == roles.basin_lead 
       ? [{ name: 'Stream Sample', href: '/portal/sample', icon: 'mdi:eyedropper' }] 
       : []
     ),

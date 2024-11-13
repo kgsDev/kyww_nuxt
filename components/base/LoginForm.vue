@@ -67,9 +67,11 @@
   </template>
   
   <script setup>
-  const { login } = useDirectusAuth();
-  const loading = ref(false);
-  const error = ref(null);
+const { login } = useDirectusAuth();
+const loading = ref(false);
+const error = ref(false);
+const config = useRuntimeConfig();
+const isDev = process.env.NODE_ENV === 'development';
   
   const credentials = reactive({
 	email: '',
@@ -82,54 +84,61 @@
 	const { email, password } = unref(credentials);
 	
 	try {
-	  loading.value = true;
-	  error.value = null;
-  
-	  // Verify CAPTCHA token
-	  const captchaVerification = await $fetch('/api/verify-captcha', {
-		method: 'POST',
-		body: { token }
-	  });
-  
-	  if (!captchaVerification.success) {
-		throw new Error('Security verification failed. Please try again.');
-	  }
-  
-	  // If CAPTCHA passes, attempt login
-	  await login(email, password);
+		loading.value = true;
+		error.value = null;
+
+		// Skip CAPTCHA verification in development
+		if (!isDev) {
+		const captchaVerification = await $fetch('/api/verify-captcha', {
+			method: 'POST',
+			body: { token }
+		});
+
+		if (!captchaVerification.success) {
+			throw new Error('Security verification failed. Please try again.');
+		}
+		}
+
+		// Attempt login
+		await login(email, password);
 	} catch (err) {
-	  error.value = err.message;
-	  // Reset reCAPTCHA on error
-	  if (window.grecaptcha) {
+		console.error('Login error:', err); // Add debugging
+		error.value = err.message;
+		if (window.grecaptcha && !isDev) {
 		grecaptcha.reset();
-	  }
+		}
 	} finally {
-	  loading.value = false;
+		loading.value = false;
 	}
-  };
+};
   
   // Handle form submission
   const onSubmit = async () => {
-	if (!credentials.email || !credentials.password) return;
-	
-	// Execute reCAPTCHA
-	if (typeof grecaptcha !== 'undefined') {
-	  grecaptcha.execute();
-	} else {
-	  error.value = 'Security check failed to load. Please refresh the page.';
-	}
-  };
+  if (!credentials.email || !credentials.password) return;
   
-  // Add reCAPTCHA script
-  useHead({
-	script: [
-	  {
-		src: 'https://www.google.com/recaptcha/api.js',
-		async: true,
-		defer: true
-	  }
-	]
-  });
+  if (isDev) {
+    // In development, skip reCAPTCHA and call callback directly
+    await onCaptchaSubmit('dev-mode');
+  } else {
+    // In production, use reCAPTCHA
+    if (typeof grecaptcha !== 'undefined') {
+      grecaptcha.execute();
+    } else {
+      error.value = 'Security check failed to load. Please refresh the page.';
+    }
+  }
+};
+
+// Only add reCAPTCHA script in production
+useHead({
+  script: !isDev ? [
+    {
+      src: 'https://www.google.com/recaptcha/api.js',
+      async: true,
+      defer: true
+    }
+  ] : []
+});
   </script>
   
   <style scoped>
