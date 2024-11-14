@@ -1,15 +1,14 @@
 <template>
 	<div v-auto-animate>
-	  <UAlert
-		v-if="error"
-		type="error"
-		class="mb-4"
-		title="Oops! Something went wrong."
-		:description="error"
-		color="rose"
-		variant="outline"
-		icon="material-symbols:warning-rounded"
-	  />
+		<UAlert
+			v-if="error"
+			type="error"
+			class="mb-4"
+			:title="error"
+			color="rose"
+			variant="soft"
+			icon="i-heroicons-exclamation-circle"
+		/>
   
 	  <form class="grid gap-4" @submit.prevent="onSubmit">
 		<UFormGroup label="Email" required>
@@ -24,15 +23,27 @@
 		  />
 		</UFormGroup>
 		<UFormGroup label="Password" required>
-		  <UInput
-			v-model="credentials.password"
-			type="password"
-			:disabled="loading"
-			size="lg"
-			name="password"
-			label="Password"
-			placeholder="Your Password"
-		  />
+		  <div class="relative">
+			<UInput
+			  v-model="credentials.password"
+			  :type="showPassword ? 'text' : 'password'"
+			  :disabled="loading"
+			  size="lg"
+			  name="password"
+			  label="Password"
+			  placeholder="Your Password"
+			/>
+			<button
+			  type="button"
+			  class="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600"
+			  @click="togglePassword"
+			>
+			  <UIcon
+				:name="showPassword ? 'i-heroicons-eye-slash' : 'i-heroicons-eye'"
+				class="w-5 h-5"
+			  />
+			</button>
+		  </div>
 		</UFormGroup>
 		
 		<!-- Forgot Password Link -->
@@ -66,18 +77,52 @@
 	</div>
   </template>
   
-  <script setup>
-const { login } = useDirectusAuth();
-const loading = ref(false);
-const error = ref(false);
-const config = useRuntimeConfig();
-const isDev = process.env.NODE_ENV === 'development';
-  
-  const credentials = reactive({
-	email: '',
-	password: '',
-  });
-  
+<script setup>
+	const { login } = useDirectusAuth();
+	const loading = ref(false);
+	const error = ref(false);
+	const isDev = process.env.NODE_ENV === 'development';
+	const showPassword = ref(false);
+	
+	const credentials = reactive({
+		email: '',
+		password: '',
+	});
+	
+	// Add toggle password function
+	const togglePassword = () => {
+	showPassword.value = !showPassword.value;
+	console.log('Password visibility:', showPassword.value); // Debug log
+	};
+
+	function getErrorMessage(error) {
+	// Check if it's an API error with status code
+	if (error.response?.status) {
+		switch (error.response.status) {
+		case 401:
+			return 'Invalid email or password. Please try again.';
+		case 429:
+			return 'Too many login attempts. Please try again later.';
+		case 503:
+			return 'Service is temporarily unavailable. Please try again later.';
+		default:
+			return 'Unable to sign in. Please try again.';
+		}
+	}
+
+	// Check for specific error messages from Directus
+	if (error.message?.toLowerCase().includes('credentials')) {
+		return 'Invalid email or password. Please try again.';
+	}
+
+	if (error.message?.toLowerCase().includes('network')) {
+		return 'Network error. Please check your connection and try again.';
+	}
+
+	// Default error message
+	return 'An error occurred while signing in. Please try again.';
+	}
+
   // Define the callback function for reCAPTCHA
   window.onCaptchaSubmit = async (token) => {
 	if (loading.value) return;
@@ -89,21 +134,21 @@ const isDev = process.env.NODE_ENV === 'development';
 
 		// Skip CAPTCHA verification in development
 		if (!isDev) {
-		const captchaVerification = await $fetch('/api/verify-captcha', {
-			method: 'POST',
-			body: { token }
-		});
+			const captchaVerification = await $fetch('/api/verify-captcha', {
+				method: 'POST',
+				body: { token }
+			});
 
-		if (!captchaVerification.success) {
-			throw new Error('Security verification failed. Please try again.');
-		}
+			if (!captchaVerification.success) {
+				throw new Error('Security verification failed. Please try again.');
+			}
 		}
 
 		// Attempt login
 		await login(email, password);
 	} catch (err) {
 		console.error('Login error:', err); // Add debugging
-		error.value = err.message;
+		error.value = getErrorMessage(err);
 		if (window.grecaptcha && !isDev) {
 		grecaptcha.reset();
 		}

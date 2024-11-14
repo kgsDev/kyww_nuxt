@@ -1,10 +1,11 @@
 // server/api/verify-captcha.post.ts
+import { getApiConfig } from '../utils/config';
 export default defineEventHandler(async (event) => {
   try {
     const body = await readBody(event);
     const token = body.token;
 
-    const config = useRuntimeConfig();
+    const config = getApiConfig();
     const secretKey = config.RECAPTCHA_SECRET_KEY;
 
 

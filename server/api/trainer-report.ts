@@ -1,5 +1,7 @@
+import { getApiConfig, getDirectusHeaders } from '../utils/config';
+
 export default defineEventHandler(async (event) => {
-    const config = useRuntimeConfig();
+    const config = getApiConfig();
     const { trainerId } = getQuery(event);
   
     if (!trainerId) {
@@ -12,12 +14,9 @@ export default defineEventHandler(async (event) => {
     try {
       // Get users managed by this trainer
       const usersResponse = await fetch(
-        `${config.public.DIRECTUS_URL}/users?filter[trainer_id][_eq]=${trainerId}`,
+        `${config.public.directusUrl}/users?filter[trainer_id][_eq]=${trainerId}`,
         {
-          headers: {
-            Authorization: `Bearer ${config.DIRECTUS_SERVER_TOKEN}`,
-            'Content-Type': 'application/json',
-          },
+          headers: getDirectusHeaders(config),
         }
       );
   

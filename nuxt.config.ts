@@ -1,6 +1,5 @@
 // import { formatFonts } from './utils/fonts';
 import { theme } from './theme';
-
 export default defineNuxtConfig({
 	server: {
 		port: 3001,       // Ensure this matches your Nginx proxy configuration
@@ -130,9 +129,12 @@ export default defineNuxtConfig({
 	// Directus Configuration
 	directus: {
 		rest: {
-            baseUrl: process.env.NODE_ENV === 'development' 
-                ? 'http://localhost:8057'
-                : (process.env.DIRECTUS_URL || 'https://kyww.uky.edu/backend'),
+			baseUrl: (() => {
+				const url = process.env.NODE_ENV === 'development'
+				  ? 'http://localhost:8057'
+				  : (process.env.DIRECTUS_URL || 'https://kyww.uky.edu/backend');
+				return url;
+			  })(),
             nuxtBaseUrl: process.env.NODE_ENV === 'development'
                 ? 'http://localhost:3000'
                 : (process.env.NUXT_PUBLIC_SITE_URL || 'https://kyww.uky.edu'),

@@ -742,6 +742,7 @@
       if (data && data.email) {
         showForm.value = true;
         email.value = data.email;
+        trainer_name.value = data.trainer_name;
         originalTrainingDate.value = data.training_date;
         trainingDateLatest.value = data.training_date;
         trainingLocation.value = data.training_location;

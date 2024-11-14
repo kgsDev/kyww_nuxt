@@ -1,7 +1,8 @@
 import sendgrid from '@sendgrid/mail';
+import { getApiConfig, getDirectusHeaders } from '../utils/config';
 import { readBody } from 'h3';
 
-const config = useRuntimeConfig();
+const config = getApiConfig();
 sendgrid.setApiKey(config.SENDGRID_API_KEY);
 
 export default eventHandler(async (event) => {
@@ -63,35 +64,37 @@ export default eventHandler(async (event) => {
     }
 
     // Verify CAPTCHA with Google
-    try {
-      const captchaVerify = await fetch(
-        `https://www.google.com/recaptcha/api/siteverify?secret=${config.RECAPTCHA_SECRET_KEY}&response=${captchaToken}`,
-        { method: 'POST' }
-      );
+    // Skip CAPTCHA verification in development
+		if (!config.isDev == 'development'){
+      try {
+        const captchaVerify = await fetch(
+          `https://www.google.com/recaptcha/api/siteverify?secret=${config.RECAPTCHA_SECRET_KEY}&response=${captchaToken}`,
+          { method: 'POST' }
+        );
 
-      if (!captchaVerify.ok) throw new Error('CAPTCHA verification request failed');
-      const captchaResult = await captchaVerify.json();
+        if (!captchaVerify.ok) throw new Error('CAPTCHA verification request failed');
+        const captchaResult = await captchaVerify.json();
 
-      if (!captchaResult.success) {
-        console.warn('CAPTCHA verification failed');
-        return respondWithJSON(createErrorResponse(
-          'Please verify that you are human and try again.',
-          'CAPTCHA_FAILED',
-          400
-        ));
+        if (!captchaResult.success) {
+          console.warn('CAPTCHA verification failed');
+          return respondWithJSON(createErrorResponse(
+            'Please verify that you are human and try again.',
+            'CAPTCHA_FAILED',
+            400
+          ));
+        }
+      } catch (error) {
+        console.error('CAPTCHA verification error:', error);
+        return respondWithJSON({ message: 'Internal CAPTCHA verification error' }, 500);
       }
-    } catch (error) {
-      console.error('CAPTCHA verification error:', error);
-      return respondWithJSON({ message: 'Internal CAPTCHA verification error' }, 500);
+    }else{
+      console.log('Skipping CAPTCHA verification in development');
     }
 
     // Check if the email already exists in Directus
     try {
-      const existingUserResponse = await fetch(`${config.public.DIRECTUS_URL}/users?filter[email][_eq]=${email}`, {
-        headers: {
-          Authorization: `Bearer ${config.DIRECTUS_SERVER_TOKEN}`,
-          'Content-Type': 'application/json',
-        },
+      const existingUserResponse = await fetch(`${config.public.directusUrl}/users?filter[email][_eq]=${email}`, {
+        headers: getDirectusHeaders(config),
       });
       
       if (!existingUserResponse.ok) {
@@ -124,11 +127,8 @@ export default eventHandler(async (event) => {
     // Validate token and fetch invite data
     let inviteData;
     try {
-      const inviteResponse = await fetch(`${config.public.DIRECTUS_URL}/items/user_invites?filter[invite_token][_eq]=${token}`, {
-        headers: {
-          Authorization: `Bearer ${config.DIRECTUS_SERVER_TOKEN}`,
-          'Content-Type': 'application/json',
-        },
+      const inviteResponse = await fetch(`${config.public.directusUrl}/items/user_invites?filter[invite_token][_eq]=${token}`, {
+        headers: getDirectusHeaders(config),
       });
       if (!inviteResponse.ok) throw new Error('Failed to validate invite token');
 
@@ -193,31 +193,27 @@ export default eventHandler(async (event) => {
       };
 
       //only add dates if set
-      if (originalTrainingDate && originalTrainingDate.trim() !== '') {
-        original_training_date = originalTrainingDate;
+      if (originalTrainingDate && originalTrainingDate.trim() !== '' && originalTrainingDate !== 'undefined' && originalTrainingDate !== 'N/A') {
+        samplerDataBody.original_training_date = originalTrainingDate;
       }
 
-      if (trainingDateLatest && trainingDateLatest.trim() !== '') {
-        training_date_latest = trainingDateLatest;
+      if (trainingDateLatest && trainingDateLatest.trim() !== '' && trainingDateLatest !== 'undefined' && trainingDateLatest !== 'N/A') {
+        samplerDataBody.training_date_latest = trainingDateLatest;
       }
 
       // Only add expiration dates if they're set
-      if (DO_expire && DO_expire.trim() !== '') {
+      if (DO_expire && DO_expire.trim() !== '' && DO_expire !== 'undefined' && DO_expire !== 'N/A') {
         samplerDataBody.DO_expire = DO_expire;
       }
-      if (PH_expire && PH_expire.trim() !== '') {
+      if (PH_expire && PH_expire.trim() !== '' && PH_expire !== 'undefined' && PH_expire !== 'N/A') {
         samplerDataBody.PH_expire = PH_expire;
       }
 
-      //console.log('Creating user with:', userRequestBody);
       
       // Create user
-      const userResponse = await fetch(`${config.public.DIRECTUS_URL}/users`, {
+      const userResponse = await fetch(`${config.public.directusUrl}/users`, {
         method: 'POST',
-        headers: {
-          Authorization: `Bearer ${config.DIRECTUS_SERVER_TOKEN}`,
-          'Content-Type': 'application/json',
-        },
+        headers: getDirectusHeaders(config),
         body: JSON.stringify(userRequestBody),
       });
 
@@ -236,12 +232,9 @@ export default eventHandler(async (event) => {
       //console.log('Creating sampler data with:', samplerDataBody);
 
       // Create sampler data
-      const samplerDataResponse = await fetch(`${config.public.DIRECTUS_URL}/items/sampler_data`, {
+      const samplerDataResponse = await fetch(`${config.public.directusUrl}/items/sampler_data`, {
         method: 'POST',
-        headers: {
-          Authorization: `Bearer ${config.DIRECTUS_SERVER_TOKEN}`,
-          'Content-Type': 'application/json',
-        },
+        headers: getDirectusHeaders(config),
         body: JSON.stringify(samplerDataBody),
       });
 
@@ -255,12 +248,9 @@ export default eventHandler(async (event) => {
 
         // Cleanup: delete the user since sampler data failed
         console.log('Cleaning up user due to sampler data creation failure');
-        const deleteResponse = await fetch(`${config.public.DIRECTUS_URL}/users/${userId}`, {
+        const deleteResponse = await fetch(`${config.public.directusUrl}/users/${userId}`, {
           method: 'DELETE',
-          headers: {
-            Authorization: `Bearer ${config.DIRECTUS_SERVER_TOKEN}`,
-            'Content-Type': 'application/json',
-          },
+          headers: getDirectusHeaders(config),
         });
 
         if (!deleteResponse.ok) {
@@ -285,12 +275,9 @@ export default eventHandler(async (event) => {
       console.log('Starting invite deletion for token:', token);
       const inviteId = inviteData.data[0].id;
       
-      const deleteInviteResponse = await fetch(`${config.public.DIRECTUS_URL}/items/user_invites/${inviteId}`, {
+      const deleteInviteResponse = await fetch(`${config.public.directusUrl}/items/user_invites/${inviteId}`, {
         method: 'DELETE',
-        headers: {
-          Authorization: `Bearer ${config.DIRECTUS_SERVER_TOKEN}`,
-          'Content-Type': 'application/json',
-        },
+        headers: getDirectusHeaders(config),
       });
 
       if (!deleteInviteResponse.ok) {

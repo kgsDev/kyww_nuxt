@@ -147,6 +147,14 @@ onMounted(async () => {
                 <p>{{ userData?.mailing_address || 'Not specified' }}</p>
               </div>
               <div>
+                <label class="text-sm text-gray-500">Phone</label>
+                <p>{{ formatPhoneNumber(userData?.phone) }}</p>
+              </div>
+              <div>
+                <label class="text-sm text-gray-500">County</label>
+                <p>{{ formatCounty(userData?.county_residence) }}</p>
+              </div>
+              <div>
                 <label class="text-sm text-gray-500">Account Status</label>
                 <p>
                   <UBadge
@@ -170,14 +178,6 @@ onMounted(async () => {
             <!-- Sampling Info - Only show if samplerData exists -->
             <div v-if="samplerData" class="space-y-4">
               <div>
-                <label class="text-sm text-gray-500">Phone</label>
-                <p>{{ formatPhoneNumber(userData?.phone) }}</p>
-              </div>
-              <div>
-                <label class="text-sm text-gray-500">County</label>
-                <p>{{ formatCounty(userData?.county_residence) }}</p>
-              </div>
-              <div>
                 <label class="text-sm text-gray-500">Support Hub</label>
                 <p v-if="samplerData.hub_id">
                   {{ samplerData.hub_id.Basin }} - {{ samplerData.hub_id.Description }}
@@ -189,8 +189,7 @@ onMounted(async () => {
                 <p>{{ samplerData.training_location_original || 'Not specified' }}</p>
               </div>
               <div>
-                <label class="text-sm text-gray-500">Latest Training Location</label>
-                <p>{{ samplerData.training_location_latest || 'Not specified' }}</p>
+                
               </div>
               <div>
                 <label class="text-sm text-gray-500">Original Training Date</label>
@@ -198,11 +197,7 @@ onMounted(async () => {
               </div>
               <div>
                 <label class="text-sm text-gray-500">Original Trainer</label>
-                <p>{{ formatDate(userData?.trainer_name) }}</p>
-              </div>
-              <div>
-                <label class="text-sm text-gray-500">Latest Training Date</label>
-                <p>{{ formatDate(samplerData.training_date_latest) }}</p>
+                <p>{{ userData?.trainer_name }}</p>
               </div>
             </div>
           </div>
@@ -212,6 +207,10 @@ onMounted(async () => {
         <UCard v-if="samplerData">
           <template #header>
             <h2 class="text-lg font-semibold">Training Status</h2>
+            <div class="text-s text-gray-500 mt-1">
+                <p>Latest Training Date: {{ formatDate(samplerData.training_date_latest) }}</p>
+                <p>Latest Training Location: {{ samplerData.training_location_latest || 'Not specified' }}</p>
+            </div>
           </template>
           
           <div class="grid grid-cols-2 md:grid-cols-4 gap-4">

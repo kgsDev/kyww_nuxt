@@ -1,26 +1,24 @@
 import { defineEventHandler, readBody, sendError } from 'h3';
+import { getApiConfig, getDirectusHeaders } from '../utils/config';
 
 export default defineEventHandler(async (event) => {
   try {
     const body = await readBody(event);
     const { token } = body;
-    const config = useRuntimeConfig();
+    const config = getApiConfig();
 
     if (!token) {
       console.warn('Token is missing in the request body');
       return { valid: false, error: 'Token is required' };
     }
 
-    const url = `${config.public.DIRECTUS_URL}/users?filter[reset_token][_eq]=${encodeURIComponent(token)}`;
+    const url = `${config.public.directusUrl}/users?filter[reset_token][_eq]=${encodeURIComponent(token)}`;
     console.log('Verifying token at URL:', url);
 
     // Check token in Directus
     const response = await fetch(url, {
       method: 'GET',
-      headers: {
-        Authorization: `Bearer ${config.DIRECTUS_SERVER_TOKEN}`,
-        'Content-Type': 'application/json',
-      },
+      headers: getDirectusHeaders(config),
     });
 
     if (!response.ok) {

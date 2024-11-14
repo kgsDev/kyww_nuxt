@@ -136,7 +136,7 @@ const mobileMenuOpen = ref(false);
 							<!-- Profile dropdown -->
 							<UDropdown class="relative" :items="userNavigation">
 								<button>
-									<span class="sr-only">Open user menu</span>
+									<span class="sr-only">Open user menus</span>
 									<UAvatar class="w-12 h-12 mx-auto" :src="user.avatar" :alt="userName(user)" />
 								</button>
 							</UDropdown>

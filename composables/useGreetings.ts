@@ -58,7 +58,6 @@ interface DashboardMessage {
         }));
         
         messages.value = fetchedMessages;
-        console.log('Fetched messages:', fetchedMessages); // Debug log
       } catch (err) {
         console.error('Error fetching dashboard messages:', err);
         error.value = 'Failed to load dashboard messages';

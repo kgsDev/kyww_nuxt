@@ -1,9 +1,10 @@
 // server/api/request-password.post.ts
 import { v4 as uuidv4 } from 'uuid';
 import sendgrid from '@sendgrid/mail';
-import { defineEventHandler, readBody, sendError } from 'h3';
+import { defineEventHandler, readBody } from 'h3';
+import { getApiConfig, getDirectusHeaders } from '../utils/config';
 
-const config = useRuntimeConfig();
+const config = getApiConfig();
 sendgrid.setApiKey(config.SENDGRID_API_KEY);
 
 export default defineEventHandler(async (event) => {
@@ -39,12 +40,9 @@ export default defineEventHandler(async (event) => {
 
     // Find user by email without revealing user existence
     const userResponse = await fetch(
-      `${config.public.DIRECTUS_URL}/users?filter[email][_eq]=${encodeURIComponent(email)}`,
+      `${config.public.directusUrl}/users?filter[email][_eq]=${encodeURIComponent(email)}`,
       {
-        headers: {
-          Authorization: `Bearer ${config.DIRECTUS_SERVER_TOKEN}`,
-          'Content-Type': 'application/json',
-        },
+        headers: getDirectusHeaders(config),
       }
     );
 
@@ -66,13 +64,10 @@ export default defineEventHandler(async (event) => {
 
     // Update user with reset token
     const updateResponse = await fetch(
-      `${config.public.DIRECTUS_URL}/users/${user.id}`,
+      `${config.public.directusUrl}/users/${user.id}`,
       {
         method: 'PATCH',
-        headers: {
-          Authorization: `Bearer ${config.DIRECTUS_SERVER_TOKEN}`,
-          'Content-Type': 'application/json',
-        },
+        headers: getDirectusHeaders(config),
         body: JSON.stringify({
           reset_token: resetToken,
           reset_token_expires: expiresAt.toISOString(),

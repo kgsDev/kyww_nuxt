@@ -1,10 +1,10 @@
 //This API page is for inviting users - sends off emails to users who have attended a training session
-
 import { v4 as uuidv4 } from 'uuid';
 import sendgrid from '@sendgrid/mail';
 import { readBody, send } from 'h3'; // Correct imports from h3
+import { getApiConfig, getDirectusHeaders } from '../utils/config';
 
-const config = useRuntimeConfig();
+const config = getApiConfig();
 sendgrid.setApiKey(config.SENDGRID_API_KEY);
 
 export default eventHandler(async (event) => {
@@ -34,13 +34,10 @@ setImmediate(async () => {
 
       // Check for existing invite
       const existingInviteResponse = await fetch(
-        `${config.public.DIRECTUS_URL}/items/user_invites?filter[email][_eq]=${email}`,
+        `${config.public.directusUrl}/items/user_invites?filter[email][_eq]=${email}`,
         {
           method: 'GET',
-          headers: {
-            Authorization: `Bearer ${config.DIRECTUS_SERVER_TOKEN}`,
-            'Content-Type': 'application/json',
-          },
+          headers: getDirectusHeaders(config),
         }
       );
 
@@ -52,13 +49,10 @@ setImmediate(async () => {
       if (existingInviteData.data?.length > 0) {
         for (const invite of existingInviteData.data) {
           const deleteResponse = await fetch(
-            `${config.public.DIRECTUS_URL}/items/user_invites/${invite.id}`,
+            `${config.public.directusUrl}/items/user_invites/${invite.id}`,
             {
               method: 'DELETE',
-              headers: {
-                Authorization: `Bearer ${config.DIRECTUS_SERVER_TOKEN}`,
-                'Content-Type': 'application/json',
-              },
+              headers: getDirectusHeaders(config),
             }
           );
 
@@ -87,12 +81,9 @@ setImmediate(async () => {
       }
 
       // Create new invite
-      const inviteResponse = await fetch(`${config.public.DIRECTUS_URL}/items/user_invites`, {
+      const inviteResponse = await fetch(`${config.public.directusUrl}/items/user_invites`, {
         method: 'POST',
-        headers: {
-          Authorization: `Bearer ${config.DIRECTUS_SERVER_TOKEN}`,
-          'Content-Type': 'application/json',
-        },
+        headers: getDirectusHeaders(config),
         body: JSON.stringify(inviteBody),
       });
 

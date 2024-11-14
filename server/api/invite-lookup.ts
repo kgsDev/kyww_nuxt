@@ -1,9 +1,10 @@
 import { setResponseStatus, send, readBody, sendError } from 'h3';
+import { getApiConfig, getDirectusHeaders } from '../utils/config';
 
 export default eventHandler(async (event) => {
   try {
     const { token } = await readBody(event);
-    const config = useRuntimeConfig();
+    const config = getApiConfig();
 
     if (!token) {
       console.warn('Token is missing in request body');
@@ -11,13 +12,11 @@ export default eventHandler(async (event) => {
       return send(event, JSON.stringify({ message: 'No user found', error: 'Token is required' }));
     }
 
-    // Query the user_invites table in Directus to find the invite with the token
-    const inviteResponse = await fetch(`${config.public.DIRECTUS_URL}/items/user_invites?filter[invite_token][_eq]=${encodeURIComponent(token)}`, {
-      headers: {
-        Authorization: `Bearer ${config.DIRECTUS_SERVER_TOKEN}`,
-        'Content-Type': 'application/json',
+    const inviteResponse = await fetch(`${config.public.directusUrl}/items/user_invites?filter[invite_token][_eq]=${encodeURIComponent(token)}`, 
+      {
+        headers: getDirectusHeaders(config),
       },
-    });
+    );
 
     if (!inviteResponse.ok) {
       const errorText = await inviteResponse.text();
@@ -41,6 +40,7 @@ export default eventHandler(async (event) => {
     // Construct the response data
     const responseData = {
       email: invite.email || 'N/A',
+      trainer_name: invite.trainer_name || 'N/A',
       training_date: invite.training_date || 'N/A',
       training_location: invite.training_location || 'N/A',
       training_field_chemistry: invite.training_field_chemistry || false,
