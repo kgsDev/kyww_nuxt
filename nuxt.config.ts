@@ -87,10 +87,14 @@ export default defineNuxtConfig({
 		RECAPTCHA_SECRET_KEY : process.env.RECAPTCHA_SECRET_KEY, //captcha - under dccurl2@g.uky.edu
 		DIRECTUS_SERVER_TOKEN: process.env.DIRECTUS_SERVER_TOKEN,
 		public: {
-			directusPublicUrl: process.env.DIRECTUS_PUBLIC_URL || 'https://kyww.uky.edu/backend',
+			directusPublicUrl: process.env.NODE_ENV === 'development'
+				? 'http://localhost:8057'
+				: (process.env.DIRECTUS_URL || 'https://kyww.uky.edu/backend'),
 			siteUrl: process.env.NUXT_PUBLIC_SITE_URL || 'https://kyww.uky.edu',
 			API_URL: process.env.API_URL || 'not set',
-			DIRECTUS_URL: process.env.DIRECTUS_URL || 'https://kyww.uky.edu/backend',
+			DIRECTUS_URL: process.env.NODE_ENV === 'development'
+				? 'http://localhost:8057'
+				: (process.env.DIRECTUS_URL || 'https://kyww.uky.edu/backend'),
 			TRAINER_ROLE_ID:process.env.TRAINER_ROLE_ID,
 			BASIN_LEAD_ROLE_ID:process.env.BASIN_LEAD_ROLE_ID,
 			SAMPLER_ROLE_ID:process.env.SAMPLER_ROLE_ID,

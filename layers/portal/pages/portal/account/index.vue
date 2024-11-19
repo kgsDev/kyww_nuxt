@@ -65,7 +65,7 @@ onMounted(async () => {
           user_id: { _eq: user.id }
         },
         fields: ['*', {
-          hub_id: ['id', 'Basin', 'Description']  // Include the fields you want from wwky_hubs
+          hub_id: ['hub_id', 'Basin', 'Description']  // Include the fields you want from wwky_hubs
         }],
         limit: 1
       }));

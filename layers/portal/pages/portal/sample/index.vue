@@ -14,7 +14,7 @@ const wwkybasin = ref('');
 
 const isConfirmationModalOpen = ref(false);
 
-// Update the confirmSubmission function
+// ConfirmSubmission function
 const confirmSubmission = () => {
   if (isFormValid.value) {
     isConfirmationModalOpen.value = true;

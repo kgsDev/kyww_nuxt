@@ -98,16 +98,24 @@ const renderHubPopupContent = (properties: any) => {
       <h3>Water Quality Hub</h3>
       <div class="hub-info-grid">
         <div class="hub-row">
-          <span class="info-label">Description:</span>
+          <span class="info-label">Name:</span>
           <span class="info-value">${properties.description || 'N/A'}</span>
+        </div>
+        <div class="hub-row">
+          <span class="info-label">Organization:</span>
+          <span class="info-value">${properties.organization || 'N/A'}</span>
         </div>
         <div class="hub-row">
           <span class="info-label">Basin:</span>
           <span class="info-value">${properties.basin || 'N/A'}</span>
         </div>
         <div class="hub-row">
-          <span class="info-label">Address:</span>
+          <span class="info-label">Physical Address:</span>
           <span class="info-value">${properties.address || 'N/A'}</span>
+        </div>
+        <div class="hub-row">
+          <span class="info-label">Mailing Address:</span>
+          <span class="info-value">${properties.mailing_address || 'N/A'}</span>
         </div>
         <div class="hub-row">
           <span class="info-label">Contact:</span>
@@ -299,10 +307,12 @@ const fetchHubs = async () => {
       features: response.map(hub => ({
         type: "Feature",
         properties: {
-          id: hub.id,
+          hub_id: hub.hub_id,
           description: hub.Description,
+          organization: hub.organization,
           basin: hub.Basin,
           address: hub.Full_Address,
+          mailing_address: hub.mailing_address,
           contact: hub.Contact_Person,
           phone: hub.Phone,
           email: hub.Email,

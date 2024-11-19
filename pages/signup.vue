@@ -240,7 +240,7 @@
           <label for="desiredHub">Support Hub location:</label>
           <select v-model="desiredHub" id="desiredHub" required>
             <option value="">Select a Support Hub</option>
-            <option v-for="hub in hubs" :key="hub.id" :value="hub.id">
+            <option v-for="hub in hubs" :key="hub.hub_id" :value="hub.hub_id">
               {{ hub.Basin }} - {{ hub.Description }}
             </option>
           </select>
