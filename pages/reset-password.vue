@@ -9,6 +9,8 @@ const confirmPassword = ref('');
 const message = ref('');
 const loading = ref(false);
 const tokenValid = ref(false);
+const showPassword = ref(false);
+const showConfirmPassword = ref(false);
 const validationErrors = ref({
   password: '',
   confirmPassword: ''
@@ -20,7 +22,7 @@ const passwordRequirements = {
   hasUpperCase: /[A-Z]/,
   hasLowerCase: /[a-z]/,
   hasNumber: /[0-9]/,
-  hasSpecialChar: /[!@#$%^&*(),.?":{}|<>]/
+  hasSpecialChar: /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?~` ]/
 };
 
 // composable to handle token verification
@@ -181,15 +183,25 @@ const onSubmit = async () => {
         <form v-else @submit.prevent="onSubmit">
           <div class="form-group">
             <label for="password">New Password</label>
-            <input
-              type="password"
-              id="password"
-              v-model="password"
-              @input="validatePassword"
-              :disabled="loading"
-              autocomplete="new-password"
-              required
-            />
+            <div class="password-input-container">
+              <input
+                :type="showPassword ? 'text' : 'password'"
+                id="password"
+                v-model="password"
+                @input="validatePassword"
+                :disabled="loading"
+                autocomplete="new-password"
+                required
+              />
+              <button 
+                type="button" 
+                class="toggle-password"
+                @click="showPassword = !showPassword"
+                :aria-label="showPassword ? 'Hide password' : 'Show password'"
+              >
+                {{ showPassword ? '👁️' : '👁️‍🗨️' }}
+              </button>
+            </div>
             <span v-if="validationErrors.password" class="error-message">
               {{ validationErrors.password }}
             </span>
@@ -197,15 +209,25 @@ const onSubmit = async () => {
 
           <div class="form-group">
             <label for="confirmPassword">Confirm Password</label>
-            <input
-              type="password"
-              id="confirmPassword"
-              v-model="confirmPassword"
-              @input="validateConfirmPassword"
-              :disabled="loading"
-              autocomplete="new-password"
-              required
-            />
+            <div class="password-input-container">
+              <input
+                :type="showConfirmPassword ? 'text' : 'password'"
+                id="confirmPassword"
+                v-model="confirmPassword"
+                @input="validateConfirmPassword"
+                :disabled="loading"
+                autocomplete="new-password"
+                required
+              />
+              <button 
+                type="button" 
+                class="toggle-password"
+                @click="showConfirmPassword = !showConfirmPassword"
+                :aria-label="showConfirmPassword ? 'Hide password' : 'Show password'"
+              >
+                {{ showConfirmPassword ? '👁️' : '👁️‍🗨️' }}
+              </button>
+            </div>
             <span v-if="validationErrors.confirmPassword" class="error-message">
               {{ validationErrors.confirmPassword }}
             </span>
@@ -232,6 +254,35 @@ const onSubmit = async () => {
 </template>
 
 <style scoped>
+.password-input-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.password-input-container input {
+  width: 100%;
+  padding: 0.5rem;
+  padding-right: 2.5rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  box-sizing: border-box;
+}
+
+.toggle-password {
+  position: absolute;
+  right: 0.5rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.25rem;
+  font-size: 1rem;
+}
+
+.toggle-password:hover {
+  opacity: 0.8;
+}
+
 .page-container {
     display: flex;
     align-items: center;
@@ -313,44 +364,44 @@ const onSubmit = async () => {
     background-color: #45a049;
   }
   
-.message-container {
-  text-align: center;
-  margin: 2rem 0;
-}
+  .message-container {
+    text-align: center;
+    margin: 2rem 0;
+  }
 
-.link-button {
-  display: inline-block;
-  margin-top: 1rem;
-  padding: 0.5rem 1rem;
-  background-color: #4CAF50;
-  color: white;
-  text-decoration: none;
-  border-radius: 4px;
-  transition: background-color 0.3s;
-}
+  .link-button {
+    display: inline-block;
+    margin-top: 1rem;
+    padding: 0.5rem 1rem;
+    background-color: #4CAF50;
+    color: white;
+    text-decoration: none;
+    border-radius: 4px;
+    transition: background-color 0.3s;
+  }
 
-.link-button:hover {
-  background-color: #45a049;
-}
+  .link-button:hover {
+    background-color: #45a049;
+  }
 
-.form-group {
-  margin-bottom: 1.5rem;
-}
+  .form-group {
+    margin-bottom: 1.5rem;
+  }
 
-.error-message {
-  color: #dc3545;
-  font-size: 0.875rem;
-  margin-top: 0.25rem;
-  display: block;
-}
+  .error-message {
+    color: #dc3545;
+    font-size: 0.875rem;
+    margin-top: 0.25rem;
+    display: block;
+  }
 
-.success-message {
-  color: #28a745;
-  margin: 1rem 0;
-}
+  .success-message {
+    color: #28a745;
+    margin: 1rem 0;
+  }
 
-.submit-button:disabled {
-  background-color: #cccccc;
-  cursor: not-allowed;
-}
+  .submit-button:disabled {
+    background-color: #cccccc;
+    cursor: not-allowed;
+  }
 </style>

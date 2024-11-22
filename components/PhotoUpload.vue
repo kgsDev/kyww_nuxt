@@ -11,11 +11,11 @@
         <input
           type="file"
           id="sampleForm"
-          ref="sampleFormRef"
+          :ref="(el) => sampleFormRef = el"
           @change="handleSampleFormChange"
           accept="application/pdf,image/*"
           class="hidden"
-        >
+        />
         <label
           for="sampleForm"
           class="flex items-center justify-center w-full px-4 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg cursor-pointer transition-all shadow-lg hover:shadow-xl"
@@ -36,12 +36,12 @@
           <input
             type="file"
             :id="field"
-            :ref="el => { if (el) fileRefs[field] = el }"
+            :ref="(el) => { if (el) fileRefs[field] = el }"
             @change="handleFileChange(field)"
             accept="image/*"
             required
             class="hidden"
-          >
+          />
           <label
             :for="field"
             class="flex items-center justify-center w-full px-3 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg cursor-pointer transition-all shadow-md hover:shadow-lg"
@@ -55,13 +55,36 @@
 
     <!-- File Preview Area -->
     <div class="mt-4 space-y-1">
-      <div v-if="sampleFormFile" class="flex items-center text-xs text-emerald-700 bg-emerald-50 p-2 rounded">
-        <i class="fas fa-check-circle mr-2"></i>
-        <span>Sample Form: {{ sampleFormFile.name }}</span>
+      <div v-if="sampleFormFile" class="flex items-center justify-between text-xs text-emerald-700 bg-emerald-50 p-2 rounded">
+        <div class="flex items-center">
+          <i class="fas fa-check-circle mr-2"></i>
+          <span>Sample Form: {{ sampleFormFile.name }}</span>
+        </div>
+        <button 
+          @click="deleteFile('sampleForm')" 
+          class="text-red-500 hover:text-red-700 p-1"
+          title="Remove file"
+        >
+          <i class="fas fa-times"></i>
+        </button>
       </div>
-      <div v-for="(file, field) in files" :key="field" class="flex items-center text-xs text-blue-700 bg-blue-50 p-2 rounded">
-        <i class="fas fa-check-circle mr-2"></i>
-        <span>{{ capitalizeFirstLetter(field) }} Photo: {{ file.name }}</span>
+      
+      <div 
+        v-for="(file, field) in files" 
+        :key="field" 
+        class="flex items-center justify-between text-xs text-blue-700 bg-blue-50 p-2 rounded"
+      >
+        <div class="flex items-center">
+          <i class="fas fa-check-circle mr-2"></i>
+          <span>{{ capitalizeFirstLetter(field) }} Photo: {{ file.name }}</span>
+        </div>
+        <button 
+          @click="deleteFile(field)" 
+          class="text-red-500 hover:text-red-700 p-1"
+          title="Remove file"
+        >
+          <i class="fas fa-times"></i>
+        </button>
       </div>
     </div>
   </div>
@@ -98,6 +121,28 @@ const validateFile = (file) => {
   }
 
   return { isValid: true };
+};
+
+const deleteFile = (field) => {
+  if (field === 'sampleForm') {
+    sampleFormFile.value = null;
+    if (sampleFormRef.value) {
+      sampleFormRef.value.value = ''; // Clear the file input
+    }
+  } else {
+    delete files[field];
+    if (fileRefs[field]) {
+      fileRefs[field].value = ''; // Clear the file input
+    }
+  }
+  emitFiles(); // Notify parent component of the change
+  
+  // Show toast notification
+  toast.add({ 
+    title: 'File Removed', 
+    description: `${field === 'sampleForm' ? 'Sample form' : capitalizeFirstLetter(field) + ' photo'} has been removed.`,
+    color: 'blue'
+  });
 };
 
 const handleFileChange = (field) => {
@@ -169,5 +214,13 @@ defineExpose({ getFiles });
 /* Optional: Add scale effect on hover */
 label:hover {
   transform: translateY(-1px);
+}
+
+button {
+  transition: all 0.2s ease-in-out;
+}
+
+button:hover {
+  transform: scale(1.1);
 }
 </style>

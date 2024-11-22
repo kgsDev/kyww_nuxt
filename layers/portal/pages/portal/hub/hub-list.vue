@@ -271,7 +271,7 @@ onMounted(async () => {
 <template>
   <div>
     <PortalPageHeader
-      title="KYWW Hubs"
+      title="KYWW Hubs and Sites"
       :breadcrumbs="[
         {
           title: 'Portal',

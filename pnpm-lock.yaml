@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@arcgis/core':
+        specifier: ^4.31.4
+        version: 4.31.4(@floating-ui/utils@0.2.8)
       '@directus/sdk':
         specifier: ^14.0.0
         version: 14.0.0
@@ -20,6 +23,12 @@ importers:
       '@sendgrid/mail':
         specifier: ^8.1.4
         version: 8.1.4
+      '@turf/bbox':
+        specifier: ^7.1.0
+        version: 7.1.0
+      '@turf/boolean-point-in-polygon':
+        specifier: ^7.1.0
+        version: 7.1.0
       bcrypt:
         specifier: ^5.1.1
         version: 5.1.1
@@ -54,6 +63,9 @@ importers:
       '@formkit/auto-animate':
         specifier: 1.0.0-beta.6
         version: 1.0.0-beta.6
+      '@fortawesome/fontawesome-free':
+        specifier: ^6.6.0
+        version: 6.7.0
       '@headlessui/vue':
         specifier: 1.7.16
         version: 1.7.16(vue@3.5.12(typescript@5.3.3))
@@ -65,7 +77,7 @@ importers:
         version: 1.6.0(rollup@4.24.4)(vite@5.4.10(@types/node@22.9.0)(terser@5.36.0))(vue@3.5.12(typescript@5.3.3))(webpack-sources@3.2.3)
       '@nuxt/ui':
         specifier: 2.11.1
-        version: 2.11.1(axios@1.7.7)(focus-trap@7.6.0)(jwt-decode@3.1.2)(magicast@0.3.5)(rollup@4.24.4)(vite@5.4.10(@types/node@22.9.0)(terser@5.36.0))(vue@3.5.12(typescript@5.3.3))(webpack-sources@3.2.3)
+        version: 2.11.1(axios@1.7.7)(focus-trap@7.6.0)(jwt-decode@3.1.2)(magicast@0.3.5)(rollup@4.24.4)(sortablejs@1.15.3)(vite@5.4.10(@types/node@22.9.0)(terser@5.36.0))(vue@3.5.12(typescript@5.3.3))(webpack-sources@3.2.3)
       '@nuxtjs/color-mode':
         specifier: ^3.4.1
         version: 3.5.2(magicast@0.3.5)(rollup@4.24.4)(webpack-sources@3.2.3)
@@ -143,10 +155,10 @@ importers:
         version: 0.6.8(magicast@0.3.5)(rollup@4.24.4)(vite@5.4.10(@types/node@22.9.0)(terser@5.36.0))(vue@3.5.12(typescript@5.3.3))(webpack-sources@3.2.3)
       nuxt-schema-org:
         specifier: 3.3.2
-        version: 3.3.2(@nuxt/devtools@1.6.0(rollup@4.24.4)(vite@5.4.10(@types/node@22.9.0)(terser@5.36.0))(vue@3.5.12(typescript@5.3.3))(webpack-sources@3.2.3))(@unocss/webpack@0.62.4(rollup@4.24.4)(webpack@5.96.1(esbuild@0.23.1)))(@vue/compiler-core@3.5.12)(axios@1.7.7)(fuse.js@6.6.2)(jwt-decode@3.1.2)(magicast@0.3.5)(nuxt@3.10.3(@parcel/watcher@2.5.0)(@types/node@22.9.0)(eslint@8.56.0)(magicast@0.3.5)(optionator@0.9.4)(rollup@4.24.4)(terser@5.36.0)(typescript@5.3.3)(vite@5.4.10(@types/node@22.9.0)(terser@5.36.0))(vue-tsc@1.8.27(typescript@5.3.3))(webpack-sources@3.2.3))(postcss@8.4.47)(rollup@4.24.4)(vite@5.4.10(@types/node@22.9.0)(terser@5.36.0))(vue@3.5.12(typescript@5.3.3))(webpack-sources@3.2.3)(webpack@5.96.1(esbuild@0.23.1))
+        version: 3.3.2(@nuxt/devtools@1.6.0(rollup@4.24.4)(vite@5.4.10(@types/node@22.9.0)(terser@5.36.0))(vue@3.5.12(typescript@5.3.3))(webpack-sources@3.2.3))(@unocss/webpack@0.62.4(rollup@4.24.4)(webpack@5.96.1(esbuild@0.23.1)))(@vue/compiler-core@3.5.12)(axios@1.7.7)(fuse.js@6.6.2)(jwt-decode@3.1.2)(magicast@0.3.5)(nuxt@3.10.3(@parcel/watcher@2.5.0)(@types/node@22.9.0)(eslint@8.56.0)(magicast@0.3.5)(optionator@0.9.4)(rollup@4.24.4)(terser@5.36.0)(typescript@5.3.3)(vite@5.4.10(@types/node@22.9.0)(terser@5.36.0))(vue-tsc@1.8.27(typescript@5.3.3))(webpack-sources@3.2.3))(postcss@8.4.47)(rollup@4.24.4)(sortablejs@1.15.3)(vite@5.4.10(@types/node@22.9.0)(terser@5.36.0))(vue@3.5.12(typescript@5.3.3))(webpack-sources@3.2.3)(webpack@5.96.1(esbuild@0.23.1))
       nuxt-simple-sitemap:
         specifier: 3.4.0
-        version: 3.4.0(@nuxt/devtools@1.6.0(rollup@4.24.4)(vite@5.4.10(@types/node@22.9.0)(terser@5.36.0))(vue@3.5.12(typescript@5.3.3))(webpack-sources@3.2.3))(@unocss/webpack@0.62.4(rollup@4.24.4)(webpack@5.96.1(esbuild@0.23.1)))(@vue/compiler-core@3.5.12)(axios@1.7.7)(fuse.js@6.6.2)(jwt-decode@3.1.2)(magicast@0.3.5)(nuxt@3.10.3(@parcel/watcher@2.5.0)(@types/node@22.9.0)(eslint@8.56.0)(magicast@0.3.5)(optionator@0.9.4)(rollup@4.24.4)(terser@5.36.0)(typescript@5.3.3)(vite@5.4.10(@types/node@22.9.0)(terser@5.36.0))(vue-tsc@1.8.27(typescript@5.3.3))(webpack-sources@3.2.3))(postcss@8.4.47)(rollup@4.24.4)(vite@5.4.10(@types/node@22.9.0)(terser@5.36.0))(vue@3.5.12(typescript@5.3.3))(webpack-sources@3.2.3)(webpack@5.96.1(esbuild@0.23.1))
+        version: 3.4.0(@nuxt/devtools@1.6.0(rollup@4.24.4)(vite@5.4.10(@types/node@22.9.0)(terser@5.36.0))(vue@3.5.12(typescript@5.3.3))(webpack-sources@3.2.3))(@unocss/webpack@0.62.4(rollup@4.24.4)(webpack@5.96.1(esbuild@0.23.1)))(@vue/compiler-core@3.5.12)(axios@1.7.7)(fuse.js@6.6.2)(jwt-decode@3.1.2)(magicast@0.3.5)(nuxt@3.10.3(@parcel/watcher@2.5.0)(@types/node@22.9.0)(eslint@8.56.0)(magicast@0.3.5)(optionator@0.9.4)(rollup@4.24.4)(terser@5.36.0)(typescript@5.3.3)(vite@5.4.10(@types/node@22.9.0)(terser@5.36.0))(vue-tsc@1.8.27(typescript@5.3.3))(webpack-sources@3.2.3))(postcss@8.4.47)(rollup@4.24.4)(sortablejs@1.15.3)(vite@5.4.10(@types/node@22.9.0)(terser@5.36.0))(vue@3.5.12(typescript@5.3.3))(webpack-sources@3.2.3)(webpack@5.96.1(esbuild@0.23.1))
       prettier:
         specifier: 3.1.1
         version: 3.1.1
@@ -175,6 +187,9 @@ packages:
 
   '@antfu/utils@0.7.10':
     resolution: {integrity: sha512-+562v9k4aI80m1+VuMHehNJWLOFjBnXn3tdOitzD0il5b7smkSBal4+a3oKiQTbrwMmN/TBUMDvbdoWDehgOww==}
+
+  '@arcgis/core@4.31.4':
+    resolution: {integrity: sha512-GIlAhKdcz9yqKH0rORc7PPjMh5kuBaWqjOzjvLjyPk7el/Da09nVqjWPBSZYYN3lKGQG9zjtj+1XfJK30PYq0w==}
 
   '@babel/code-frame@7.26.2':
     resolution: {integrity: sha512-RJlIHRueQgwWitWgF8OdFYGZX328Ax5BCemNGlqHfplnRT9ESi8JkFlvaVYbS+UubVY6dpv87Fs2u5M29iNFVQ==}
@@ -1022,6 +1037,20 @@ packages:
     resolution: {integrity: sha512-gMsVel9D7f2HLkBma9VbtzZRehRogVRfbr++f06nL2vnCGCNlzOD+/MUov/F4p8myyAHspEhVobgjpX64q5m6A==}
     engines: {node: ^12.22.0 || ^14.17.0 || >=16.0.0}
 
+  '@esri/arcgis-html-sanitizer@4.1.0-next.4':
+    resolution: {integrity: sha512-CFDBFVgCLLaY6qBS70oozzIPXkTTCVkG/KFkjAZHIPYMgxgFtYPMBETRutELQQWDJa0Tv1QNK1N/7NyaKfsPvQ==}
+    engines: {node: '>=18.0.0'}
+
+  '@esri/calcite-colors@6.1.0':
+    resolution: {integrity: sha512-wHQYWFtDa6c328EraXEVZvgOiaQyYr0yuaaZ0G3cB4C3lSkWefW34L/e5TLAhtuG3zJ/wR6pl5X1YYNfBc0/4Q==}
+
+  '@esri/calcite-components@2.13.2':
+    resolution: {integrity: sha512-90v4H8zs2wEzUXQGmZ+joHhP7ulFUHmQjDlIwXylJiDvoChhnEm38iv7eeG+X8im06biIHEDGRB8LLszlQQ7jw==}
+
+  '@esri/calcite-ui-icons@3.32.0':
+    resolution: {integrity: sha512-2UEddEeSnpXVWp/uNrgym3mrb8lZ5+vXFbtmvXv5NiE32nQGw2MFZD52L5Z+FsxqHJ9vVrtl/X6pTIgkd0c8jA==}
+    hasBin: true
+
   '@fastify/accept-negotiator@1.1.0':
     resolution: {integrity: sha512-OIHZrb2ImZ7XG85HXOONLcJWGosv7sIvM2ifAPQVhg9Lv7qdmMBNVaai4QTdyuaqbKM5eO6sLSQOYI7wEQeCJQ==}
     engines: {node: '>=14'}
@@ -1032,11 +1061,18 @@ packages:
   '@floating-ui/dom@1.1.1':
     resolution: {integrity: sha512-TpIO93+DIujg3g7SykEAGZMDtbJRrmnYRCNYSjJlvIbGhBjRSNTLVbNeDQBrzy9qDgUbiWdc7KA0uZHZ2tJmiw==}
 
+  '@floating-ui/dom@1.6.11':
+    resolution: {integrity: sha512-qkMCxSR24v2vGkhYDo/UzxfJN3D4syqSjyuTFz6C7XcpU1pASPRieNI0Kj5VP3/503mOfYiGY891ugBX1GlABQ==}
+
   '@floating-ui/utils@0.2.8':
     resolution: {integrity: sha512-kym7SodPp8/wloecOpcmSnWJsK7M0E5Wg8UcFA+uO4B9s5d0ywXOEro/8HM9x0rW+TljRzul/14UYz3TleT3ig==}
 
   '@formkit/auto-animate@1.0.0-beta.6':
     resolution: {integrity: sha512-PVDhLAlr+B4Xb7e+1wozBUWmXa6BFU8xUPR/W/E+TsQhPS1qkAdAsJ25keEnFrcePSnXHrOsh3tiFbEToOzV9w==}
+
+  '@fortawesome/fontawesome-free@6.7.0':
+    resolution: {integrity: sha512-lXTP8oiLGM97Aqjn47nod9awKe574HRfCngFizr7FiHTadKTiPkoVn0Mzg+tZBLD1XpE4CRvcF7/UM3g1jyVYw==}
+    engines: {node: '>=6'}
 
   '@hapi/hoek@9.3.0':
     resolution: {integrity: sha512-/c6rf4UJlmHlC9b5BaNvzAcFv7HZ2QHaV0D4/HNlBdvFnvQq8RI4kYdhyPCl7Xj+oWvTWQ8ujhqS53LIgAe6KQ==}
@@ -1209,6 +1245,9 @@ packages:
     cpu: [x64]
     os: [win32]
 
+  '@interactjs/types@1.10.27':
+    resolution: {integrity: sha512-BUdv0cvs4H5ODuwft2Xp4eL8Vmi3LcihK42z0Ft/FbVJZoRioBsxH+LlsBdK4tAie7PqlKGy+1oyOncu1nQ6eA==}
+
   '@ioredis/commands@1.2.0':
     resolution: {integrity: sha512-Sx1pU8EM64o2BrqNpEO1CNLtKQwyhuXuqyfH7oGKCk+1a33d2r5saW8zNwm3j6BTExtjrv2BxTgzzkMwts6vGg==}
 
@@ -1254,6 +1293,12 @@ packages:
 
   '@kwsites/promise-deferred@1.1.1':
     resolution: {integrity: sha512-GaHYm+c0O9MjZRu0ongGBRbinu8gVAMd2UZjji6jVmqKtZluZnptXGWhz1E8j8D2HJ3f/yMxKAUC0b+57wncIw==}
+
+  '@lit-labs/ssr-dom-shim@1.2.1':
+    resolution: {integrity: sha512-wx4aBmgeGvFmOKucFKY+8VFJSYZxs9poN3SDNQFF6lT6NrQUnHiPB2PWz2sc4ieEcAaYYzN+1uWahEeTq2aRIQ==}
+
+  '@lit/reactive-element@2.0.4':
+    resolution: {integrity: sha512-GFn91inaUa2oHLak8awSIigYz0cU0Payr1rcFsrkf5OJ5eSPxElyZfKh0f2p9FsTiZWXQdWGJeXZICEfXXYSXQ==}
 
   '@mapbox/jsonlint-lines-primitives@2.0.2':
     resolution: {integrity: sha512-rY0o9A5ECsTQRVhv7tL/OyDpGAoUB4tTvLiW1DSzQGq4bvTPhNw1VpSNjDJc5GFZ2XuyOtSWSVN05qOtcD71qQ==}
@@ -1403,6 +1448,9 @@ packages:
   '@nuxtjs/tailwindcss@6.10.3':
     resolution: {integrity: sha512-AXkfAW0RLbJfPtdw0QY6+1q+N0e9790zhu6t9DezEvHqfG0ajBSwDTvuu3P48hOcxZpY3PZ+j8N0LDTqCW9X8w==}
 
+  '@open-wc/dedupe-mixin@1.4.0':
+    resolution: {integrity: sha512-Sj7gKl1TLcDbF7B6KUhtvr+1UCxdhMbNY5KxdU5IfMFWqL8oy1ZeAcCANjoB1TL0AJTcPmcCFsCbHf8X2jGDUA==}
+
   '@parcel/watcher-android-arm64@2.5.0':
     resolution: {integrity: sha512-qlX4eS28bUcQCdribHkg/herLe+0A9RyYC+mm2PXpncit8z5b3nSqGVzMNR3CmtAOgRutiZ02eIJJgP/b1iEFQ==}
     engines: {node: '>= 10.0.0'}
@@ -1501,6 +1549,9 @@ packages:
 
   '@polka/url@1.0.0-next.28':
     resolution: {integrity: sha512-8LduaNlMZGwdZ6qWrKlfa+2M4gahzFkprZiAt2TF8uS0qQgBizKXpXURqvTJ4WtmupWxaLqjRb2UCTe72mu+Aw==}
+
+  '@polymer/polymer@3.5.2':
+    resolution: {integrity: sha512-fWwImY/UH4bb2534DVSaX+Azs2yKg8slkMBHOyGeU2kKx7Xmxp6Lee0jP8p6B3d7c1gFUPB2Z976dTUtX81pQA==}
 
   '@popperjs/core@2.11.8':
     resolution: {integrity: sha512-P1st0aksCrn9sGZhp8GMYwBnQsbvAWsZAX44oXNNvLHGqAOcoVxmjZiohstwQ7SqKnbR47akdNi+uleWD8+g6A==}
@@ -1806,6 +1857,11 @@ packages:
     resolution: {integrity: sha512-LtoMMhxAlorcGhmFYI+LhPgbPZCkgP6ra1YL604EeF6U98pLlQ3iWIGMdWSC+vWmPBWBNgmDBAhnAobLROJmwg==}
     engines: {node: '>=18'}
 
+  '@stencil/core@4.20.0':
+    resolution: {integrity: sha512-WPrTHFngvN081RY+dJPneKQLwnOFD60OMCOQGmmSHfCW0f4ujPMzzhwWU1gcSwXPWXz5O+8cBiiCaxAbJU7kAg==}
+    engines: {node: '>=16.0.0', npm: '>=7.10.0'}
+    hasBin: true
+
   '@stripe/stripe-js@2.2.2':
     resolution: {integrity: sha512-LvFZRZEBoMe6vXC6RoOAIbXWo/0JDdndq43ekL9M6affcM7PtF5KALmwt91BazW7q49sbSl0l7TunWhhSwEW4w==}
 
@@ -1832,6 +1888,30 @@ packages:
   '@trysound/sax@0.2.0':
     resolution: {integrity: sha512-L7z9BgrNEcYyUYtF+HaEfiS5ebkh9jXqbszz7pC0hRBPaatV0XjSD3+eHrpqFemQfgwiFF0QPIarnIihIDn7OA==}
     engines: {node: '>=10.13.0'}
+
+  '@turf/bbox@7.1.0':
+    resolution: {integrity: sha512-PdWPz9tW86PD78vSZj2fiRaB8JhUHy6piSa/QXb83lucxPK+HTAdzlDQMTKj5okRCU8Ox/25IR2ep9T8NdopRA==}
+
+  '@turf/boolean-point-in-polygon@7.1.0':
+    resolution: {integrity: sha512-mprVsyIQ+ijWTZwbnO4Jhxu94ZW2M2CheqLiRTsGJy0Ooay9v6Av5/Nl3/Gst7ZVXxPqMeMaFYkSzcTc87AKew==}
+
+  '@turf/helpers@7.1.0':
+    resolution: {integrity: sha512-dTeILEUVeNbaEeoZUOhxH5auv7WWlOShbx7QSd4s0T4Z0/iz90z9yaVCtZOLbU89umKotwKaJQltBNO9CzVgaQ==}
+
+  '@turf/invariant@7.1.0':
+    resolution: {integrity: sha512-OCLNqkItBYIP1nE9lJGuIUatWGtQ4rhBKAyTfFu0z8npVzGEYzvguEeof8/6LkKmTTEHW53tCjoEhSSzdRh08Q==}
+
+  '@turf/meta@7.1.0':
+    resolution: {integrity: sha512-ZgGpWWiKz797Fe8lfRj7HKCkGR+nSJ/5aKXMyofCvLSc2PuYJs/qyyifDPWjASQQCzseJ7AlF2Pc/XQ/3XkkuA==}
+
+  '@types/color-convert@2.0.4':
+    resolution: {integrity: sha512-Ub1MmDdyZ7mX//g25uBAoH/mWGd9swVbt8BseymnaE18SU4po/PjmCrHxqIIRjBo3hV/vh1KGr0eMxUhp+t+dQ==}
+
+  '@types/color-name@1.1.5':
+    resolution: {integrity: sha512-j2K5UJqGTxeesj6oQuGpMgifpT5k9HprgQd8D1Y0lOFqKHl3PJu5GMeS4Y5EgjS55AE6OQxf8mPED9uaGbf4Cg==}
+
+  '@types/color@3.0.6':
+    resolution: {integrity: sha512-NMiNcZFRUAiUUCCf7zkAelY8eV3aKqfbzyFQlXpPIEeoNDbsEHGpb854V3gzTsGKYj830I5zPuOwU/TP5/cW6A==}
 
   '@types/debug@4.1.12':
     resolution: {integrity: sha512-vIChWdVG3LG1SMxEvI/AK+FWJthlrqlTu7fbrlywTkkaONwk/UAGaULXRlf8vkzFBLVm0zkMdCquhL5aOjhXPQ==}
@@ -1902,8 +1982,14 @@ packages:
   '@types/semver@7.5.8':
     resolution: {integrity: sha512-I8EUhyrgfLrcTkzV3TSsGyl1tSuPrEDzr0yd5m90UgNxQkyDXULk3b6MlQqTCpZpNtWe1K0hzclnZkTcLBe2UQ==}
 
+  '@types/sortablejs@1.15.8':
+    resolution: {integrity: sha512-b79830lW+RZfwaztgs1aVPgbasJ8e7AXtZYHTELNXZPsERt4ymJdjV4OccDbHQAvHrCcFpbF78jkm0R6h/pZVg==}
+
   '@types/supercluster@7.1.3':
     resolution: {integrity: sha512-Z0pOY34GDFl3Q6hUFYf3HkTwKEE02e7QgtJppBt+beEAxnyOpJua+voGFvxINBHa06GwLFFym7gRPY2SiKIfIA==}
+
+  '@types/trusted-types@2.0.7':
+    resolution: {integrity: sha512-ScaPdn1dQczgbl0QFTeTOmVHFULt394XJgOQNoyVhZ6r2vLnMLJfBPd53SB52T/3G36VI1/g2MZaX0cwDuXsfw==}
 
   '@types/uuid@9.0.7':
     resolution: {integrity: sha512-WUtIVRUZ9i5dYXefDEAI7sh9/O7jGvHg7Df/5O/gtH3Yabe5odI3UWopVR1qbPXQtvOxWu3mM4XxlYeZtMWF4g==}
@@ -2101,6 +2187,49 @@ packages:
     resolution: {integrity: sha512-hccXqpssqi1DyPJOwyIB3IhYe5SWND2JwTPxVTg8wO9fI1JvEK5DxK8FflJpXVps7QjotCmB/AXp0ezD0SutUg==}
     peerDependencies:
       webpack: ^4 || ^5
+
+  '@vaadin/a11y-base@24.5.3':
+    resolution: {integrity: sha512-Jm2z205UCCdv6BtG9KLLP+2OmcgLiBeJLJr6aQw/aEa132pD4kMTXn0w4gwDHzm3rUucov7pTNOHfZy+3RbMxw==}
+
+  '@vaadin/checkbox@24.5.3':
+    resolution: {integrity: sha512-0biJeiHpBoj/7eG9m5GLn4SFVQN/EGT18quGXfKlQwvoSIT9rlj9Ai7zNmGNmxNEMqxCSriUmZZfMG3+wSX2kA==}
+
+  '@vaadin/component-base@24.5.3':
+    resolution: {integrity: sha512-5RwMLpuT7mT29UamP+X2Ddkgti2WMlUu4G34SoT3sq/zBqzrBjjA25aa/Jog2Slyy9ibucoWHtjbu+ExGDme6A==}
+
+  '@vaadin/field-base@24.5.3':
+    resolution: {integrity: sha512-f5XtLy2XLDFvpxMH8Y5NmY7aaPqYfuxEJz14SZzI4njmBUF6X3DbYJ0M93M0qOgpieXsNycvwxYR30dZ64KPAg==}
+
+  '@vaadin/grid@24.5.3':
+    resolution: {integrity: sha512-9OQUwbUcVjzTqzmapP/bJ8UN56G8qhH6lJ97bvM036Hpo88xDz02RfOqDmaTHj4j/+BiBP6ncsDRl5M4jt6PNA==}
+
+  '@vaadin/icon@24.5.3':
+    resolution: {integrity: sha512-eAx0+claguWaF9f86wBWBFRt8QkULFSDaDht/MOL/+TAn6py0WX8sa/YZP3xEBD603Jt0UwTNyjjeATveDNyaA==}
+
+  '@vaadin/input-container@24.5.3':
+    resolution: {integrity: sha512-hrloEHVpWm32tVKRqOlyA1sj0O5pmUoFxZyGjDnj43eknvKXvjR/2l9esuWREg0SnoywyR2Cm1Q/03vghRLPJw==}
+
+  '@vaadin/lit-renderer@24.5.3':
+    resolution: {integrity: sha512-iI00quTY6FuAoBSw6iggzyDmfVOtaj+glP6R+s5XUasaGBC1XJUzlfaNAAEdPEtGm48WPT6Fa4KQYyVlmVJwhg==}
+
+  '@vaadin/text-field@24.5.3':
+    resolution: {integrity: sha512-IBLwmQTmbkWkk1Q9iBWcj57oMk02C5NCevdSZjIc2z+Nnc/8vbNxd0TY+1TXCMJC7tkAqiNJrMYgmAumZzXD3Q==}
+
+  '@vaadin/vaadin-development-mode-detector@2.0.7':
+    resolution: {integrity: sha512-9FhVhr0ynSR3X2ao+vaIEttcNU5XfzCbxtmYOV8uIRnUCtNgbvMOIcyGBvntsX9I5kvIP2dV3cFAOG9SILJzEA==}
+
+  '@vaadin/vaadin-lumo-styles@24.5.3':
+    resolution: {integrity: sha512-2qjBDR7LlERj0+m07l2Lxg9yXumrOgkmzBxbX0sIapGlJbPu7MHxx6HhcQp4+Zvw0k+Bd6KMZsDPz5So6gDHDA==}
+
+  '@vaadin/vaadin-material-styles@24.5.3':
+    resolution: {integrity: sha512-Lv7LfIdaF4YETEeoN585B4sM3fsbopqL8lWJqKpbbrI9mVafajxgtrmqqD1NYmEbWVFPbzjE95b+SZWwXDOFNQ==}
+
+  '@vaadin/vaadin-themable-mixin@24.5.3':
+    resolution: {integrity: sha512-I47ZoSrzezCt9uzi1l5lTQnpjyIZWvFIlrXeLZF1ZGmYjUqCZRu6C3DnQn6mBBdpcmDYSvFSWKL/+XkFwl35GA==}
+
+  '@vaadin/vaadin-usage-statistics@2.1.3':
+    resolution: {integrity: sha512-8r4TNknD7OJQADe3VygeofFR7UNAXZ2/jjBFP5dgI8+2uMfnuGYgbuHivasKr9WSQ64sPej6m8rDoM1uSllXjQ==}
+    engines: {node: ^12.20.0 || ^14.13.1 || >=16.0.0}
 
   '@vercel/nft@0.27.5':
     resolution: {integrity: sha512-b2A7M+4yMHdWKY7xCC+kBEcnMrpaSE84CnuauTjhKKoCEeej0byJMAB8h/RBVnw/HdZOAFVcxR0Izr3LL24FwA==}
@@ -2387,11 +2516,18 @@ packages:
   '@webassemblyjs/wast-printer@1.12.1':
     resolution: {integrity: sha512-+X4WAlOisVWQMikjbcvY2e0rwPsKQ9F688lksZhBcPycBBuii3O7m8FACbDMWDojpAqvjIncrG8J0XHKyQfVeA==}
 
+  '@webcomponents/shadycss@1.11.2':
+    resolution: {integrity: sha512-vRq+GniJAYSBmTRnhCYPAPq6THYqovJ/gzGThWbgEZUQaBccndGTi1hdiUP15HzEco0I6t4RCtXyX0rsSmwgPw==}
+
   '@xtuc/ieee754@1.2.0':
     resolution: {integrity: sha512-DX8nKgqcGwsc0eJSqYt5lwP4DH5FlHnmuWWBRy7X0NcaGR0ZtuyeESgMwTYVEtxmsNGY+qit4QYT/MIYTOTPeA==}
 
   '@xtuc/long@4.2.2':
     resolution: {integrity: sha512-NuHqBY1PB/D8xU6s/thBgOAiAP7HOYDQ32+BFZILJ8ivkUkAHQnWfn6WhL79Owj1qmUnoN/YPhktdIoucipkAQ==}
+
+  '@zip.js/zip.js@2.7.53':
+    resolution: {integrity: sha512-G6Bl5wN9EXXVaTUIox71vIX5Z454zEBe+akKpV4m1tUboIctT5h7ID3QXCJd/Lfy2rSvmkTmZIucf1jGRR4f5A==}
+    engines: {bun: '>=0.7.0', deno: '>=1.0.0', node: '>=16.5.0'}
 
   abbrev@1.1.1:
     resolution: {integrity: sha512-nne9/IiQ/hzIhY6pdDnbBtz7DjPTKrY00P/zvPSm5pOFkl6xuGrGnXn/VtTNNfNtAfZ9/1RtehkszU9qcTii0Q==}
@@ -2862,6 +2998,11 @@ packages:
   compatx@0.1.8:
     resolution: {integrity: sha512-jcbsEAR81Bt5s1qOFymBufmCbXCXbk0Ql+K5ouj6gCyx2yHlu6AgmGIi9HxfKixpUDO5bCFJUHQ5uM6ecbTebw==}
 
+  composed-offset-position@0.0.6:
+    resolution: {integrity: sha512-Q7dLompI6lUwd7LWyIcP66r4WcS9u7AL2h8HaeipiRfCRPLMWqRx8fYsjb4OHi6UQFifO7XtNC2IlEJ1ozIFxw==}
+    peerDependencies:
+      '@floating-ui/utils': ^0.2.5
+
   compress-commons@6.0.2:
     resolution: {integrity: sha512-6FqVXeETqWPoGcfzrXb37E50NP0LXT8kAMu5ooZayhWWdgEY4lBEEcbQNXtkuKQsGduxiIcI4gOTsxTmuq/bSg==}
     engines: {node: '>= 14'}
@@ -3015,6 +3156,9 @@ packages:
   data-view-byte-offset@1.0.0:
     resolution: {integrity: sha512-t/Ygsytq+R995EJ5PZlD4Cu56sWa8InXySaViRzw9apusqsOO2bQP+SbYzAhR0pFKoB+43lYy8rWban9JSuXnA==}
     engines: {node: '>= 0.4'}
+
+  dayjs@1.11.13:
+    resolution: {integrity: sha512-oaMBel6gjolK862uaPQOVTA7q3TZhuSvuMQAAglQDOWYO9A91IrAOUJEyKVlqJlHE0vq5p5UXxzdPfMH/x6xNg==}
 
   db0@0.2.1:
     resolution: {integrity: sha512-BWSFmLaCkfyqbSEZBQINMVNjCVfrogi7GQ2RSy1tmtfK9OXlsup6lUMwLsqSD7FbAjD04eWFdXowSHHUp6SE/Q==}
@@ -3990,6 +4134,9 @@ packages:
     resolution: {integrity: sha512-QQnnxNyfvmHFIsj7gkPcYymR8Jdw/o7mp5ZFihxn6h8Ci6fh3Dx4E1gPjpQEpIuPo9XVNY/ZUwh4BPMjGyL01g==}
     engines: {node: ^14.17.0 || ^16.13.0 || >=18.0.0}
 
+  interactjs@1.10.27:
+    resolution: {integrity: sha512-y/8RcCftGAF24gSp76X2JS3XpHiUvDQyhF8i7ujemBz77hwiHDuJzftHx7thY8cxGogwGiPJ+o97kWB6eAXnsA==}
+
   internal-slot@1.0.7:
     resolution: {integrity: sha512-NGnrKwXzSms2qUUih/ILZ5JBqNTSa1+ZmP6flaIp6KmSElgE9qdndzS3cqjrDovwFdmwsGsLdeFgB6suw+1e9g==}
     engines: {node: '>= 0.4'}
@@ -4358,6 +4505,15 @@ packages:
     resolution: {integrity: sha512-I8oW2+QL5KJo8zXNWX046M134WchxsXC7SawLPvRQpogCbkyQIaFxPE89A2HiwR7vAK2Dm2ERBAmyjTYGYEpBg==}
     hasBin: true
 
+  lit-element@4.1.1:
+    resolution: {integrity: sha512-HO9Tkkh34QkTeUmEdNYhMT8hzLid7YlMlATSi1q4q17HE5d9mrrEHJ/o8O2D0cMi182zK1F3v7x0PWFjrhXFew==}
+
+  lit-html@3.2.1:
+    resolution: {integrity: sha512-qI/3lziaPMSKsrwlxH/xMgikhQ0EGOX2ICU73Bi/YHFvz2j/yMCIrw4+puF2IpQ4+upd3EWbvnHM9+PnJn48YA==}
+
+  lit@3.2.1:
+    resolution: {integrity: sha512-1BBa1E/z0O9ye5fZprPtdqnc0BFzxIxTTOO/tQFmyC/hj1O3jL4TfmLBw0WEwjAokdLwpclkvGgDJwTIh0/22w==}
+
   load-tsconfig@0.2.5:
     resolution: {integrity: sha512-IXO6OCs9yg8tMKzfPZ1YmheJbZCiEsnBdcB03l0OcfK9prKnJb96siuHCr5Fl37/yo9DnKU+TLpxzTUspw9shg==}
     engines: {node: ^12.20.0 || ^14.13.1 || >=16.0.0}
@@ -4381,6 +4537,9 @@ packages:
   locate-path@6.0.0:
     resolution: {integrity: sha512-iPZK6eYjbxRu3uB4/WZ3EsEIMJFMqAoopl3R+zuq0UjcAm/MO6KCweDgPfP3elTztoKP3KtnVHxTn2NHBSDVUw==}
     engines: {node: '>=10'}
+
+  lodash-es@4.17.21:
+    resolution: {integrity: sha512-mKnC+QJ9pWVzv+C4/U3rRsHapFfHvQFoFB92e52xeyGMcX6/OlIl78je1u8vePzYZSkkogMPJ2yjxxsb89cxyw==}
 
   lodash.castarray@4.4.0:
     resolution: {integrity: sha512-aVx8ztPv7/2ULbArGJ2Y42bG1mEQ5mGjpdvrbJcJFU3TbYybe+QlLS4pst9zV52ymy2in1KpFPiZnAOATxD4+Q==}
@@ -4415,6 +4574,10 @@ packages:
   lru-cache@5.1.1:
     resolution: {integrity: sha512-KpNARQA3Iwv+jTA0utUVVbrh+Jlrr1Fv0e56GGzAFOXN7dk/FviaDW8LHmK52DlcH4WP2n6gI8vN1aesBFgo9w==}
 
+  luxon@3.5.0:
+    resolution: {integrity: sha512-rh+Zjr6DNfUYR3bPwJEnuwDdqMbxZW7LOQfUN4B54+Cl+0o5zaU9RJ6bcidfDtC1cWCZXQ+nvX8bf6bAji37QQ==}
+    engines: {node: '>=12'}
+
   magic-string-ast@0.6.2:
     resolution: {integrity: sha512-oN3Bcd7ZVt+0VGEs7402qR/tjgjbM7kPlH/z7ufJnzTLVBzXJITRHOJiwMmmYMgZfdoWQsfQcY+iKlxiBppnMA==}
     engines: {node: '>=16.14.0'}
@@ -4434,6 +4597,11 @@ packages:
 
   mapbox-gl@3.7.0:
     resolution: {integrity: sha512-dCbVyH1uGobwv6f4QKRv2Z2wuVT/RmspsudK3sTxGRFxZi6Pd2P9axdbVyZpmGddCAREy44pHhvzvO0qgpdKAg==}
+
+  marked@14.1.4:
+    resolution: {integrity: sha512-vkVZ8ONmUdPnjCKc5uTRvmkRbx4EAi2OkTOXmfTDhZz3OFqMNBM1oTTWwTr4HY4uAEojhzPf+Fy8F1DWa3Sndg==}
+    engines: {node: '>= 18'}
+    hasBin: true
 
   marky@1.2.5:
     resolution: {integrity: sha512-q9JtQJKjpsVxCRVgQ+WapguSbKC3SQ5HEzFGPAJMStgh3QjCawp00UKv3MTTAArTmGmmPUvllHZoNbZ3gs0I+Q==}
@@ -5034,6 +5202,9 @@ packages:
   pluralize@8.0.0:
     resolution: {integrity: sha512-Nc3IT5yHzflTfbjgqWcCPpo7DaKy4FnpB0l/zCAW0Tc7jxAiuqSxHasntB3D7887LSrA93kDJ9IXovxJYxyLCA==}
     engines: {node: '>=4'}
+
+  point-in-polygon-hao@1.1.0:
+    resolution: {integrity: sha512-3hTIM2j/v9Lio+wOyur3kckD4NxruZhpowUbEgmyikW+a2Kppjtu1eN+AhnMQtoHW46zld88JiYWv6fxpsDrTQ==}
 
   popmotion@11.0.5:
     resolution: {integrity: sha512-la8gPM1WYeFznb/JqF4GiTkRRPZsfaj2+kCxqQgr2MJylMmIKUwBfWW8Wa5fml/8gmtlD5yI01MP1QCZPWmppA==}
@@ -5647,6 +5818,9 @@ packages:
   smob@1.5.0:
     resolution: {integrity: sha512-g6T+p7QO8npa+/hNx9ohv1E5pVCmWrVCUzUXJyLdMmftX6ER0oiWY/w9knEonLpnOp6b6FenKnMfR8gqwWdwig==}
 
+  sortablejs@1.15.3:
+    resolution: {integrity: sha512-zdK3/kwwAK1cJgy1rwl1YtNTbRmc8qW/+vgXf75A7NHag5of4pyI6uK86ktmQETyWRH7IGaE73uZOOBcGxgqZg==}
+
   source-map-js@1.2.1:
     resolution: {integrity: sha512-UXWMKhLOwVKb728IUtQPXxfYU+usdybtUrK/8uGE8CQMvrhOpwvzDBwj0QhSL7MQc7vIsISBG8VQ8+IDQxpfQA==}
     engines: {node: '>=0.10.0'}
@@ -5908,6 +6082,10 @@ packages:
     resolution: {integrity: sha512-Cc+OraorugtXNfs50hU9KS369rFXCfgGLpfCfvlc+Ud5u6VWmUQsOAa9HbTvheQdYnrdJqqv1e5oIqXppMYnSw==}
     engines: {node: '>=8'}
 
+  timezone-groups@0.10.2:
+    resolution: {integrity: sha512-01G9JdlIybA9Njp0wJcGenXKWAw+woWbv6W/oMexWyPs7Nr/S2p2n1NRrMHbHaFzdf+PNNStQp1WILdnAGjYXQ==}
+    engines: {node: '>=18.12.0'}
+
   tiny-inflate@1.0.3:
     resolution: {integrity: sha512-pkY1fj1cKHb2seWDy0B16HeWyczlJA9/WW3u3c4z/NiWDsO3DOU5D7nhTLE9CF0yXv/QZFY7sEJmj24dK+Rrqw==}
 
@@ -5988,6 +6166,10 @@ packages:
   type-fest@0.8.1:
     resolution: {integrity: sha512-4dbzIzqvjtgiM5rw1k5rEHtBANKmdudhGyBEajN01fEyhaAIhsoKNy6y7+IN93IfpFtwY9iqi7kD+xwKhQsNJA==}
     engines: {node: '>=8'}
+
+  type-fest@4.18.2:
+    resolution: {integrity: sha512-+suCYpfJLAe4OXS6+PPXjW3urOS4IoP9waSiLuXfLgqZODKw/aWwASvzqE886wA0kQgGy0mIWyhd87VpqIy6Xg==}
+    engines: {node: '>=16'}
 
   type-fest@4.26.1:
     resolution: {integrity: sha512-yOGpmOAL7CkKe/91I5O3gPICmJNLJ1G4zFYVAsRHg7M64biSnPtRj0WNQt++bRkjYOqjWXrhnUw1utzmVErAdg==}
@@ -6431,6 +6613,11 @@ packages:
     resolution: {integrity: sha512-ICP2e+jsHvAj2E2lIHxa5tjXRlKDJo4IdvPvCXbXQGdzSfmSpNVyIKMvoZHjDY9DP0zV17iI85o90vRFXNccRw==}
     engines: {node: '>=12'}
 
+  xss@1.0.13:
+    resolution: {integrity: sha512-clu7dxTm1e8Mo5fz3n/oW3UCXBfV89xZ72jM8yzo1vR/pIS0w3sgB3XV2H8Vm6zfGnHL0FzvLJPJEBhd86/z4Q==}
+    engines: {node: '>= 0.10.0'}
+    hasBin: true
+
   xss@1.0.15:
     resolution: {integrity: sha512-FVdlVVC67WOIPvfOwhoMETV72f6GbW7aOabBC3WxN/oUdoEMDyLz4OgRv5/gck2ZeNqEQu+Tb0kloovXOfpYVg==}
     engines: {node: '>= 0.10.0'}
@@ -6495,6 +6682,19 @@ snapshots:
       tinyexec: 0.3.1
 
   '@antfu/utils@0.7.10': {}
+
+  '@arcgis/core@4.31.4(@floating-ui/utils@0.2.8)':
+    dependencies:
+      '@esri/arcgis-html-sanitizer': 4.1.0-next.4
+      '@esri/calcite-colors': 6.1.0
+      '@esri/calcite-components': 2.13.2(@floating-ui/utils@0.2.8)
+      '@vaadin/grid': 24.5.3
+      '@zip.js/zip.js': 2.7.53
+      luxon: 3.5.0
+      marked: 14.1.4
+      sortablejs: 1.15.3
+    transitivePeerDependencies:
+      - '@floating-ui/utils'
 
   '@babel/code-frame@7.26.2':
     dependencies:
@@ -7103,6 +7303,33 @@ snapshots:
 
   '@eslint/js@8.56.0': {}
 
+  '@esri/arcgis-html-sanitizer@4.1.0-next.4':
+    dependencies:
+      xss: 1.0.13
+
+  '@esri/calcite-colors@6.1.0': {}
+
+  '@esri/calcite-components@2.13.2(@floating-ui/utils@0.2.8)':
+    dependencies:
+      '@esri/calcite-ui-icons': 3.32.0
+      '@floating-ui/dom': 1.6.11
+      '@stencil/core': 4.20.0
+      '@types/color': 3.0.6
+      '@types/sortablejs': 1.15.8
+      color: 4.2.3
+      composed-offset-position: 0.0.6(@floating-ui/utils@0.2.8)
+      dayjs: 1.11.13
+      focus-trap: 7.6.0
+      interactjs: 1.10.27
+      lodash-es: 4.17.21
+      sortablejs: 1.15.3
+      timezone-groups: 0.10.2
+      type-fest: 4.18.2
+    transitivePeerDependencies:
+      - '@floating-ui/utils'
+
+  '@esri/calcite-ui-icons@3.32.0': {}
+
   '@fastify/accept-negotiator@1.1.0':
     optional: true
 
@@ -7114,9 +7341,16 @@ snapshots:
     dependencies:
       '@floating-ui/core': 1.6.8
 
+  '@floating-ui/dom@1.6.11':
+    dependencies:
+      '@floating-ui/core': 1.6.8
+      '@floating-ui/utils': 0.2.8
+
   '@floating-ui/utils@0.2.8': {}
 
   '@formkit/auto-animate@1.0.0-beta.6': {}
+
+  '@fortawesome/fontawesome-free@6.7.0': {}
 
   '@hapi/hoek@9.3.0': {}
 
@@ -7271,6 +7505,8 @@ snapshots:
   '@img/sharp-win32-x64@0.33.5':
     optional: true
 
+  '@interactjs/types@1.10.27': {}
+
   '@ioredis/commands@1.2.0': {}
 
   '@isaacs/cliui@8.0.2':
@@ -7334,6 +7570,12 @@ snapshots:
       - supports-color
 
   '@kwsites/promise-deferred@1.1.1': {}
+
+  '@lit-labs/ssr-dom-shim@1.2.1': {}
+
+  '@lit/reactive-element@2.0.4':
+    dependencies:
+      '@lit-labs/ssr-dom-shim': 1.2.1
 
   '@mapbox/jsonlint-lines-primitives@2.0.2': {}
 
@@ -7418,7 +7660,7 @@ snapshots:
       - supports-color
       - webpack-sources
 
-  '@nuxt/devtools-ui-kit@1.6.0(@nuxt/devtools@1.6.0(rollup@4.24.4)(vite@5.4.10(@types/node@22.9.0)(terser@5.36.0))(vue@3.5.12(typescript@5.3.3))(webpack-sources@3.2.3))(@unocss/webpack@0.62.4(rollup@4.24.4)(webpack@5.96.1(esbuild@0.23.1)))(@vue/compiler-core@3.5.12)(axios@1.7.7)(fuse.js@6.6.2)(jwt-decode@3.1.2)(magicast@0.3.5)(nuxt@3.10.3(@parcel/watcher@2.5.0)(@types/node@22.9.0)(eslint@8.56.0)(magicast@0.3.5)(optionator@0.9.4)(rollup@4.24.4)(terser@5.36.0)(typescript@5.3.3)(vite@5.4.10(@types/node@22.9.0)(terser@5.36.0))(vue-tsc@1.8.27(typescript@5.3.3))(webpack-sources@3.2.3))(postcss@8.4.47)(rollup@4.24.4)(vite@5.4.10(@types/node@22.9.0)(terser@5.36.0))(vue@3.5.12(typescript@5.3.3))(webpack-sources@3.2.3)(webpack@5.96.1(esbuild@0.23.1))':
+  '@nuxt/devtools-ui-kit@1.6.0(@nuxt/devtools@1.6.0(rollup@4.24.4)(vite@5.4.10(@types/node@22.9.0)(terser@5.36.0))(vue@3.5.12(typescript@5.3.3))(webpack-sources@3.2.3))(@unocss/webpack@0.62.4(rollup@4.24.4)(webpack@5.96.1(esbuild@0.23.1)))(@vue/compiler-core@3.5.12)(axios@1.7.7)(fuse.js@6.6.2)(jwt-decode@3.1.2)(magicast@0.3.5)(nuxt@3.10.3(@parcel/watcher@2.5.0)(@types/node@22.9.0)(eslint@8.56.0)(magicast@0.3.5)(optionator@0.9.4)(rollup@4.24.4)(terser@5.36.0)(typescript@5.3.3)(vite@5.4.10(@types/node@22.9.0)(terser@5.36.0))(vue-tsc@1.8.27(typescript@5.3.3))(webpack-sources@3.2.3))(postcss@8.4.47)(rollup@4.24.4)(sortablejs@1.15.3)(vite@5.4.10(@types/node@22.9.0)(terser@5.36.0))(vue@3.5.12(typescript@5.3.3))(webpack-sources@3.2.3)(webpack@5.96.1(esbuild@0.23.1))':
     dependencies:
       '@iconify-json/carbon': 1.2.4
       '@iconify-json/logos': 1.2.3
@@ -7434,7 +7676,7 @@ snapshots:
       '@unocss/preset-mini': 0.62.4
       '@unocss/reset': 0.62.4
       '@vueuse/core': 11.2.0(vue@3.5.12(typescript@5.3.3))
-      '@vueuse/integrations': 11.2.0(axios@1.7.7)(focus-trap@7.6.0)(fuse.js@6.6.2)(jwt-decode@3.1.2)(vue@3.5.12(typescript@5.3.3))
+      '@vueuse/integrations': 11.2.0(axios@1.7.7)(focus-trap@7.6.0)(fuse.js@6.6.2)(jwt-decode@3.1.2)(sortablejs@1.15.3)(vue@3.5.12(typescript@5.3.3))
       '@vueuse/nuxt': 11.2.0(magicast@0.3.5)(nuxt@3.10.3(@parcel/watcher@2.5.0)(@types/node@22.9.0)(eslint@8.56.0)(magicast@0.3.5)(optionator@0.9.4)(rollup@4.24.4)(terser@5.36.0)(typescript@5.3.3)(vite@5.4.10(@types/node@22.9.0)(terser@5.36.0))(vue-tsc@1.8.27(typescript@5.3.3))(webpack-sources@3.2.3))(rollup@4.24.4)(vue@3.5.12(typescript@5.3.3))(webpack-sources@3.2.3)
       defu: 6.1.4
       focus-trap: 7.6.0
@@ -7681,7 +7923,7 @@ snapshots:
 
   '@nuxt/ui-templates@1.3.4': {}
 
-  '@nuxt/ui@2.11.1(axios@1.7.7)(focus-trap@7.6.0)(jwt-decode@3.1.2)(magicast@0.3.5)(rollup@4.24.4)(vite@5.4.10(@types/node@22.9.0)(terser@5.36.0))(vue@3.5.12(typescript@5.3.3))(webpack-sources@3.2.3)':
+  '@nuxt/ui@2.11.1(axios@1.7.7)(focus-trap@7.6.0)(jwt-decode@3.1.2)(magicast@0.3.5)(rollup@4.24.4)(sortablejs@1.15.3)(vite@5.4.10(@types/node@22.9.0)(terser@5.36.0))(vue@3.5.12(typescript@5.3.3))(webpack-sources@3.2.3)':
     dependencies:
       '@egoist/tailwindcss-icons': 1.8.1(tailwindcss@3.4.14)
       '@headlessui/tailwindcss': 0.2.1(tailwindcss@3.4.14)
@@ -7696,7 +7938,7 @@ snapshots:
       '@tailwindcss/forms': 0.5.7(tailwindcss@3.4.14)
       '@tailwindcss/typography': 0.5.10(tailwindcss@3.4.14)
       '@vueuse/core': 10.7.1(vue@3.5.12(typescript@5.3.3))
-      '@vueuse/integrations': 10.11.1(axios@1.7.7)(focus-trap@7.6.0)(fuse.js@6.6.2)(jwt-decode@3.1.2)(vue@3.5.12(typescript@5.3.3))
+      '@vueuse/integrations': 10.11.1(axios@1.7.7)(focus-trap@7.6.0)(fuse.js@6.6.2)(jwt-decode@3.1.2)(sortablejs@1.15.3)(vue@3.5.12(typescript@5.3.3))
       '@vueuse/math': 10.11.1(vue@3.5.12(typescript@5.3.3))
       defu: 6.1.4
       fuse.js: 6.6.2
@@ -7891,6 +8133,8 @@ snapshots:
       - ts-node
       - webpack-sources
 
+  '@open-wc/dedupe-mixin@1.4.0': {}
+
   '@parcel/watcher-android-arm64@2.5.0':
     optional: true
 
@@ -7962,6 +8206,10 @@ snapshots:
   '@pkgr/core@0.1.1': {}
 
   '@polka/url@1.0.0-next.28': {}
+
+  '@polymer/polymer@3.5.2':
+    dependencies:
+      '@webcomponents/shadycss': 1.11.2
 
   '@popperjs/core@2.11.8': {}
 
@@ -8210,6 +8458,8 @@ snapshots:
 
   '@sindresorhus/merge-streams@2.3.0': {}
 
+  '@stencil/core@4.20.0': {}
+
   '@stripe/stripe-js@2.2.2': {}
 
   '@tailwindcss/aspect-ratio@0.4.2(tailwindcss@3.4.14)':
@@ -8234,6 +8484,47 @@ snapshots:
       tailwindcss: 3.4.14
 
   '@trysound/sax@0.2.0': {}
+
+  '@turf/bbox@7.1.0':
+    dependencies:
+      '@turf/helpers': 7.1.0
+      '@turf/meta': 7.1.0
+      '@types/geojson': 7946.0.14
+      tslib: 2.8.1
+
+  '@turf/boolean-point-in-polygon@7.1.0':
+    dependencies:
+      '@turf/helpers': 7.1.0
+      '@turf/invariant': 7.1.0
+      '@types/geojson': 7946.0.14
+      point-in-polygon-hao: 1.1.0
+      tslib: 2.8.1
+
+  '@turf/helpers@7.1.0':
+    dependencies:
+      '@types/geojson': 7946.0.14
+      tslib: 2.8.1
+
+  '@turf/invariant@7.1.0':
+    dependencies:
+      '@turf/helpers': 7.1.0
+      '@types/geojson': 7946.0.14
+      tslib: 2.8.1
+
+  '@turf/meta@7.1.0':
+    dependencies:
+      '@turf/helpers': 7.1.0
+      '@types/geojson': 7946.0.14
+
+  '@types/color-convert@2.0.4':
+    dependencies:
+      '@types/color-name': 1.1.5
+
+  '@types/color-name@1.1.5': {}
+
+  '@types/color@3.0.6':
+    dependencies:
+      '@types/color-convert': 2.0.4
 
   '@types/debug@4.1.12':
     dependencies:
@@ -8308,9 +8599,13 @@ snapshots:
 
   '@types/semver@7.5.8': {}
 
+  '@types/sortablejs@1.15.8': {}
+
   '@types/supercluster@7.1.3':
     dependencies:
       '@types/geojson': 7946.0.14
+
+  '@types/trusted-types@2.0.7': {}
 
   '@types/uuid@9.0.7': {}
 
@@ -8653,6 +8948,114 @@ snapshots:
       - rollup
       - supports-color
 
+  '@vaadin/a11y-base@24.5.3':
+    dependencies:
+      '@open-wc/dedupe-mixin': 1.4.0
+      '@polymer/polymer': 3.5.2
+      '@vaadin/component-base': 24.5.3
+      lit: 3.2.1
+
+  '@vaadin/checkbox@24.5.3':
+    dependencies:
+      '@open-wc/dedupe-mixin': 1.4.0
+      '@polymer/polymer': 3.5.2
+      '@vaadin/a11y-base': 24.5.3
+      '@vaadin/component-base': 24.5.3
+      '@vaadin/field-base': 24.5.3
+      '@vaadin/vaadin-lumo-styles': 24.5.3
+      '@vaadin/vaadin-material-styles': 24.5.3
+      '@vaadin/vaadin-themable-mixin': 24.5.3
+      lit: 3.2.1
+
+  '@vaadin/component-base@24.5.3':
+    dependencies:
+      '@open-wc/dedupe-mixin': 1.4.0
+      '@polymer/polymer': 3.5.2
+      '@vaadin/vaadin-development-mode-detector': 2.0.7
+      '@vaadin/vaadin-usage-statistics': 2.1.3
+      lit: 3.2.1
+
+  '@vaadin/field-base@24.5.3':
+    dependencies:
+      '@open-wc/dedupe-mixin': 1.4.0
+      '@polymer/polymer': 3.5.2
+      '@vaadin/a11y-base': 24.5.3
+      '@vaadin/component-base': 24.5.3
+      lit: 3.2.1
+
+  '@vaadin/grid@24.5.3':
+    dependencies:
+      '@open-wc/dedupe-mixin': 1.4.0
+      '@polymer/polymer': 3.5.2
+      '@vaadin/a11y-base': 24.5.3
+      '@vaadin/checkbox': 24.5.3
+      '@vaadin/component-base': 24.5.3
+      '@vaadin/lit-renderer': 24.5.3
+      '@vaadin/text-field': 24.5.3
+      '@vaadin/vaadin-lumo-styles': 24.5.3
+      '@vaadin/vaadin-material-styles': 24.5.3
+      '@vaadin/vaadin-themable-mixin': 24.5.3
+      lit: 3.2.1
+
+  '@vaadin/icon@24.5.3':
+    dependencies:
+      '@open-wc/dedupe-mixin': 1.4.0
+      '@polymer/polymer': 3.5.2
+      '@vaadin/component-base': 24.5.3
+      '@vaadin/vaadin-lumo-styles': 24.5.3
+      '@vaadin/vaadin-themable-mixin': 24.5.3
+      lit: 3.2.1
+
+  '@vaadin/input-container@24.5.3':
+    dependencies:
+      '@polymer/polymer': 3.5.2
+      '@vaadin/component-base': 24.5.3
+      '@vaadin/vaadin-lumo-styles': 24.5.3
+      '@vaadin/vaadin-material-styles': 24.5.3
+      '@vaadin/vaadin-themable-mixin': 24.5.3
+      lit: 3.2.1
+
+  '@vaadin/lit-renderer@24.5.3':
+    dependencies:
+      lit: 3.2.1
+
+  '@vaadin/text-field@24.5.3':
+    dependencies:
+      '@open-wc/dedupe-mixin': 1.4.0
+      '@polymer/polymer': 3.5.2
+      '@vaadin/a11y-base': 24.5.3
+      '@vaadin/component-base': 24.5.3
+      '@vaadin/field-base': 24.5.3
+      '@vaadin/input-container': 24.5.3
+      '@vaadin/vaadin-lumo-styles': 24.5.3
+      '@vaadin/vaadin-material-styles': 24.5.3
+      '@vaadin/vaadin-themable-mixin': 24.5.3
+      lit: 3.2.1
+
+  '@vaadin/vaadin-development-mode-detector@2.0.7': {}
+
+  '@vaadin/vaadin-lumo-styles@24.5.3':
+    dependencies:
+      '@polymer/polymer': 3.5.2
+      '@vaadin/component-base': 24.5.3
+      '@vaadin/icon': 24.5.3
+      '@vaadin/vaadin-themable-mixin': 24.5.3
+
+  '@vaadin/vaadin-material-styles@24.5.3':
+    dependencies:
+      '@polymer/polymer': 3.5.2
+      '@vaadin/component-base': 24.5.3
+      '@vaadin/vaadin-themable-mixin': 24.5.3
+
+  '@vaadin/vaadin-themable-mixin@24.5.3':
+    dependencies:
+      '@open-wc/dedupe-mixin': 1.4.0
+      lit: 3.2.1
+
+  '@vaadin/vaadin-usage-statistics@2.1.3':
+    dependencies:
+      '@vaadin/vaadin-development-mode-detector': 2.0.7
+
   '@vercel/nft@0.27.5':
     dependencies:
       '@mapbox/node-pre-gyp': 1.0.11
@@ -8877,7 +9280,7 @@ snapshots:
       - '@vue/composition-api'
       - vue
 
-  '@vueuse/integrations@10.11.1(axios@1.7.7)(focus-trap@7.6.0)(fuse.js@6.6.2)(jwt-decode@3.1.2)(vue@3.5.12(typescript@5.3.3))':
+  '@vueuse/integrations@10.11.1(axios@1.7.7)(focus-trap@7.6.0)(fuse.js@6.6.2)(jwt-decode@3.1.2)(sortablejs@1.15.3)(vue@3.5.12(typescript@5.3.3))':
     dependencies:
       '@vueuse/core': 10.11.1(vue@3.5.12(typescript@5.3.3))
       '@vueuse/shared': 10.11.1(vue@3.5.12(typescript@5.3.3))
@@ -8887,11 +9290,12 @@ snapshots:
       focus-trap: 7.6.0
       fuse.js: 6.6.2
       jwt-decode: 3.1.2
+      sortablejs: 1.15.3
     transitivePeerDependencies:
       - '@vue/composition-api'
       - vue
 
-  '@vueuse/integrations@11.2.0(axios@1.7.7)(focus-trap@7.6.0)(fuse.js@6.6.2)(jwt-decode@3.1.2)(vue@3.5.12(typescript@5.3.3))':
+  '@vueuse/integrations@11.2.0(axios@1.7.7)(focus-trap@7.6.0)(fuse.js@6.6.2)(jwt-decode@3.1.2)(sortablejs@1.15.3)(vue@3.5.12(typescript@5.3.3))':
     dependencies:
       '@vueuse/core': 11.2.0(vue@3.5.12(typescript@5.3.3))
       '@vueuse/shared': 11.2.0(vue@3.5.12(typescript@5.3.3))
@@ -8901,6 +9305,7 @@ snapshots:
       focus-trap: 7.6.0
       fuse.js: 6.6.2
       jwt-decode: 3.1.2
+      sortablejs: 1.15.3
     transitivePeerDependencies:
       - '@vue/composition-api'
       - vue
@@ -9066,9 +9471,13 @@ snapshots:
       '@webassemblyjs/ast': 1.12.1
       '@xtuc/long': 4.2.2
 
+  '@webcomponents/shadycss@1.11.2': {}
+
   '@xtuc/ieee754@1.2.0': {}
 
   '@xtuc/long@4.2.2': {}
+
+  '@zip.js/zip.js@2.7.53': {}
 
   abbrev@1.1.1: {}
 
@@ -9588,6 +9997,10 @@ snapshots:
 
   compatx@0.1.8: {}
 
+  composed-offset-position@0.0.6(@floating-ui/utils@0.2.8):
+    dependencies:
+      '@floating-ui/utils': 0.2.8
+
   compress-commons@6.0.2:
     dependencies:
       crc-32: 1.2.2
@@ -9690,8 +10103,7 @@ snapshots:
 
   cssesc@3.0.0: {}
 
-  cssfilter@0.0.10:
-    optional: true
+  cssfilter@0.0.10: {}
 
   cssnano-preset-default@6.1.2(postcss@8.4.47):
     dependencies:
@@ -9760,6 +10172,8 @@ snapshots:
       call-bind: 1.0.7
       es-errors: 1.3.0
       is-data-view: 1.0.1
+
+  dayjs@1.11.13: {}
 
   db0@0.2.1: {}
 
@@ -10894,6 +11308,10 @@ snapshots:
 
   ini@4.1.1: {}
 
+  interactjs@1.10.27:
+    dependencies:
+      '@interactjs/types': 1.10.27
+
   internal-slot@1.0.7:
     dependencies:
       es-errors: 1.3.0
@@ -11312,6 +11730,22 @@ snapshots:
       untun: 0.1.3
       uqr: 0.1.2
 
+  lit-element@4.1.1:
+    dependencies:
+      '@lit-labs/ssr-dom-shim': 1.2.1
+      '@lit/reactive-element': 2.0.4
+      lit-html: 3.2.1
+
+  lit-html@3.2.1:
+    dependencies:
+      '@types/trusted-types': 2.0.7
+
+  lit@3.2.1:
+    dependencies:
+      '@lit/reactive-element': 2.0.4
+      lit-element: 4.1.1
+      lit-html: 3.2.1
+
   load-tsconfig@0.2.5: {}
 
   loader-runner@4.3.0: {}
@@ -11330,6 +11764,8 @@ snapshots:
   locate-path@6.0.0:
     dependencies:
       p-locate: 5.0.0
+
+  lodash-es@4.17.21: {}
 
   lodash.castarray@4.4.0: {}
 
@@ -11354,6 +11790,8 @@ snapshots:
   lru-cache@5.1.1:
     dependencies:
       yallist: 3.1.1
+
+  luxon@3.5.0: {}
 
   magic-string-ast@0.6.2:
     dependencies:
@@ -11405,6 +11843,8 @@ snapshots:
       supercluster: 8.0.1
       tinyqueue: 3.0.0
       vt-pbf: 3.1.3
+
+  marked@14.1.4: {}
 
   marky@1.2.5: {}
 
@@ -11931,10 +12371,10 @@ snapshots:
       - vue
       - webpack-sources
 
-  nuxt-schema-org@3.3.2(@nuxt/devtools@1.6.0(rollup@4.24.4)(vite@5.4.10(@types/node@22.9.0)(terser@5.36.0))(vue@3.5.12(typescript@5.3.3))(webpack-sources@3.2.3))(@unocss/webpack@0.62.4(rollup@4.24.4)(webpack@5.96.1(esbuild@0.23.1)))(@vue/compiler-core@3.5.12)(axios@1.7.7)(fuse.js@6.6.2)(jwt-decode@3.1.2)(magicast@0.3.5)(nuxt@3.10.3(@parcel/watcher@2.5.0)(@types/node@22.9.0)(eslint@8.56.0)(magicast@0.3.5)(optionator@0.9.4)(rollup@4.24.4)(terser@5.36.0)(typescript@5.3.3)(vite@5.4.10(@types/node@22.9.0)(terser@5.36.0))(vue-tsc@1.8.27(typescript@5.3.3))(webpack-sources@3.2.3))(postcss@8.4.47)(rollup@4.24.4)(vite@5.4.10(@types/node@22.9.0)(terser@5.36.0))(vue@3.5.12(typescript@5.3.3))(webpack-sources@3.2.3)(webpack@5.96.1(esbuild@0.23.1)):
+  nuxt-schema-org@3.3.2(@nuxt/devtools@1.6.0(rollup@4.24.4)(vite@5.4.10(@types/node@22.9.0)(terser@5.36.0))(vue@3.5.12(typescript@5.3.3))(webpack-sources@3.2.3))(@unocss/webpack@0.62.4(rollup@4.24.4)(webpack@5.96.1(esbuild@0.23.1)))(@vue/compiler-core@3.5.12)(axios@1.7.7)(fuse.js@6.6.2)(jwt-decode@3.1.2)(magicast@0.3.5)(nuxt@3.10.3(@parcel/watcher@2.5.0)(@types/node@22.9.0)(eslint@8.56.0)(magicast@0.3.5)(optionator@0.9.4)(rollup@4.24.4)(terser@5.36.0)(typescript@5.3.3)(vite@5.4.10(@types/node@22.9.0)(terser@5.36.0))(vue-tsc@1.8.27(typescript@5.3.3))(webpack-sources@3.2.3))(postcss@8.4.47)(rollup@4.24.4)(sortablejs@1.15.3)(vite@5.4.10(@types/node@22.9.0)(terser@5.36.0))(vue@3.5.12(typescript@5.3.3))(webpack-sources@3.2.3)(webpack@5.96.1(esbuild@0.23.1)):
     dependencies:
       '@nuxt/devtools-kit': 1.6.0(magicast@0.3.5)(rollup@4.24.4)(vite@5.4.10(@types/node@22.9.0)(terser@5.36.0))(webpack-sources@3.2.3)
-      '@nuxt/devtools-ui-kit': 1.6.0(@nuxt/devtools@1.6.0(rollup@4.24.4)(vite@5.4.10(@types/node@22.9.0)(terser@5.36.0))(vue@3.5.12(typescript@5.3.3))(webpack-sources@3.2.3))(@unocss/webpack@0.62.4(rollup@4.24.4)(webpack@5.96.1(esbuild@0.23.1)))(@vue/compiler-core@3.5.12)(axios@1.7.7)(fuse.js@6.6.2)(jwt-decode@3.1.2)(magicast@0.3.5)(nuxt@3.10.3(@parcel/watcher@2.5.0)(@types/node@22.9.0)(eslint@8.56.0)(magicast@0.3.5)(optionator@0.9.4)(rollup@4.24.4)(terser@5.36.0)(typescript@5.3.3)(vite@5.4.10(@types/node@22.9.0)(terser@5.36.0))(vue-tsc@1.8.27(typescript@5.3.3))(webpack-sources@3.2.3))(postcss@8.4.47)(rollup@4.24.4)(vite@5.4.10(@types/node@22.9.0)(terser@5.36.0))(vue@3.5.12(typescript@5.3.3))(webpack-sources@3.2.3)(webpack@5.96.1(esbuild@0.23.1))
+      '@nuxt/devtools-ui-kit': 1.6.0(@nuxt/devtools@1.6.0(rollup@4.24.4)(vite@5.4.10(@types/node@22.9.0)(terser@5.36.0))(vue@3.5.12(typescript@5.3.3))(webpack-sources@3.2.3))(@unocss/webpack@0.62.4(rollup@4.24.4)(webpack@5.96.1(esbuild@0.23.1)))(@vue/compiler-core@3.5.12)(axios@1.7.7)(fuse.js@6.6.2)(jwt-decode@3.1.2)(magicast@0.3.5)(nuxt@3.10.3(@parcel/watcher@2.5.0)(@types/node@22.9.0)(eslint@8.56.0)(magicast@0.3.5)(optionator@0.9.4)(rollup@4.24.4)(terser@5.36.0)(typescript@5.3.3)(vite@5.4.10(@types/node@22.9.0)(terser@5.36.0))(vue-tsc@1.8.27(typescript@5.3.3))(webpack-sources@3.2.3))(postcss@8.4.47)(rollup@4.24.4)(sortablejs@1.15.3)(vite@5.4.10(@types/node@22.9.0)(terser@5.36.0))(vue@3.5.12(typescript@5.3.3))(webpack-sources@3.2.3)(webpack@5.96.1(esbuild@0.23.1))
       '@nuxt/kit': 3.14.0(magicast@0.3.5)(rollup@4.24.4)(webpack-sources@3.2.3)
       '@unhead/schema-org': 1.11.11
       floating-vue: 2.0.0-beta.24(@nuxt/kit@3.14.0(magicast@0.3.5)(rollup@4.24.4)(webpack-sources@3.2.3))(vue@3.5.12(typescript@5.3.3))
@@ -11969,7 +12409,7 @@ snapshots:
       - webpack
       - webpack-sources
 
-  nuxt-simple-sitemap@3.4.0(@nuxt/devtools@1.6.0(rollup@4.24.4)(vite@5.4.10(@types/node@22.9.0)(terser@5.36.0))(vue@3.5.12(typescript@5.3.3))(webpack-sources@3.2.3))(@unocss/webpack@0.62.4(rollup@4.24.4)(webpack@5.96.1(esbuild@0.23.1)))(@vue/compiler-core@3.5.12)(axios@1.7.7)(fuse.js@6.6.2)(jwt-decode@3.1.2)(magicast@0.3.5)(nuxt@3.10.3(@parcel/watcher@2.5.0)(@types/node@22.9.0)(eslint@8.56.0)(magicast@0.3.5)(optionator@0.9.4)(rollup@4.24.4)(terser@5.36.0)(typescript@5.3.3)(vite@5.4.10(@types/node@22.9.0)(terser@5.36.0))(vue-tsc@1.8.27(typescript@5.3.3))(webpack-sources@3.2.3))(postcss@8.4.47)(rollup@4.24.4)(vite@5.4.10(@types/node@22.9.0)(terser@5.36.0))(vue@3.5.12(typescript@5.3.3))(webpack-sources@3.2.3)(webpack@5.96.1(esbuild@0.23.1)):
+  nuxt-simple-sitemap@3.4.0(@nuxt/devtools@1.6.0(rollup@4.24.4)(vite@5.4.10(@types/node@22.9.0)(terser@5.36.0))(vue@3.5.12(typescript@5.3.3))(webpack-sources@3.2.3))(@unocss/webpack@0.62.4(rollup@4.24.4)(webpack@5.96.1(esbuild@0.23.1)))(@vue/compiler-core@3.5.12)(axios@1.7.7)(fuse.js@6.6.2)(jwt-decode@3.1.2)(magicast@0.3.5)(nuxt@3.10.3(@parcel/watcher@2.5.0)(@types/node@22.9.0)(eslint@8.56.0)(magicast@0.3.5)(optionator@0.9.4)(rollup@4.24.4)(terser@5.36.0)(typescript@5.3.3)(vite@5.4.10(@types/node@22.9.0)(terser@5.36.0))(vue-tsc@1.8.27(typescript@5.3.3))(webpack-sources@3.2.3))(postcss@8.4.47)(rollup@4.24.4)(sortablejs@1.15.3)(vite@5.4.10(@types/node@22.9.0)(terser@5.36.0))(vue@3.5.12(typescript@5.3.3))(webpack-sources@3.2.3)(webpack@5.96.1(esbuild@0.23.1)):
     dependencies:
       '@nuxt/devtools-kit': 0.8.5(magicast@0.3.5)(nuxt@3.10.3(@parcel/watcher@2.5.0)(@types/node@22.9.0)(eslint@8.56.0)(magicast@0.3.5)(optionator@0.9.4)(rollup@4.24.4)(terser@5.36.0)(typescript@5.3.3)(vite@5.4.10(@types/node@22.9.0)(terser@5.36.0))(vue-tsc@1.8.27(typescript@5.3.3))(webpack-sources@3.2.3))(rollup@4.24.4)(vite@5.4.10(@types/node@22.9.0)(terser@5.36.0))(webpack-sources@3.2.3)
       '@nuxt/kit': 3.14.0(magicast@0.3.5)(rollup@4.24.4)(webpack-sources@3.2.3)
@@ -11978,7 +12418,7 @@ snapshots:
       escape-string-regexp: 5.0.0
       fast-glob: 3.3.2
       knitwork: 1.1.0
-      nuxt-site-config: 1.6.7(@nuxt/devtools@1.6.0(rollup@4.24.4)(vite@5.4.10(@types/node@22.9.0)(terser@5.36.0))(vue@3.5.12(typescript@5.3.3))(webpack-sources@3.2.3))(@unocss/webpack@0.62.4(rollup@4.24.4)(webpack@5.96.1(esbuild@0.23.1)))(@vue/compiler-core@3.5.12)(axios@1.7.7)(fuse.js@6.6.2)(jwt-decode@3.1.2)(magicast@0.3.5)(nuxt@3.10.3(@parcel/watcher@2.5.0)(@types/node@22.9.0)(eslint@8.56.0)(magicast@0.3.5)(optionator@0.9.4)(rollup@4.24.4)(terser@5.36.0)(typescript@5.3.3)(vite@5.4.10(@types/node@22.9.0)(terser@5.36.0))(vue-tsc@1.8.27(typescript@5.3.3))(webpack-sources@3.2.3))(postcss@8.4.47)(rollup@4.24.4)(vite@5.4.10(@types/node@22.9.0)(terser@5.36.0))(vue@3.5.12(typescript@5.3.3))(webpack-sources@3.2.3)(webpack@5.96.1(esbuild@0.23.1))
+      nuxt-site-config: 1.6.7(@nuxt/devtools@1.6.0(rollup@4.24.4)(vite@5.4.10(@types/node@22.9.0)(terser@5.36.0))(vue@3.5.12(typescript@5.3.3))(webpack-sources@3.2.3))(@unocss/webpack@0.62.4(rollup@4.24.4)(webpack@5.96.1(esbuild@0.23.1)))(@vue/compiler-core@3.5.12)(axios@1.7.7)(fuse.js@6.6.2)(jwt-decode@3.1.2)(magicast@0.3.5)(nuxt@3.10.3(@parcel/watcher@2.5.0)(@types/node@22.9.0)(eslint@8.56.0)(magicast@0.3.5)(optionator@0.9.4)(rollup@4.24.4)(terser@5.36.0)(typescript@5.3.3)(vite@5.4.10(@types/node@22.9.0)(terser@5.36.0))(vue-tsc@1.8.27(typescript@5.3.3))(webpack-sources@3.2.3))(postcss@8.4.47)(rollup@4.24.4)(sortablejs@1.15.3)(vite@5.4.10(@types/node@22.9.0)(terser@5.36.0))(vue@3.5.12(typescript@5.3.3))(webpack-sources@3.2.3)(webpack@5.96.1(esbuild@0.23.1))
       nuxt-site-config-kit: 1.6.7(magicast@0.3.5)(rollup@4.24.4)(vue@3.5.12(typescript@5.3.3))(webpack-sources@3.2.3)
       pathe: 1.1.2
       radix3: 1.1.2
@@ -12041,10 +12481,10 @@ snapshots:
       - vue
       - webpack-sources
 
-  nuxt-site-config@1.6.7(@nuxt/devtools@1.6.0(rollup@4.24.4)(vite@5.4.10(@types/node@22.9.0)(terser@5.36.0))(vue@3.5.12(typescript@5.3.3))(webpack-sources@3.2.3))(@unocss/webpack@0.62.4(rollup@4.24.4)(webpack@5.96.1(esbuild@0.23.1)))(@vue/compiler-core@3.5.12)(axios@1.7.7)(fuse.js@6.6.2)(jwt-decode@3.1.2)(magicast@0.3.5)(nuxt@3.10.3(@parcel/watcher@2.5.0)(@types/node@22.9.0)(eslint@8.56.0)(magicast@0.3.5)(optionator@0.9.4)(rollup@4.24.4)(terser@5.36.0)(typescript@5.3.3)(vite@5.4.10(@types/node@22.9.0)(terser@5.36.0))(vue-tsc@1.8.27(typescript@5.3.3))(webpack-sources@3.2.3))(postcss@8.4.47)(rollup@4.24.4)(vite@5.4.10(@types/node@22.9.0)(terser@5.36.0))(vue@3.5.12(typescript@5.3.3))(webpack-sources@3.2.3)(webpack@5.96.1(esbuild@0.23.1)):
+  nuxt-site-config@1.6.7(@nuxt/devtools@1.6.0(rollup@4.24.4)(vite@5.4.10(@types/node@22.9.0)(terser@5.36.0))(vue@3.5.12(typescript@5.3.3))(webpack-sources@3.2.3))(@unocss/webpack@0.62.4(rollup@4.24.4)(webpack@5.96.1(esbuild@0.23.1)))(@vue/compiler-core@3.5.12)(axios@1.7.7)(fuse.js@6.6.2)(jwt-decode@3.1.2)(magicast@0.3.5)(nuxt@3.10.3(@parcel/watcher@2.5.0)(@types/node@22.9.0)(eslint@8.56.0)(magicast@0.3.5)(optionator@0.9.4)(rollup@4.24.4)(terser@5.36.0)(typescript@5.3.3)(vite@5.4.10(@types/node@22.9.0)(terser@5.36.0))(vue-tsc@1.8.27(typescript@5.3.3))(webpack-sources@3.2.3))(postcss@8.4.47)(rollup@4.24.4)(sortablejs@1.15.3)(vite@5.4.10(@types/node@22.9.0)(terser@5.36.0))(vue@3.5.12(typescript@5.3.3))(webpack-sources@3.2.3)(webpack@5.96.1(esbuild@0.23.1)):
     dependencies:
       '@nuxt/devtools-kit': 1.6.0(magicast@0.3.5)(rollup@4.24.4)(vite@5.4.10(@types/node@22.9.0)(terser@5.36.0))(webpack-sources@3.2.3)
-      '@nuxt/devtools-ui-kit': 1.6.0(@nuxt/devtools@1.6.0(rollup@4.24.4)(vite@5.4.10(@types/node@22.9.0)(terser@5.36.0))(vue@3.5.12(typescript@5.3.3))(webpack-sources@3.2.3))(@unocss/webpack@0.62.4(rollup@4.24.4)(webpack@5.96.1(esbuild@0.23.1)))(@vue/compiler-core@3.5.12)(axios@1.7.7)(fuse.js@6.6.2)(jwt-decode@3.1.2)(magicast@0.3.5)(nuxt@3.10.3(@parcel/watcher@2.5.0)(@types/node@22.9.0)(eslint@8.56.0)(magicast@0.3.5)(optionator@0.9.4)(rollup@4.24.4)(terser@5.36.0)(typescript@5.3.3)(vite@5.4.10(@types/node@22.9.0)(terser@5.36.0))(vue-tsc@1.8.27(typescript@5.3.3))(webpack-sources@3.2.3))(postcss@8.4.47)(rollup@4.24.4)(vite@5.4.10(@types/node@22.9.0)(terser@5.36.0))(vue@3.5.12(typescript@5.3.3))(webpack-sources@3.2.3)(webpack@5.96.1(esbuild@0.23.1))
+      '@nuxt/devtools-ui-kit': 1.6.0(@nuxt/devtools@1.6.0(rollup@4.24.4)(vite@5.4.10(@types/node@22.9.0)(terser@5.36.0))(vue@3.5.12(typescript@5.3.3))(webpack-sources@3.2.3))(@unocss/webpack@0.62.4(rollup@4.24.4)(webpack@5.96.1(esbuild@0.23.1)))(@vue/compiler-core@3.5.12)(axios@1.7.7)(fuse.js@6.6.2)(jwt-decode@3.1.2)(magicast@0.3.5)(nuxt@3.10.3(@parcel/watcher@2.5.0)(@types/node@22.9.0)(eslint@8.56.0)(magicast@0.3.5)(optionator@0.9.4)(rollup@4.24.4)(terser@5.36.0)(typescript@5.3.3)(vite@5.4.10(@types/node@22.9.0)(terser@5.36.0))(vue-tsc@1.8.27(typescript@5.3.3))(webpack-sources@3.2.3))(postcss@8.4.47)(rollup@4.24.4)(sortablejs@1.15.3)(vite@5.4.10(@types/node@22.9.0)(terser@5.36.0))(vue@3.5.12(typescript@5.3.3))(webpack-sources@3.2.3)(webpack@5.96.1(esbuild@0.23.1))
       '@nuxt/kit': 3.14.0(magicast@0.3.5)(rollup@4.24.4)(webpack-sources@3.2.3)
       '@nuxt/schema': 3.14.0(magicast@0.3.5)(rollup@4.24.4)(webpack-sources@3.2.3)
       nuxt-site-config-kit: 1.6.7(magicast@0.3.5)(rollup@4.24.4)(vue@3.5.12(typescript@5.3.3))(webpack-sources@3.2.3)
@@ -12432,6 +12872,8 @@ snapshots:
   playwright-core@1.48.2: {}
 
   pluralize@8.0.0: {}
+
+  point-in-polygon-hao@1.1.0: {}
 
   popmotion@11.0.5:
     dependencies:
@@ -13128,6 +13570,8 @@ snapshots:
 
   smob@1.5.0: {}
 
+  sortablejs@1.15.3: {}
+
   source-map-js@1.2.1: {}
 
   source-map-support@0.5.21:
@@ -13440,6 +13884,8 @@ snapshots:
 
   tildify@2.0.0: {}
 
+  timezone-groups@0.10.2: {}
+
   tiny-inflate@1.0.3: {}
 
   tiny-invariant@1.3.3: {}
@@ -13505,6 +13951,8 @@ snapshots:
   type-fest@0.6.0: {}
 
   type-fest@0.8.1: {}
+
+  type-fest@4.18.2: {}
 
   type-fest@4.26.1: {}
 
@@ -14030,6 +14478,11 @@ snapshots:
   ws@8.18.0: {}
 
   xml-name-validator@4.0.0: {}
+
+  xss@1.0.13:
+    dependencies:
+      commander: 2.20.3
+      cssfilter: 0.0.10
 
   xss@1.0.15:
     dependencies:

@@ -279,6 +279,7 @@ const waterSurfaceSoapSuds = ref();
 const waterSurfaceSewage = ref();
 const waterSurfaceErosion = ref();
 const streamFlowVisual = ref();
+const negsample = ref();
 const streamFlowMeasured = ref();
 const waterTemperature = ref();
 const pH = ref();
@@ -309,6 +310,9 @@ const useTurbidMeter = ref(false)
 const useTransparencyTube = ref(false)
 const transparencyTubeMeasured= ref();
 const turbidMeterMeasured = ref()
+
+const selectedSamplers = ref([]);
+const availableSamplers = ref([]);
 
 //photo upload
 const photoUpload = ref(null);
@@ -360,10 +364,52 @@ const fillFormWithTestData = () => {
   useTurbidMeter.value = true;
   trash.value = 2; // Assuming 2 represents 'Minimal'
 };
+//END DEV TESTING
 
-//DEV TESTING: Fill the form with test data
-// 3. Using a keyboard shortcut
+// Fetch available samplers
+const selectedSamplerIds = ref([]);
+
+const fetchSamplers = async () => {
+  try {
+    const response = await $fetch('/api/samplers');
+    availableSamplers.value = response.filter(sampler => sampler.id !== user.value?.id);
+  } catch (error) {
+    toast.add({
+      title: 'Error',
+      description: 'Failed to load available samplers',
+      color: 'red'
+    });
+  }
+};
+
+const getSelectedSamplerName = (id) => {
+  const sampler = availableSamplers.value.find(s => s.id === id);
+  return sampler ? `${sampler.first_name} ${sampler.last_name}` : '';
+};
+
+const removeSampler = (id) => {
+  selectedSamplerIds.value = selectedSamplerIds.value.filter(sId => sId !== id);
+};
+
+const useRCard = ref(false);
+const defaultSampleVol = 1.0;
+const sampleVolOptions = [
+  { value: 1.0, label: '1.0 mL' },
+  { value: 0.75, label: '0.75 mL' },
+  { value: 0.5, label: '0.5 mL' },
+  { value: 0.25, label: '0.25 mL' }
+];
+
+watch(useRCard, (newValue) => {
+  if (newValue) {
+    sampleVolA.value = 1.0;
+    sampleVolB.value = 1.0;
+    sampleVolC.value = 1.0;
+  }
+});
+
 onMounted(() => {
+  fetchSamplers();
   if (process.env.NODE_ENV === 'development') {
     window.addEventListener('keydown', (e) => {
       if (e.ctrlKey && e.key === 'f') {
@@ -372,9 +418,6 @@ onMounted(() => {
     });
   }
 });
-
-//************END DEV TESTING
-
 
 //Validations:
 const isPHValid = computed(() => {
@@ -454,7 +497,9 @@ const errorMessage = ref('');
 const isFormValid = computed(() => {
   formErrors.value = [];
   
-  if (!date.value || !startTime.value || !wwkyid_pk.value) {
+  if (!sampler.value || !adults.value || !youths.value || !date.value || !startTime.value || !wwkyid_pk.value || 
+  	!totalVolunteerMinutes.value || !milesDriven.value || !currentWeather.value || !rainfall.value || 
+	!streamFlowVisual.value || !trash.value) {	
     formErrors.value.push('Please fill in all required fields.');
   }
   
@@ -470,6 +515,20 @@ const isFormValid = computed(() => {
     formErrors.value.push('One or more files exceed the 10 MB size limit.');
   }
   
+
+  // Add R-Card validations only if R-Card method is selected
+  if (useRCard.value) {
+    if (!timeINIncubator.value || !timeOUTIncubator.value) {
+      formErrors.value.push('Incubator times are required for R-Card method.');
+    }
+    if (!ecoliA_count.value || !ecoliB_count.value || !ecoliC_count.value) {
+      formErrors.value.push('All E. coli counts are required for R-Card method.');
+    }
+    if (!sampleVolA.value || !sampleVolB.value || !sampleVolC.value) {
+      formErrors.value.push('All sample volumes are required for R-Card method.');
+    }
+  }
+
   return formErrors.value.length === 0;
 });
 
@@ -553,6 +612,7 @@ const submitData = async () => {
     await updateJoinTable('base_samples_lu_water_surface', createdSampleId, water_surface);
     await updateJoinTable('base_samples_lu_bacterial_sources', createdSampleId, bacterial_sources);
     await updateJoinTable('base_samples_lu_water_color', createdSampleId, water_color);
+	await updateJoinTable('base_samples_directus_users', createdSampleId, selectedSamplerIds.value);
 
     // Step 3: Handle file uploads
     submissionStatus.value = 'Uploading photos...';
@@ -592,24 +652,27 @@ const updateJoinTable = async (tableName, sampleId, relatedIds) => {
       filter: { base_samples_id: { _eq: sampleId } }
     }));
 
-    // Extract the correct column name for the related ID
-    const relatedIdColumn = tableName.replace('base_samples_', '') + '_id';
+    // Handle the special case for samplers table
+    const relatedIdColumn = tableName === 'base_samples_directus_users' 
+      ? 'directus_users_id' 
+      : tableName.replace('base_samples_', '') + '_id';
 
     // Then, create new relationships
-    const items = relatedIds.map(id => ({
-      base_samples_id: sampleId,
-      [relatedIdColumn]: id
-    }));
+    if (relatedIds && relatedIds.length > 0) {
 
-    if (items.length > 0) {
-      await useDirectus(createItem(tableName, items));
+      const items = relatedIds.map(id => ({
+        base_samples_id: sampleId,
+        [relatedIdColumn]: id // This should now be a UUID
+      }));
+
+      await useDirectus(createItems(tableName, items));
     }
   } catch (error) {
     console.error(`Error updating join table ${tableName}:`, error);
-    throw new Error(`Failed to update ${tableName}`);
+    console.error('RelatedIds:', relatedIds);
+    throw new Error(`Failed to update ${tableName}: ${error.message}`);
   }
 };
-
 const prepareSampleData = () => {
   // Helper functions (unchanged)
   const toNullableNumber = (value) => {
@@ -625,6 +688,7 @@ const prepareSampleData = () => {
   // Prepare sample data
   const sampleData = {
     status: 'draft',
+	primary_sampler_id: user.value?.id,
     participants_adults: toNullableInteger(adults.value),
     participants_youth: toNullableInteger(youths.value),
     total_volunteer_minutes: toNullableInteger(totalVolunteerMinutes.value),
@@ -634,6 +698,7 @@ const prepareSampleData = () => {
     dissolved_oxygen: toNullableNumber(dissolvedOxygen.value),
     conductivity: toNullableNumber(conductivity.value),
     stream_flow_measurement: toNullableNumber(streamFlowMeasured.value),
+	negsample: negsample.value || null,
     field_multimeter_manufacturer: manufacturer.value || null,
     field_multimeter_model: model.value || null,
     field_multimeter_certify: iCertifyCheckbox.value,
@@ -788,10 +853,11 @@ const rollbackChanges = async (sampleId) => {
   try {
 
     // Delete entries from join tables
-    await deleteJoinTableEntries('lu_base_samples_odor', sampleId);
-    await deleteJoinTableEntries('lu_base_samples_water_surface', sampleId);
-    await deleteJoinTableEntries('lu_base_samples_bacterial_sources', sampleId);
-    await deleteJoinTableEntries('lu_base_samples_water_color', sampleId);
+    await deleteJoinTableEntries('base_samples_lu_odor', sampleId);
+    await deleteJoinTableEntries('base_samples_lu_water_surface', sampleId);
+    await deleteJoinTableEntries('base_samples_lu_bacterial_sources', sampleId);
+    await deleteJoinTableEntries('base_samples_lu_water_color', sampleId);
+	await deleteJoinTableEntries('base_samples_directus_users', sampleId);
 
     // Delete the created sample
     await useDirectus(deleteItem('base_samples', sampleId));
@@ -823,14 +889,6 @@ const deleteJoinTableEntries = async (tableName, sampleId) => {
     // We don't throw here to allow the rollback process to continue with other tables
   }
 };
-
-/*
-const deleteUploadedFiles = async (sampleId) => {
-  // Implement file deletion logic here
-  // This might involve making an API call to your server to delete the files
-  // associated with this sampleId
-};
-*/
 
 // New function to show error modal
 const showErrorModal = () => {
@@ -878,6 +936,7 @@ const resetForm = () => {
   waterSurfaceSewage.value = false;
   waterSurfaceErosion.value = false;
   streamFlowVisual.value = null;
+  negsample.value = null;
   streamFlowMeasured.value = null;
   waterTemperature.value = null;
   pH.value = null;
@@ -957,22 +1016,66 @@ const viewDashboard = () => {
 
 		<!-- Main Form -->
 		<div v-else>
-			<h1 class="text-2xl text-center text-gray-900">Kentucky Watershed Watch Monitoring Data Form</h1>
+			<h3 class="text-3xl text-center text-gray-900">Kentucky Watershed Watch Monitoring Data Form</h3>
 			<Form @submit.prevent="submitData">
 				<div class="relative items-start">
 				<div class="border-4 p-1 border-gray-900">
+					<div class="p-2">
+						<h1 class="text-xl text-center bact-msg">IF USING <strong>R-CARD METHOD</strong> FOR E. COLI ANALYSIS, IT SHOULD BE COMPLETED BEFORE FILLING OUT AND SUBMITTING THIS FORM.</h1>
+					</div>
+					<div class="p-2">
+						<h1 class="text-1xl font-bold text-left text-gray-900 required-field">Required Fields</h1>
+					</div>
 					<div class="flex">
-						<UFormGroup class="p-2 basis-1/3">
-							<label class="block mb-1">Sampler:</label>
-							<UInput v-model="sampler" icon="i-ic-baseline-person" disabled />
+						<UFormGroup class="p-2 basis-1/3" required>
+							<label class="block mb-1 required-field">Primary Sampler (you)</label>
+							<UInput v-model="sampler" icon="i-ic-baseline-person" disabled required />
 						</UFormGroup>
-						<UFormGroup class="p-2 basis-1/3">
-							<label class="block mb-1"># Adult Participants:</label>
-							<UInput v-model="adults" icon="ic:baseline-group" type="number" />
+						<UFormGroup class="p-2 basis-2/3">
+							<label class="block mb-1">Additional Samplers</label>
+							<div class="space-y-2">
+							<USelectMenu
+								v-model="selectedSamplerIds"
+								:options="availableSamplers"
+								multiple
+								searchable
+								placeholder="Search and select additional samplers"
+								value-attribute="id"
+							>
+								<template #option="{ option }">
+								<span>{{ option.first_name }} {{ option.last_name }}</span>
+								</template>
+								<template #selected-option="{ option }">
+								<span>{{ option.first_name }} {{ option.last_name }}</span>
+								</template>
+							</USelectMenu>
+							
+							<!-- Display selected samplers with remove option -->
+							<div class="flex flex-wrap gap-2 mt-2">
+								<div 
+								v-for="selectedId in selectedSamplerIds" 
+								:key="selectedId"
+								class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full flex items-center gap-2"
+								>
+								<span>{{ getSelectedSamplerName(selectedId) }}</span>
+								<button
+									@click="removeSampler(selectedId)"
+									class="text-blue-600 hover:text-blue-800"
+								>
+									<UIcon name="i-heroicons-x-mark" />
+								</button>
+								</div>
+							</div>
+							</div>
 						</UFormGroup>
-						<UFormGroup class="p-2 basis-1/3">
-							<label class="block mb-1"># Youth Participants:</label>
-							<UInput v-model="youths" icon="healthicons:child-program" type="number" />
+
+						<UFormGroup class="p-2 basis-1/3" required>
+							<label class="block mb-1 required-field"># Adult Participants:</label>
+							<UInput v-model="adults" icon="ic:baseline-group" type="number" required />
+						</UFormGroup>
+						<UFormGroup class="p-2 basis-1/3" required>
+							<label class="block mb-1 required-field"># Youth Participants:</label>
+							<UInput v-model="youths" icon="healthicons:child-program" type="number" required />
 						</UFormGroup>
 					</div>
 					<div class="flex">
@@ -996,8 +1099,8 @@ const viewDashboard = () => {
 							<UButton label="Open Map" @click="openMap" />
 						</UFormGroup>
 						<UFormGroup class="p-2 basis-1/4" required>
-							<label class="block mb-1">Site ID:</label>
-							<UInput :model-value="wwkyid_pk !== null ? wwkyid_pk.toString() : ''" icon="bxs:been-here" :disabled="true"/>
+							<label class="block mb-1 required-field">Site ID:</label>
+							<UInput :model-value="wwkyid_pk !== null ? wwkyid_pk.toString() : ''" icon="bxs:been-here" :disabled="true" required/>
 						</UFormGroup>
 						<UFormGroup class="p-2 basis-1/4">
 							<label class="block mb-1">Stream Name:</label>
@@ -1010,27 +1113,31 @@ const viewDashboard = () => {
 					</div>
 					<div class="flex">
 						<UFormGroup class="p-2 basis-1/4" required>
-							<label class="block mb-1">Date:</label>
-							<UInput v-model="date" icon="solar:calendar-bold" type="date" />
+							<label class="block mb-1 required-field">Date:</label>
+							<UInput v-model="date" icon="solar:calendar-bold" type="date" required />
 						</UFormGroup>
 						<UFormGroup class="p-2 basis-1/4" required>
-							<label class="block mb-1">Start Time:</label>
-							<UInput v-model="startTime" icon="mdi:clock-outline" type="time" />
+							<label class="block mb-1 required-field">Start Time:</label>
+							<UInput v-model="startTime" icon="mdi:clock-outline" type="time" required />
 						</UFormGroup>
 						<UFormGroup class="p-2 basis-1/4" required>
-							<label class="block mb-1">Total Volunteer Minutes:</label>
-							<UInput v-model="totalVolunteerMinutes" placeholder="Travel+Sampling" tuiype="number" />
+							<label class="block mb-1 required-field">Total Volunteer Minutes:</label>
+							<UInput v-model="totalVolunteerMinutes" placeholder="Travel+Sampling" tuiype="number" required />
 						</UFormGroup>
 						<UFormGroup class="p-2 basis-1/4">
-							<label class="block mb-1">Miles Driven:</label>
-							<UInput v-model="milesDriven" type="number" icon="fa-solid:car-side" />
+							<label class="block mb-1 required-field">Miles Driven:</label>
+							<UInput v-model="milesDriven" type="number" icon="fa-solid:car-side" required />
 						</UFormGroup>
+					</div>
+					<div class="p-2 text-sm text-right">
+						<h1>Total time spent sampling at multiple sites should only be entered once.</h1>
+						<h1>Total miles driven to sample at multiple sites should only be entered once.</h1>
 					</div>
 				</div>
 				<div class="border-4 p-1 border-gray-900">
 					<div class="flex">
 						<UFormGroup class="p-2 basis-1/3">
-						<label class="block mb-1">Current Weather:</label>
+						<label class="block mb-1 required-field">Current Weather:</label>
 							<URadioGroup v-model="currentWeather" :options="currentWeatherOptions" name="currentWeather">
 								<template #option="{ option }">
 								<div class="flex items-center">
@@ -1041,7 +1148,7 @@ const viewDashboard = () => {
 							</URadioGroup>
 						</UFormGroup>
 						<UFormGroup class="p-2 basis-1/3 border-l border-gray-500">
-							<label class="block mb-1">Rainfall in last 48 hours (round up):</label>
+							<label class="block mb-1 required-field">Rainfall in last 48 hours (round up):</label>
 							<URadioGroup v-model="rainfall" :options="rainfallOptions" name="rainfall" />
 						</UFormGroup>
 						<UFormGroup class="p-2 basis-1/3 border-l border-gray-500">
@@ -1073,18 +1180,25 @@ const viewDashboard = () => {
 				<div class="flex">
 					<div class="border-4 p-1 border-gray-900 w-1/2">
 						<UFormGroup class="p-2 basis-1/2">
-							<label class="block mb-1">Stream Flow (Visual):</label>
+							<label class="block mb-1 required-field">Stream Flow (Visual):</label>
 							<URadioGroup v-model="streamFlowVisual" :options="streamFlowVisualOptions" name="streamFlowVisual" />
+						</UFormGroup>
+						<UFormGroup class="p-2 basis-1/2">
+							<UCheckbox
+								v-model="negsample"
+								:true-value="true"
+								:false-value="false"
+								label="Unable to sample due to flow conditions (flooded, ponded or dry)"
+							/>
 						</UFormGroup>
 						<UFormGroup class="p-2 basis-1/2">
 							<UCheckbox
 								v-model="streamMeter"
 								label="Check here if using a stream flow meter? (optional)"
 								icon="mdi:water"
-								placeholder="CuFt/Sec"
 								@click="!streamMeter"
 							/>
-							<UInput v-if="streamMeter" v-model="streamFlowMeasured" icon="mdi:water" />
+							<UInput v-if="streamMeter" v-model="streamFlowMeasured" icon="mdi:water" placeholder="CuFt/Sec" />
 						</UFormGroup>
 					</div>
 					<div class="border-4 p-1 border-gray-900 w-1/2">
@@ -1095,7 +1209,7 @@ const viewDashboard = () => {
 				<div class="flex">
 					<div class="border-4 p-1 border-gray-900 w-1/2">
 						<UFormGroup class="p-2">
-							<label class="block mb-1">Trash/Litter:</label>
+							<label class="block mb-1 required-field">Trash/Litter:</label>
 							<URadioGroup v-model="trash" :options="trashOptions" name="trash" />
 						</UFormGroup>
 					</div>
@@ -1202,92 +1316,114 @@ const viewDashboard = () => {
 				</div>
 				<div class="border-4 p-5 border-gray-900">
 					<div class="flex items-center mb-4">
-						<div class="flex items-center">
-							<img
-							src="assets/form_icons/bacteria.png"
-							alt="Bacteria"
-							class="w-20 mr-4"
-							/>
-						</div>
-						<h2 class="text-xl font-bold mr-4 flex-shrink-0">Bacteria: R-Card Method</h2>
-						
+						<UCheckbox
+						v-model="useRCard"
+						/><label class="text-1x1 font-bold">&nbsp;Using R-Card Method for Bacteria Analysis</label>	
 					</div>
-					<div class="flex items-center mb-4">
-						<p class="text-center">Incubation should be for 20-24 hrs at 35-38°C</p>
-					</div>
-					<div class="flex items-start">
-						<!-- Left Column -->
-						<div class="flex-2 pr-4">
-							<UFormGroup class="mb-2" label="Time IN Incubator" required>
-							<UInput v-model="timeINIncubator" icon="mdi:clock-outline" type="time" />
-							</UFormGroup>
-							<UFormGroup class="mb-2" label="Time OUT Incubator" required>
-							<UInput v-model="timeOUTIncubator" icon="mdi:clock-outline" type="time" />
-							</UFormGroup>
-							<UFormGroup class="mb-2" label="Initials of R-Card Reader">
-							<UInput v-model="manufacturer" />
-							</UFormGroup>
-						</div>
 
-						<!-- Middle Column -->
-						<div class="flex-1 px-6">
-							<div class="grid grid-cols-[auto_1fr_auto_1fr_auto_1fr] gap-2">
+					<template v-if="useRCard">
+						<div class="flex items-center mb-4">
+							<div class="flex items-center">
+								<img
+								src="assets/form_icons/bacteria.png"
+								alt="Bacteria"
+								class="w-20 mr-4"
+								/>
+							</div>
+							<h2 class="text-xl font-bold mr-4 flex-shrink-0">Bacteria: R-Card Method</h2>
+							</div>
+							<div class="flex items-center mb-4">
+							<p class="text-center bact-msg">Time Out should be between 20 and 24 hrs at 35-38°C after placing cards in incubator</p>
+							</div>
+							<div class="flex items-start">
+							<!-- Left Column -->
+							<div class="flex-2 pr-4">
+								<UFormGroup class="mb-2">
+								<label class="text-sm required-field">Time In Incubator</label>
+								<UInput v-model="timeINIncubator" icon="mdi:clock-outline" type="time" />
+								</UFormGroup>
+								<UFormGroup class="mb-2">
+								<label class="text-sm required-field">Time Out Incubator</label>
+								<UInput v-model="timeOUTIncubator" icon="mdi:clock-outline" type="time" />
+								</UFormGroup>
+								<UFormGroup class="mb-2">
+								<label class="text-sm required-field">Initials of R-Card Reader</label>
+								<UInput v-model="manufacturer" />
+								</UFormGroup>
+							</div>
+
+							<!-- Middle Column -->
+							<div class="flex-1 px-6">
+								<div class="grid grid-cols-[auto_1fr_auto_1fr_auto_1fr] gap-2">
 								<!-- Headers -->
 								<div></div>
-								<label class="text-sm font-semibold whitespace-nowrap"># E.coli/card</label>
+								<label class="text-sm font-semibold whitespace-nowrap required-field"># E.coli/card</label>
 								<div></div>
-								<label class="text-sm font-semibold whitespace-nowrap">Sample Vol (mL)</label>
+								<label class="text-sm font-semibold whitespace-nowrap required-field">Sample Vol (mL)</label>
 								<div></div>
-								<label class="text-sm font-semibold whitespace-nowrap">E.coli/100mL</label>
+								<label class="text-sm font-semibold whitespace-nowrap required-field">E.coli/100mL</label>
 
 								<!-- Sample A -->
-								<label class="self-center text-sm whitespace-nowrap">Sample A:</label>
-								<UInput v-model="ecoliA_count" type="number" />
+								<label class="self-center text-sm whitespace-nowrap required-field">Sample A:</label>
+								<UInput v-model="ecoliA_count" type="number" required />
 								<span class="self-center text-sm font-semibold px-1">÷</span>
-								<UInput v-model="sampleVolA" type="number"/>
+								<USelect
+									v-model="sampleVolA"
+									:options="sampleVolOptions"
+									:default-value="defaultSampleVol"
+								/>
 								<span class="self-center text-sm font-semibold px-1 whitespace-nowrap">× 100 =</span>
-								<UInput v-model="ecoliA" type="number" :disabled="true" />
+								<UInput v-model="ecoliA" type="number" disabled />
 
 								<!-- Sample B -->
-								<label class="self-center text-sm whitespace-nowrap">Sample B:</label>
-								<UInput v-model="ecoliB_count" type="number" />
+								<label class="self-center text-sm whitespace-nowrap required-field">Sample B:</label>
+								<UInput v-model="ecoliB_count" type="number" required/>
 								<span class="self-center text-sm font-semibold px-1">÷</span>
-								<UInput v-model="sampleVolB" type="number"/>
+								<USelect
+									v-model="sampleVolB"
+									:options="sampleVolOptions"
+									:default-value="defaultSampleVol"
+								/>
 								<span class="self-center text-sm font-semibold px-1 whitespace-nowrap">× 100 =</span>
-								<UInput v-model="ecoliB" type="number" :disabled="true" />
+								<UInput v-model="ecoliB" type="number" disabled />
 
 								<!-- Sample C -->
-								<label class="self-center text-sm whitespace-nowrap">Sample C:</label>
+								<label class="self-center text-sm whitespace-nowrap required-field">Sample C:</label>
 								<UInput v-model="ecoliC_count" type="number" />
 								<span class="self-center text-sm font-semibold px-1">÷</span>
-								<UInput v-model="sampleVolC" type="number"/>
+								<USelect
+									v-model="sampleVolC"
+									:options="sampleVolOptions"
+									:default-value="defaultSampleVol"
+								/>			
 								<span class="self-center text-sm font-semibold px-1 whitespace-nowrap">× 100 =</span>
-								<UInput v-model="ecoliC" type="number" :disabled="true" />
+								<UInput v-model="ecoliC" type="number" disabled />
 
-								<!-- Average -->
-								<label class="text-sm font-semibold col-span-3 self-center px-1">Average E.&nbsp;coli/100mL:</label>
-								<UInput v-model="averageEcoli" class="col-span-3 px-1" disabled />
+									<!-- Average -->
+									<label class="text-sm font-semibold col-span-3 self-center px-1 required-field">Average E.&nbsp;coli/100mL:</label>
+									<UInput v-model="averageEcoli" class="col-span-3 px-1" disabled />
+								</div>
+								
+								<div v-if="isEcoliVariationHigh" class="mt-2 p-2 bg-yellow-100 text-yellow-800 rounded">
+									The variation between E. Coli samples is high (> 1000).
+								</div>
 							</div>
-							
-							<div v-if="isEcoliVariationHigh" class="mt-2 p-2 bg-yellow-100 text-yellow-800 rounded">
-								The variation between E. Coli samples is high (> 1000).
+
+							<!-- Right Column -->
+							<div class="flex-3 pl-4 border-l border-gray-500">
+								<h3 class="text-m font-semibold mb-2 whitespace-nowrap required-field">Possible Bacterial Sources:</h3>
+								<UFormGroup>
+								<UCheckbox v-model="bacterialSourceDuckGoose" label="Duck/Goose" value="1" />
+								<UCheckbox v-model="bacterialSourceHuman" label="Human" value="2" />
+								<UCheckbox v-model="bacterialSourceLivestock" label="Livestock" value="3" />
+								<UCheckbox v-model="bacterialSourcePetWaste" label="Pet Waste" value="4" />
+								<UCheckbox v-model="bacterialSourceWildlife" label="Wildlife" value="5" />
+								<UCheckbox v-model="bacterialSourceOther" label="Other" @click="!bacterialSourceOther" value="6" />
+								<UInput v-if="bacterialSourceOther" v-model="bacterialSourceOtherData" />
+								</UFormGroup>
 							</div>
 						</div>
-
-						<!-- Right Column -->
-						<div class="flex-3 pl-4 border-l border-gray-500">
-							<h3 class="text-m font-semibold mb-2 whitespace-nowrap">Possible Bacterial Sources:</h3>
-							<UFormGroup>
-							<UCheckbox v-model="bacterialSourceDuckGoose" label="Duck/Goose" value="1" />
-							<UCheckbox v-model="bacterialSourceHuman" label="Human" value="2" />
-							<UCheckbox v-model="bacterialSourceLivestock" label="Livestock" value="3" />
-							<UCheckbox v-model="bacterialSourcePetWaste" label="Pet Waste" value="4" />
-							<UCheckbox v-model="bacterialSourceWildlife" label="Wildlife" value="5" />
-							<UCheckbox v-model="bacterialSourceOther" label="Other" @click="!bacterialSourceOther" value="6" />
-							<UInput v-if="bacterialSourceOther" v-model="bacterialSourceOtherData" />
-							</UFormGroup>
-						</div>
-					</div>
+					</template>
 				</div>
 				<div class="flex">
 					<div class="border-4 p-1 border-gray-900 w-1/2">
@@ -1394,6 +1530,25 @@ const viewDashboard = () => {
 </template>
 
 <style scoped>
+.required-field::after {
+  content: '*';
+  color: red;
+  margin-left: 4px;
+}
+
+.required-field {
+  font-weight: bold;
+}
+
+.bact-msg {
+  background-color: #fffb17;
+  padding-top: 0.3rem;
+  padding-bottom: 0.3rem;
+  padding-left: 0.8rem;
+  padding-right: 0.8rem;
+  border-radius: 0.5rem;
+}
+
 .fade-enter-active,
 .fade-leave-active {
   transition: opacity 0.3s;

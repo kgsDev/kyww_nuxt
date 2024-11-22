@@ -4,12 +4,17 @@ module.exports = {
     script: './.output/server/index.mjs',
     exec_mode: 'cluster',
     instances: 'max',
+    instances: 2, // Let's start with 2 instances instead of max
     env: {
       NODE_ENV: 'production',
       API_URL: 'https://kyww.uky.edu',
       BASE_URL: 'https://kyww.uky.edu',
       DIRECTUS_URL: 'https://kyww.uky.edu/backend',
-      PORT: 3001
+      NUXT_PUBLIC_DIRECTUS_URL: 'https://kyww.uky.edu/backend', // Add this
+      PORT: 3001,
+      HOST: 'localhost', // Add this
+      NITRO_HOST: 'localhost', // Add this
+      NITRO_PORT: 3001 // Add this
     },
     error_file: '/var/log/kyww/error.log',
     out_file: '/var/log/kyww/access.log',

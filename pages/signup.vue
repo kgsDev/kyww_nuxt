@@ -58,14 +58,50 @@
         <!-- Password with validation message -->
         <div class="form-group">
           <label for="password">Create a Password:</label>
-          <input type="password" v-model="password" id="password" required @input="validatePassword" />
-          <small class="info-text">Password must be at least 8 characters and include uppercase, lowercase, number, and special character. Password can contain spaces.</small>
+          <div class="relative">
+            <input 
+              :type="showPassword ? 'text' : 'password'" 
+              v-model="password" 
+              id="password" 
+              required 
+              @input="validatePassword"
+            />
+            <button 
+              type="button"
+              class="absolute right-2 top-1/2 transform -translate-y-1/2"
+              @click="showPassword = !showPassword"
+            >
+              <UIcon 
+                :name="showPassword ? 'i-heroicons-eye-slash' : 'i-heroicons-eye'"
+                class="w-5 h-5 text-gray-500 hover:text-gray-700"
+              />
+            </button>
+          </div>
+          <small class="info-text">Password must be at least 8 characters and include uppercase, lowercase, number, and at least one special character. Password can contain spaces.</small>
           <p v-if="passwordMessage" class="password-message">{{ passwordMessage }}</p>
         </div>
 
         <div class="form-group">
           <label for="confirmPassword">Re-enter Password:</label>
-          <input type="password" v-model="confirmPassword" id="confirmPassword" required @input="validatePasswordMatch" />
+          <div class="relative">
+            <input 
+              :type="showConfirmPassword ? 'text' : 'password'" 
+              v-model="confirmPassword" 
+              id="confirmPassword" 
+              required 
+              @input="validatePasswordMatch"
+            />
+            <button 
+              type="button"
+              class="absolute right-2 top-1/2 transform -translate-y-1/2"
+              @click="showConfirmPassword = !showConfirmPassword"
+            >
+              <UIcon 
+                :name="showConfirmPassword ? 'i-heroicons-eye-slash' : 'i-heroicons-eye'"
+                class="w-5 h-5 text-gray-500 hover:text-gray-700"
+              />
+            </button>
+          </div>
           <p v-if="passwordMatchMessage" class="password-message">{{ passwordMatchMessage }}</p>
         </div>
 
@@ -199,7 +235,6 @@
               type="text"
               v-model="address.state"
               id="state"
-              readonly
             />
           </div>
 
@@ -452,6 +487,13 @@
     { id: 'woodford', name: 'Woodford' }
   ];
 
+  const showPassword = ref(false);
+  const showConfirmPassword = ref(false);
+
+  const togglePassword = () => {
+	  showPassword.value = !showPassword.value
+  }
+
   // Validation functions
   const validateEmail = () => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -473,35 +515,37 @@
     }
   };
 
-  const validatePassword = () => {
-    const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?& ]{8,}$/;
-    if (regex.test(password.value)) {
-      passwordMessage.value = '';
-    } else {
-      passwordMessage.value = 'Password does not meet security requirements.';
-    }
-  };
+// Update password validation functions
+const validatePassword = () => {
+  // This regex ensures password contains:
+  // - At least one lowercase letter
+  // - At least one uppercase letter 
+  // - At least one number
+  // - At least one special character
+  // - Minimum length of 8 characters
+  // - Allows all special characters including spaces (but not control characters)
+  const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?~` ])[A-Za-z\d!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?~` ]{8,}$/;
 
-  const validatePasswordMatch = () => {
+  if (regex.test(password.value)) {
+    passwordMessage.value = '';
+    // Add password match validation here
+    validatePasswordMatch();
+  } else {
+    passwordMessage.value = 'Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, one number, and one special character. Spaces are allowed.';
+  }
+};
+
+const validatePasswordMatch = () => {
+  // Only show match error if there's a confirm password value
+  if (confirmPassword.value) {
     if (confirmPassword.value !== password.value) {
       passwordMatchMessage.value = 'Passwords do not match.';
     } else {
       passwordMatchMessage.value = '';
     }
-  };
+  }
+};
 
-  // Computed properties
-  const isFormValid = computed(() => {
-    return (
-      !emailMessage.value &&
-      !phoneMessage.value &&
-      !passwordMessage.value &&
-      !passwordMatchMessage.value &&
-      email.value &&
-      password.value &&
-      confirmPassword.value
-    );
-  });
   // Fetch hubs data
   const fetchHubs = async () => {
     try {
@@ -765,6 +809,9 @@
 
   // Head configuration
   useHead({
+    meta: [
+      { name: 'color-scheme', content: 'light' }
+    ],
     script: [
       {
         src: 'https://www.google.com/recaptcha/api.js?render=explicit',
@@ -780,6 +827,53 @@
   });
 </script> 
 <style scoped>
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="tel"],
+  input[type="date"],
+  select,
+  textarea {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    box-sizing: border-box;
+    background-color: #ffffff; /* Explicit white background */
+    color: #000000; /* Explicit black text */
+    /* Add a slightly darker border on focus for accessibility */
+    &:focus {
+      border-color: #666;
+      outline: none;
+      box-shadow: 0 0 0 2px rgba(66, 153, 225, 0.5);
+    }
+  }
+
+  /* Force color scheme */
+  @media (prefers-color-scheme: dark) {
+    input[type="text"],
+    input[type="email"],
+    input[type="password"],
+    input[type="tel"],
+    input[type="date"],
+    select,
+    textarea {
+      background-color: #ffffff !important;
+      color: #000000 !important;
+      -webkit-text-fill-color: #000000 !important;
+    }
+  }
+
+  /* Add specific styling for disabled/readonly fields */
+  .readonly-field,
+  input:disabled,
+  textarea:disabled,
+  select:disabled {
+    background-color: #f0f0f0 !important;
+    color: #666666 !important;
+    -webkit-text-fill-color: #666666 !important;
+  }
+
   .page-container {
     display: flex;
     align-items: center;
@@ -967,5 +1061,33 @@
     background-color: #FEF2F2;
     border: 1px solid #FCA5A5;
     color: #B91C1C;
+  }
+
+  .relative {
+    position: relative;
+  }
+
+  .absolute {
+    position: absolute;
+  }
+
+  .right-2 {
+    right: 0.5rem;
+  }
+
+  .transform {
+    transform: translate(0, -50%);
+  }
+
+  button {
+    background: none;
+    border: none;
+    cursor: pointer;
+  }
+
+  /* Ensure password input has enough padding on the right for the icon */
+  input[type="password"],
+  input[type="text"] {
+    padding-right: 2.5rem;
   }
   </style>

@@ -24,7 +24,22 @@ export default defineNuxtConfig({
                 host: '0.0.0.0',
                 overlay: false
             } : false
-        }
+        },
+		build: {
+			chunkSizeWarningLimit: 1000,
+			rollupOptions: {
+			  output: {
+				manualChunks(id) {
+				  if (id.includes('node_modules')) {
+					return 'vendor';
+				  }
+				  if (id.includes('pages/account')) {
+					return 'account';
+				  }
+				}
+			  }
+			}
+		}
     },
 
 	//for development:

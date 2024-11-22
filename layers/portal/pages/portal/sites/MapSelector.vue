@@ -811,37 +811,121 @@ const setupEventListeners = () => {
   });
 };
 
+const searchSiteById = async (siteId: string) => {
+  try {
+    // Try to parse the site ID as a number
+    const numericSiteId = parseInt(siteId);
+    if (isNaN(numericSiteId)) return null;
+
+    const response = await useDirectus(
+      readItems('wwky_sites', {
+        filter: {
+          wwkyid_pk: { _eq: numericSiteId }
+        },
+        fields: ['wwkyid_pk', 'latitude', 'longitude', 'stream_name', 'wwkybasin', 'description']
+      })
+    );
+
+    if (response && response.length > 0) {
+      return response[0];
+    }
+    return null;
+  } catch (error) {
+    console.error('Error searching for site:', error);
+    return null;
+  }
+};
+
 const locateAddress = async () => {
-  if (!map.value) {
-    console.error('Map is not initialized');
+  if (!map.value || !address.value) {
+    console.error('Map is not initialized or address is empty');
     return;
   }
 
-  const response = await fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(address.value)}.json?access_token=${mapboxgl.accessToken}`);
-  const data = await response.json();
+  // First, try to find a site by ID
+  const siteResult = await searchSiteById(address.value);
   
-  if (data.features && data.features.length > 0) {
-    const [lng, lat] = data.features[0].center;
-    const placeName = data.features[0].place_name;
+  if (siteResult) {
+    // Found a site, center the map on it
+    const coordinates = new mapboxgl.LngLat(siteResult.longitude, siteResult.latitude);
     
+    // Remove existing markers
     if (addressMarker.value) addressMarker.value.remove();
     if (clickMarker.value) {
       clickMarker.value.remove();
       clickMarker.value = null;
     }
     
+    // Add new marker
     addressMarker.value = new mapboxgl.Marker()
-      .setLngLat([lng, lat])
+      .setLngLat(coordinates)
       .addTo(map.value);
 
+    // Fly to the site
     map.value.flyTo({
-      center: [lng, lat],
+      center: [siteResult.longitude, siteResult.latitude],
       zoom: 14
     });
 
-    createAddSitePopup(new mapboxgl.LngLat(lng, lat), placeName);
+    // Highlight the site
+    highlightedSite.value = siteResult.wwkyid_pk;
+    map.value.setFilter('highlighted-site-layer', ['==', 'wwkyid_pk', siteResult.wwkyid_pk]);
+
+    // Show the site popup
+    createPopup(coordinates, renderSitePopupContent({
+      wwkyid_pk: siteResult.wwkyid_pk,
+      stream_name: siteResult.stream_name,
+      wwkybasin: siteResult.wwkybasin,
+      description: siteResult.description
+    }));
   } else {
-    alert('Address not found');
+    // If no site found, proceed with geocoding address
+    try {
+      const response = await fetch(
+        `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(address.value)}.json?` +
+        `access_token=${mapboxgl.accessToken}&` +
+        'bbox=-89.571067,36.497129,-81.964788,39.147732' // Bounding box for Kentucky
+      );
+      
+      const data = await response.json();
+      
+      if (data.features && data.features.length > 0) {
+        const [lng, lat] = data.features[0].center;
+        const placeName = data.features[0].place_name;
+        
+        if (addressMarker.value) addressMarker.value.remove();
+        if (clickMarker.value) {
+          clickMarker.value.remove();
+          clickMarker.value = null;
+        }
+        
+        addressMarker.value = new mapboxgl.Marker()
+          .setLngLat([lng, lat])
+          .addTo(map.value);
+
+        map.value.flyTo({
+          center: [lng, lat],
+          zoom: 14
+        });
+
+        // Get basin info and create popup
+        const basinInfo = await getBasinAtPoint({ lng, lat });
+        createAddSitePopup(new mapboxgl.LngLat(lng, lat), placeName);
+      } else {
+        toast.add({ 
+          title: 'Location Not Found', 
+          description: 'No matching site ID or address found', 
+          color: 'yellow'
+        });
+      }
+    } catch (error) {
+      console.error('Error in address search:', error);
+      toast.add({ 
+        title: 'Search Error', 
+        description: 'Error searching for location', 
+        color: 'red'
+      });
+    }
   }
 };
 
@@ -887,7 +971,7 @@ onMounted(async () => {
       </div>
     </div>
     <div class="address-bar">
-      <input v-model="address" placeholder="Search by street address or coordinates (lat,lon)" class="address-input" />
+      <input v-model="address" placeholder="Search by site ID, street address or coordinates (lat,lon)" class="address-input" />
       <button @click="locateAddress" class="locate-button">Locate Site</button>
     </div>
 
