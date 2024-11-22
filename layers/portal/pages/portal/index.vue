@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useGreetings } from '~/composables/useGreetings';
+import { useKYWWMap } from '~/composables/useKYWWMap';
 
 const { getTodaysMessage, loading: messagesLoading, error: messagesError, messages: greetingMessages } = useGreetings();
 
@@ -14,12 +15,9 @@ const timedMessages = computed(() => {
   return greetingMessages.value.filter(msg => msg.start_date || msg.end_date);
 });
 
-
 const { user } = useDirectusAuth();
 
 // Add sampling stats functionality
-const loading = ref(true);
-const error = ref(null);
 const samplingStats = ref({
   totalSamples: 0,
   uniqueSites: [],
@@ -29,8 +27,11 @@ const samplingStats = ref({
     adults: 0,
     youth: 0
   },
-  siteDetails: []
+  siteDetails: [],
+  siteSamplingHistory: [], // New field for detailed sampling history
+  samples: [] // Store all samples for reference
 });
+
 
 const formatDate = (date) => {
   if (!date) return 'Not recorded';
@@ -41,11 +42,89 @@ const formatDate = (date) => {
   });
 };
 
+// Add new refs for map
+const mapContainer = ref(null);
+const containerReady = ref(false);
+
+const {
+  loading,
+  error,
+  fetchData,
+  initializeMap,
+  highlightUserSites,
+} = useKYWWMap();
+
+// Watch for container and data
+watch(mapContainer, async (newValue) => {
+  if (newValue && !loading.value) {
+    containerReady.value = true;
+    await initializeMap(newValue);
+    
+    // After map is initialized, fetch and add user's sites
+    if (user.value?.id) {
+      // First get all samples for this user
+      const userSamples = await useDirectus(
+        readItems('base_samples', {
+          filter: { 
+            volunteer_id: { _eq: user.value.id }
+          },
+          fields: ['wwky_id', 'date'],
+          sort: ['-date']
+        })
+      );
+
+      // Process the data to get unique sites with latest dates
+      const siteMap = userSamples.reduce((acc, sample) => {
+        if (!acc.has(sample.wwky_id) || new Date(sample.date) > new Date(acc.get(sample.wwky_id).date)) {
+          acc.set(sample.wwky_id, sample);
+        }
+        return acc;
+      }, new Map());
+
+      // Get unique site IDs
+      const siteIds = [...siteMap.keys()];
+      
+      if (siteIds.length > 0) {
+        // Fetch site details for these IDs
+        const siteDetails = await useDirectus(
+          readItems('wwky_sites', {
+            filter: {
+              wwkyid_pk: { _in: siteIds }
+            },
+            fields: [
+              'wwkyid_pk',
+              'latitude',
+              'longitude',
+              'stream_name',
+              'wwkybasin',
+              'description'
+            ]
+          })
+        );
+
+        // Combine the data
+        const userSitesWithDetails = siteDetails.map(site => {
+          const sampleInfo = siteMap.get(site.wwkyid_pk);
+          const sampleCount = userSamples.filter(sample => sample.wwky_id === site.wwkyid_pk).length;
+          return {
+            ...site,
+            date: sampleInfo?.date,
+            wwky_id: site.wwkyid_pk,
+            sampleCount
+          };
+        });
+        
+        await highlightUserSites(userSitesWithDetails);
+      }
+    }
+  }
+});
+
 // Fetch user's sampling data
 onMounted(async () => {
   try {
     if (user.value?.id) {
-      // Get user's samples - make sure we're using the complete API path
+      // Get user's samples with more details
       const samples = await useDirectus(readItems('base_samples', {
         filter: {
           volunteer_id: { _eq: user.value.id }
@@ -57,14 +136,23 @@ onMounted(async () => {
           'wwky_id',
           'participants_adults',
           'participants_youth',
-          'total_volunteer_minutes'
+          'total_volunteer_minutes',
+          'water_temperature',
+          'pH',
+          'dissolved_oxygen',
+          'conductivity',
+          'bacteria_sample_a_ecoli',
+          'bacteria_sample_b_ecoli',
+          'bacteria_sample_c_ecoli'
         ]
       }));
 
       if (samples?.length > 0) {
+        samplingStats.value.samples = samples;
         samplingStats.value.totalSamples = samples.length;
         samplingStats.value.latestSample = samples[0];
         
+        // Calculate volunteer stats
         samplingStats.value.totalVolunteerMinutes = samples.reduce((acc, sample) => 
           acc + (sample.total_volunteer_minutes || 0), 0);
         
@@ -73,36 +161,56 @@ onMounted(async () => {
           youth: acc.youth + (sample.participants_youth || 0)
         }), { adults: 0, youth: 0 });
 
+        // Get unique sites
         const uniqueSiteIds = [...new Set(samples.map(sample => sample.wwky_id))];
         
-		// When fetching site details, ensure complete API path
-		const sites = await useDirectus(readItems('wwky_sites', {
+        // Fetch detailed site information
+        const sites = await useDirectus(readItems('wwky_sites', {
           filter: {
             wwkyid_pk: { 
-              _in: uniqueSiteIds.filter(id => id != null) // Add null check
+              _in: uniqueSiteIds.filter(id => id != null)
             }
           },
           fields: [
             'wwkyid_pk',
             'stream_name',
             'wwkybasin',
-            'description'
+            'description',
+            'latitude',
+            'longitude'
           ]
         }));
 
         samplingStats.value.siteDetails = sites;
         samplingStats.value.uniqueSites = sites;
+
+        // Create sampling history for each site
+        samplingStats.value.siteSamplingHistory = sites.map(site => {
+          const siteSamples = samples.filter(sample => sample.wwky_id === site.wwkyid_pk);
+          return {
+            ...site,
+            sampleCount: siteSamples.length,
+            samples: siteSamples.map(sample => ({
+              id: sample.id,
+              date: sample.date,
+              measurements: {
+                temperature: sample.water_temperature,
+                pH: sample.pH,
+                dissolvedOxygen: sample.dissolved_oxygen,
+                conductivity: sample.conductivity,
+                eColi: sample.bacteria_sample_a_ecoli
+              }
+            }))
+          };
+        });
+
+        await nextTick();
+        await fetchData();
       }
     }
   } catch (err) {
     error.value = 'Failed to load sampling information.';
     console.error('Dashboard load error:', err);
-    console.log('Error route:', window.location.pathname);
-    console.log('Error state:', {
-      user: user.value,
-      route: useRoute().path,
-      fullUrl: window.location.href
-    });
   } finally {
     loading.value = false;
   }
@@ -212,7 +320,94 @@ onMounted(async () => {
             </div>
           </div>
         </UCard>
+
+        <UCard class="col-span-2">
+          <template #header>
+            <h2 class="text-lg font-semibold">Your Sampling Sites</h2>
+          </template>
+          <div class="relative w-full h-[400px] bg-gray-100">
+            <div 
+              ref="mapContainer" 
+              class="absolute inset-0 w-full h-full"
+            ></div>
+            
+            <div 
+              v-if="!containerReady" 
+              class="absolute inset-0 flex items-center justify-center bg-gray-100 bg-opacity-75"
+            >
+              <ULoadingIcon />
+              <span class="ml-2">Loading map...</span>
+            </div>
+          </div>
+        </UCard>
+
+      <!-- Site Sampling History - Full Width -->
+      <UCard class="col-span-2">
+        <template #header>
+          <h2 class="text-lg font-semibold">Site Sampling History</h2>
+        </template>
+        
+        <div class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead>
+              <tr>
+                <th class="px-4 py-2 text-left">Site ID</th>
+                <th class="px-4 py-2 text-left">Stream Name</th>
+                <th class="px-4 py-2 text-left">Basin</th>
+                <th class="px-4 py-2 text-center">Times Sampled</th>
+                <th class="px-4 py-2 text-center">Latest Sample</th>
+                <th class="px-4 py-2 text-center">Actions</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200">
+              <tr v-for="site in samplingStats.siteSamplingHistory" :key="site.wwkyid_pk">
+                <td class="px-4 py-2">{{ site.wwkyid_pk }}</td>
+                <td class="px-4 py-2">{{ site.stream_name || 'Unnamed' }}</td>
+                <td class="px-4 py-2">{{ site.wwkybasin }}</td>
+                <td class="px-4 py-2 text-center">{{ site.sampleCount }}</td>
+                <td class="px-4 py-2 text-center">
+                  {{ formatDate(site.samples[0]?.date) }}
+                </td>
+                <td class="px-4 py-2 text-center">
+                  <UButton
+                    size="sm"
+                    @click="navigateTo(`/portal/sites/${site.wwkyid_pk}`)"
+                  >
+                    View Samples
+                  </UButton>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </UCard>
+
       </template>
     </div>
   </PageContainer>
 </template>
+
+<style scoped>
+@import "https://js.arcgis.com/4.31/@arcgis/core/assets/esri/themes/light/main.css";
+
+.relative {
+  position: relative;
+}
+
+.absolute {
+  position: absolute;
+}
+
+.inset-0 {
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+}
+
+/* Add explicit dimensions for map container */
+[ref="mapContainer"] {
+  min-height: 400px;
+  min-width: 100%;
+}
+</style>

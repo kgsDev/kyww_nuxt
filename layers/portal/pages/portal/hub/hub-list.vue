@@ -1,270 +1,37 @@
 <script setup lang="ts">
-const hubs = ref([]);
-const sites = ref([]);
-const loading = ref(true);
-const error = ref(null);
-const view = ref<any>(null);
-let mapView: any = null;
+import { useKYWWMap } from '~/composables/useKYWWMap';
 
+const mapContainer = ref(null);
+const containerReady = ref(false);
 
-// Load ArcGIS modules
-async function loadArcGISModules() {
- const [Map, MapView, GraphicsLayer, Graphic, Point, PopupTemplate] = await Promise.all([
-   import('@arcgis/core/Map').then(m => m.default),
-   import('@arcgis/core/views/MapView').then(m => m.default),
-   import('@arcgis/core/layers/GraphicsLayer').then(m => m.default),
-   import('@arcgis/core/Graphic').then(m => m.default),
-   import('@arcgis/core/geometry/Point').then(m => m.default),
-   import('@arcgis/core/PopupTemplate').then(m => m.default)
- ]);
+const {
+  loading,
+  error,
+  hubs,
+  fetchData,
+  initializeMap,
+  zoomTo
+} = useKYWWMap();
 
-  return { Map, MapView, GraphicsLayer, Graphic, Point, PopupTemplate };
-}
-
-// Fetch hubs data
-async function fetchHubs() {
-  try {
-    const hubsData = await useDirectus(readItems('wwky_hubs', {
-      sort: ['Description'],
-      fields: ['*']
-    }));
-    hubs.value = hubsData;
-  } catch (err) {
-    error.value = 'Failed to load hubs';
-    console.error('Error loading hubs:', err);
-  } finally {
-    loading.value = false;
+// Handle zooming to hub
+function zoomToHub(hub) {
+  if (hub.longitude && hub.latitude) {
+    zoomTo([hub.longitude, hub.latitude]);
   }
 }
 
-async function fetchSites() {
-  try {
-    const sitesData = await useDirectus(readItems('wwky_sites', {
-      fields: ['wwkyid_pk','latitude', 'longitude', 'stream_name', 'wwkybasin','description'],
-      limit: 8000
-    }));
-
-    sites.value = sitesData;
-  } catch (err) {
-    error.value = 'Failed to load sites';
-    console.error('Error loading sites:', err);
-  } finally {
-    loading.value = false;
-  }
-}
-
-
-async function initMap() {
- try {
-   const {
-     Map,
-     MapView,
-     GraphicsLayer,
-     Graphic,
-     Point,
-     PopupTemplate
-   } = await loadArcGISModules();
-
-   const mapInstance = new Map({
-      basemap: 'topo-vector'
+watch(mapContainer, async (newValue) => {
+  if (newValue && !loading.value) {
+    containerReady.value = true;
+    await initializeMap(newValue, {
+      showSites: true,
+      showHubs: true
     });
-
-   const viewInstance = new MapView({
-    container: 'map',
-    map: mapInstance,
-    center: [-84.2700, 37.8393],
-    zoom: 7
-  });
-
-  mapView = viewInstance; // Store in non-reactive variable
-  view.value = viewInstance;
-
-   const graphicsLayer = new GraphicsLayer();
-   mapInstance.add(graphicsLayer);
-
-   sites.value.forEach(site => {
-  if (site.longitude && site.latitude) {
-    const point = new Point({
-      longitude: site.longitude,
-      latitude: site.latitude
-    });
-
-    const markerSymbol = {
-      type: "simple-marker",
-      color: [255, 165, 0, 0.7],
-      outline: {
-        color: [0, 0, 0],
-        width: 1
-      }
-    };
-
-    const popupTemplate = new PopupTemplate({
-      content: [
-        {
-          type: "text",
-          text: `
-            <h2>Site: {wwkyid_pk}</h2>
-            <div class="bg-gray-50 p-4 rounded">
-              <dl class="space-y-2">
-                <div>
-                  <dt class="font-medium">Stream Name:</dt>
-                  <dd>{stream_name}</dd>
-                </div>
-                <div>
-                  <dt class="font-medium">Basin:</dt>
-                  <dd>{wwkybasin}</dd>
-                </div>
-                <div>
-                  <dt class="font-medium">Description:</dt>
-                  <dd>{description}</dd>
-                </div>
-                <div>
-                  <dt class="font-medium">Comments:</dt>
-                  <dd>{comments}</dd>
-                </div>
-              </dl>
-            </div>
-          `
-        }
-      ],
-      outlineColor: [0, 0, 0, 0.3]
-    });
-
-    const pointGraphic = new Graphic({
-      geometry: point,
-      symbol: markerSymbol,
-      popupTemplate: popupTemplate,
-      attributes: site
-    });
-
-    graphicsLayer.add(pointGraphic);
   }
 });
-   hubs.value.forEach(hub => {
-     if (hub.longitude && hub.latitude) {
-       const point = new Point({
-         longitude: hub.longitude,
-         latitude: hub.latitude
-       });
-
-       const markerSymbol = {
-         type: "simple-marker",
-         size: 20,
-         color: [46, 204, 113, 0.7],
-         outline: {
-           color: [0, 0, 0],
-           width: 1
-         }
-       };
-
-       const popupTemplate = new PopupTemplate({
-        content: [
-          {
-            type: "text",
-            text: `
-              <h2>Hub: {Description}</h2>
-              <div class="bg-gray-50 p-4 rounded">
-                <dl class="space-y-2">
-                  <div>
-                    <dt class="font-medium">Hub Name:</dt>
-                    <dd>{Description}</dd>
-                  </div>
-                  <div>
-                    <dt class="font-medium">Organization:</dt>
-                    <dd>{organization}</dd>
-                  </div>
-                  <div>
-                    <dt class="font-medium">Physical Address:</dt>
-                    <dd>{Full_Address}</dd>
-                  </div>
-                  <div>
-                    <dt class="font-medium">Mailing Address:</dt>
-                    <dd>{mailing_address}</dd>
-                  </div>
-                  <div>
-                    <dt class="font-medium">Contact Person:</dt>
-                    <dd>{Contact_Person}</dd>
-                  </div>
-                  <div>
-                    <dt class="font-medium">Phone:</dt>
-                    <dd>{Phone}</dd>
-                  </div>
-                  <div>
-                    <dt class="font-medium">Email:</dt>
-                    <dd>{Email}</dd>
-                  </div>
-                  <div>
-                    <dt class="font-medium">Availability:</dt>
-                    <dd>{Availability}</dd>
-                  </div>
-                  <div>
-                    <dt class="font-medium">Basin(s):</dt>
-                    <dd>{Basin}</dd>
-                  </div>
-                  <div>
-                    <dt class="font-medium">Counties:</dt>
-                    <dd>{County}</dd>
-                  </div>
-                  ${
-                    hub.Sampling_kits || hub.Incubator || hub.Biological_kit || 
-                    hub.Events_and_meetings || hub.Site_selection_assist || 
-                    hub.Data_entry_assistance || hub.Interpret_findings || 
-                    hub.Coordinate_community || hub.Host_outreach_materials ? 
-                    `<div>
-                      <dt class="font-medium">Services Offered:</dt>
-                      <dd>
-                        <ul class="list-disc list-inside">
-                          ${hub.Sampling_kits ? '<li>Host sampling kits for check-out</li>' : ''}
-                          ${hub.Incubator ? '<li>Host incubator for E. coli analysis</li>' : ''}
-                          ${hub.Biological_kit ? '<li>Host biological sampling kits</li>' : ''}
-                          ${hub.Events_and_meetings ? '<li>Host sampler training events and meetings</li>' : ''}
-                          ${hub.Site_selection_assist ? '<li>Assist with sampling site selection</li>' : ''}
-                          ${hub.Data_entry_assistance ? '<li>Provide assistance with volunteer data entry</li>' : ''}
-                          ${hub.Interpret_findings ? '<li>Help interpret water quality findings</li>' : ''}
-                          ${hub.Coordinate_community ? '<li>Help coordinate community water projects</li>' : ''}
-                          ${hub.Host_outreach_materials ? '<li>Host outreach materials</li>' : ''}
-                        </ul>
-                      </dd>
-                    </div>` : ''
-                  }
-                </dl>
-              </div>
-            `
-          }
-        ],
-        outlineColor: [0, 0, 0, 0.3]
-        });
-
-       const pointGraphic = new Graphic({
-         geometry: point,
-         symbol: markerSymbol,
-         popupTemplate: popupTemplate,
-         attributes: hub
-       });
-
-       graphicsLayer.add(pointGraphic);
-     }
-   });
- } catch (err) {
-   console.error('Error initializing map:', err);
-   error.value = 'Failed to initialize map';
- }
-}
-
-function zoomToHub(hub) {
-  if (!mapView || !hub.longitude || !hub.latitude) return;
-  
-  mapView.goTo({
-    center: [hub.longitude, hub.latitude],
-    zoom: 12
-  });
-}
 
 onMounted(async () => {
-  await Promise.all([fetchHubs(), fetchSites()]);
-  if (hubs.value.length || sites.value.length) {
-    await initMap();
-  }
+  await fetchData();
 });
 </script>
 
@@ -282,8 +49,7 @@ onMounted(async () => {
           href: '/portal/hub',
         },
       ]"
-    >
-    </PortalPageHeader>
+    />
 
     <div class="container mx-auto px-4">
       <ULoadingBlock v-if="loading" class="h-64" />
@@ -298,7 +64,19 @@ onMounted(async () => {
       <div v-else class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <!-- Map -->
         <div class="bg-white rounded-lg shadow-lg">
-          <div id="map" class="w-full h-[600px] rounded-lg"></div>
+          <div 
+            ref="mapContainer" 
+            class="w-full h-[600px] rounded-lg relative"
+          >
+            <!-- Loading overlay -->
+            <div 
+              v-if="!containerReady" 
+              class="absolute inset-0 flex items-center justify-center bg-gray-100"
+            >
+              <ULoadingIcon />
+              <span class="ml-2">Loading map...</span>
+            </div>
+          </div>
         </div>
 
         <!-- Hub List -->
@@ -373,12 +151,5 @@ onMounted(async () => {
 
 .container {
   max-width: 1400px;
-}
-
-#map {
-  padding: 0;
-  margin: 0;
-  height: 600px;
-  width: 100%;
 }
 </style>
