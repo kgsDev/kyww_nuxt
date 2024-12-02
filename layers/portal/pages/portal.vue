@@ -51,7 +51,7 @@ const sidebarNavigation = {
       : []
     ),
 	...(user_role == roles.admin || user_role == roles.basin_lead || user_role == roles.trainer || user_role == roles.sampler
-      ? [{ name: 'Hubs List (Sites Map)', href: '/portal/hub/hub-list', icon: 'material-symbols:list' }] 
+      ? [{ name: 'Hubs and Sites', href: '/portal/hub/hub-list', icon: 'material-symbols:list' }] 
       : []
     ),
     ...(user_role == roles.admin || user_role == roles.trainer || user_role == roles.basin_lead 
@@ -88,181 +88,228 @@ const mobileMenuOpen = ref(false);
 </script>
 
 <template>
-	<div class="flex h-full transition duration-150 bg-gray-100 dark:bg-gray-950">
-		<div class="hidden p-3 md:block">
-			<!-- Narrow sidebar -->
-			<div class="w-24 h-full bg-gray-900 rounded-panel">
-				<div class="flex flex-col items-center w-full h-full py-6">
-					<div class="flex items-center flex-shrink-0">
-						<Logo class="w-20 text-white" alt="Your Company" />
-					</div>
-					<div class="flex flex-col justify-between flex-1 h-full gap-y-4">
-						<div class="w-full px-2 mt-6 space-y-1">
-							<component
-								:is="item.href ? NuxtLink : 'button'"
-								v-for="item in sidebarNavigation.top"
-								:key="item.name"
-								:href="item.href ?? undefined"
-								:class="[
-									item.current ? 'bg-gray-800 text-white' : 'text-gray-100 hover:bg-gray-800 hover:text-white',
-									'group flex w-full flex-col items-center text-center rounded-card py-3 px-2 text-xs font-bold ',
-								]"
-								:aria-current="item.current ? 'page' : undefined"
-								@click="item.click ? item.click() : undefined"
-							>
-								<UIcon
-									:name="item.icon"
-									:class="[item.current ? 'text-white' : 'text-gray-300 group-hover:text-white', 'h-6 w-6']"
-									aria-hidden="true"
-								/>
-								<span class="mt-2">{{ item.name }}</span>
-							</component>
-						</div>
-						<div class="flex flex-col items-center justify-center w-full px-2 space-y-2">
-							<NuxtLink
-								v-for="item in sidebarNavigation.bottom"
-								:key="item.name"
-								:href="item.href"
-								:class="[
-									item.current ? 'bg-gray-800 text-white' : 'text-gray-100 hover:bg-gray-800 hover:text-white',
-									'group flex w-full flex-col items-center rounded-card py-3 px-2 text-xs font-bold ',
-								]"
-								:aria-current="item.current ? 'page' : undefined"
-							>
-								<UIcon
-									:name="item.icon"
-									:class="[item.current ? 'text-white' : 'text-gray-300 group-hover:text-white', 'h-6 w-6']"
-									aria-hidden="true"
-								/>
-								<span class="mt-2">{{ item.name }}</span>
-							</NuxtLink>
-							<DarkModeToggle bg="dark" class="" />
-							<!-- Profile dropdown -->
-							<UDropdown class="relative" :items="userNavigation">
-								<button>
-									<span class="sr-only">Open user menus</span>
-									<UAvatar class="w-12 h-12 mx-auto" :src="user.avatar" :alt="userName(user)" />
-								</button>
-							</UDropdown>
-						</div>
-					</div>
-				</div>
-			</div>
-		</div>
+  <div class="min-h-screen flex flex-col bg-gray-100 dark:bg-gray-950">
+    <!-- Mobile header -->
+    <div class="md:hidden flex items-center justify-between p-4 bg-gray-900 text-white">
+      <Logo class="h-8 w-auto" alt="Your Company" />
+      <button
+        type="button"
+        class="p-2 rounded-md text-gray-200 hover:text-white"
+        @click="mobileMenuOpen = true"
+      >
+        <UIcon name="heroicons:bars-3" class="h-6 w-6" />
+      </button>
+    </div>
 
-		<!-- Mobile menu -->
-		<TransitionRoot as="template" :show="mobileMenuOpen">
-			<Dialog as="div" class="relative z-20 md:hidden" @close="mobileMenuOpen = false">
-				<TransitionChild
-					as="template"
-					enter="transition-opacity ease-linear duration-300"
-					enter-from="opacity-0"
-					enter-to="opacity-100"
-					leave="transition-opacity ease-linear duration-300"
-					leave-from="opacity-100"
-					leave-to="opacity-0"
-				>
-					<div class="fixed inset-0 bg-gray-600 bg-opacity-75" />
-				</TransitionChild>
+    <div class="flex flex-1 h-0">
+      <!-- Desktop sidebar -->
+      <div class="hidden md:flex md:flex-col md:w-24 md:fixed md:inset-y-0">
+        <div class="flex flex-col flex-1 min-h-0 bg-gray-900">
+          <div class="flex-1 flex flex-col pt-5 pb-4 overflow-y-auto">
+            <div class="flex items-center flex-shrink-0 px-4">
+              <Logo class="w-20 text-white" alt="Your Company" />
+            </div>
+            
+            <nav class="mt-5 flex-1 flex flex-col justify-between">
+              <!-- Top navigation items -->
+              <div class="px-2 space-y-1">
+                <component
+                  :is="item.href ? NuxtLink : 'button'"
+                  v-for="item in sidebarNavigation.top"
+                  :key="item.name"
+                  :href="item.href ?? undefined"
+                  :class="[
+                    item.current ? 'bg-gray-800 text-white' : 'text-gray-100 hover:bg-gray-800 hover:text-white',
+                    'group flex w-full flex-col items-center text-center rounded-md py-3 px-2 text-xs font-medium'
+                  ]"
+                  :aria-current="item.current ? 'page' : undefined"
+                  @click="item.click ? item.click() : undefined"
+                >
+                  <UIcon
+                    :name="item.icon"
+                    :class="[
+                      item.current ? 'text-white' : 'text-gray-300 group-hover:text-white',
+                      'h-6 w-6'
+                    ]"
+                    aria-hidden="true"
+                  />
+                  <span class="mt-2 text-center w-full">{{ item.name }}</span>
+                </component>
+              </div>
 
-				<div class="fixed inset-0 z-40 flex">
-					<TransitionChild
-						as="template"
-						enter="transition ease-in-out duration-300 transform"
-						enter-from="-translate-x-full"
-						enter-to="translate-x-0"
-						leave="transition ease-in-out duration-300 transform"
-						leave-from="translate-x-0"
-						leave-to="-translate-x-full"
-					>
-						<DialogPanel class="relative flex flex-col flex-1 w-full max-w-xs pt-5 pb-4 bg-gray-700">
-							<TransitionChild
-								as="template"
-								enter="ease-in-out duration-300"
-								enter-from="opacity-0"
-								enter-to="opacity-100"
-								leave="ease-in-out duration-300"
-								leave-from="opacity-100"
-								leave-to="opacity-0"
-							>
-								<div class="absolute right-0 p-1 top-1 -mr-14">
-									<button
-										type="button"
-										class="flex items-center justify-center w-12 h-12 rounded-full focus:outline-none focus:ring-2 focus:ring-white"
-										@click="mobileMenuOpen = false"
-									>
-										<Icon name="heroicons:x-mark" class="w-6 h-6 text-white" aria-hidden="true" />
-										<span class="sr-only">Close sidebar</span>
-									</button>
-								</div>
-							</TransitionChild>
-							<div class="flex items-center flex-shrink-0 px-4">
-								<Logo class="w-auto h-8" alt="Your Company" />
-							</div>
-							<div class="flex-1 h-0 px-2 mt-5 overflow-y-auto">
-								<nav class="flex flex-col h-full">
-									<div class="space-y-1">
-										<NuxtLink
-											v-for="item in sidebarNavigation.top"
-											:key="item.name"
-											:href="item.href"
-											:class="[
-												item.current ? 'bg-gray-800 text-white' : 'text-gray-100 hover:bg-gray-800 hover:text-white',
-												'group flex items-center rounded-md py-2 px-3 text-sm font-medium ',
-											]"
-											:aria-current="item.current ? 'page' : undefined"
-										>
-											<UIcon
-												:name="item.icon"
-												:class="[item.current ? 'text-white' : 'text-gray-300 group-hover:text-white', 'mr-3 h-6 w-6']"
-												aria-hidden="true"
-											/>
-											<span>{{ item.name }}</span>
-										</NuxtLink>
-									</div>
-								</nav>
-							</div>
-						</DialogPanel>
-					</TransitionChild>
-					<div class="flex-shrink-0 w-14" aria-hidden="true">
-						<!-- Dummy element to force sidebar to shrink to fit close icon -->
-					</div>
-				</div>
-			</Dialog>
-		</TransitionRoot>
+              <!-- Bottom navigation items -->
+              <div class="flex flex-col items-center justify-center w-full px-2 space-y-2">
+                <NuxtLink
+                  v-for="item in sidebarNavigation.bottom"
+                  :key="item.name"
+                  :href="item.href"
+                  :class="[
+                    item.current ? 'bg-gray-800 text-white' : 'text-gray-100 hover:bg-gray-800 hover:text-white',
+                    'group flex w-full flex-col items-center text-center rounded-md py-3 px-2 text-xs font-medium'
+                  ]"
+                  :aria-current="item.current ? 'page' : undefined"
+                >
+                  <UIcon
+                    :name="item.icon"
+                    :class="[
+                      item.current ? 'text-white' : 'text-gray-300 group-hover:text-white',
+                      'h-6 w-6'
+                    ]"
+                    aria-hidden="true"
+                  />
+                  <span class="mt-2 text-center w-full">{{ item.name }}</span>
+                </NuxtLink>
+                <DarkModeToggle bg="dark" class="w-full flex justify-center" />
 
-		<!-- Content area -->
-		<div class="flex flex-col flex-1 overflow-y-auto">
-			<NuxtErrorBoundary>
-				<template #error="{ error, clearError }">
-					<VAlert type="error">{{ error }}</VAlert>
-					<button class="mt-4 text-sm text-gray-500 underline" @click="clearError">Try again</button>
-					<p>An error occurred: {{ error }}</p>
-				</template>
-				<div class="w-full max-w-5xl p-4 mx-auto">
-					<NuxtPage />
-				</div>
-			</NuxtErrorBoundary>
-		</div>
+                <!-- Profile dropdown -->
+                <UDropdown class="relative w-full flex justify-center px-2" :items="userNavigation">
+                  <button class="w-12 h-12 flex justify-center mx-auto">
+                    <span class="sr-only">Open user menu</span>
+                    <UAvatar class="w-12 h-12" :src="user.avatar" :alt="userName(user)" />
+                  </button>
+                </UDropdown>
+              </div>
+            </nav>
+          </div>
+        </div>
+      </div>
 
-		<!-- Meta layer -->
-		<UModal v-model="showCommandPalette">
-			<PortalSearch @close="showCommandPalette = false" />
-		</UModal>
-		<UNotifications />
-	</div>
+      <!-- Mobile menu -->
+      <TransitionRoot as="template" :show="mobileMenuOpen">
+        <Dialog as="div" class="relative z-50 md:hidden" @close="mobileMenuOpen = false">
+          <TransitionChild
+            as="template"
+            enter="transition-opacity ease-linear duration-300"
+            enter-from="opacity-0"
+            enter-to="opacity-100"
+            leave="transition-opacity ease-linear duration-300"
+            leave-from="opacity-100"
+            leave-to="opacity-0"
+          >
+            <div class="fixed inset-0 bg-gray-600 bg-opacity-75" />
+          </TransitionChild>
+
+          <div class="fixed inset-0 z-40 flex">
+            <TransitionChild
+              as="template"
+              enter="transition ease-in-out duration-300 transform"
+              enter-from="-translate-x-full"
+              enter-to="translate-x-0"
+              leave="transition ease-in-out duration-300 transform"
+              leave-from="translate-x-0"
+              leave-to="-translate-x-full"
+            >
+              <DialogPanel class="relative flex flex-col w-full max-w-xs pt-5 pb-4 bg-gray-900">
+                <div class="absolute top-0 right-0 p-1 -mr-14">
+                  <button
+                    type="button"
+                    class="flex items-center justify-center w-12 h-12 rounded-full focus:outline-none focus:ring-2 focus:ring-white"
+                    @click="mobileMenuOpen = false"
+                  >
+                    <UIcon name="heroicons:x-mark" class="w-6 h-6 text-white" />
+                    <span class="sr-only">Close sidebar</span>
+                  </button>
+                </div>
+
+                <nav class="flex-1 px-4 divide-y divide-gray-800">
+                  <!-- Top navigation items -->
+                  <div class="space-y-1 py-4">
+                    <NuxtLink
+                      v-for="item in sidebarNavigation.top"
+                      :key="item.name"
+                      :href="item.href"
+                      :class="[
+                        item.current ? 'bg-gray-800 text-white' : 'text-gray-100 hover:bg-gray-800 hover:text-white',
+                        'group flex items-center rounded-md px-3 py-2 text-base font-medium'
+                      ]"
+                      @click="mobileMenuOpen = false"
+                    >
+                      <UIcon
+                        :name="item.icon"
+                        :class="[
+                          item.current ? 'text-white' : 'text-gray-300 group-hover:text-white',
+                          'mr-4 h-6 w-6'
+                        ]"
+                      />
+                      {{ item.name }}
+                    </NuxtLink>
+                  </div>
+
+                  <!-- Bottom navigation items -->
+                  <div class="space-y-1 py-4">
+                    <NuxtLink
+                      v-for="item in sidebarNavigation.bottom"
+                      :key="item.name"
+                      :href="item.href"
+                      :class="[
+                        item.current ? 'bg-gray-800 text-white' : 'text-gray-100 hover:bg-gray-800 hover:text-white',
+                        'group flex items-center rounded-md px-3 py-2 text-base font-medium'
+                      ]"
+                      @click="mobileMenuOpen = false"
+                    >
+                      <UIcon
+                        :name="item.icon"
+                        :class="[
+                          item.current ? 'text-white' : 'text-gray-300 group-hover:text-white',
+                          'mr-4 h-6 w-6'
+                        ]"
+                      />
+                      {{ item.name }}
+                    </NuxtLink>
+
+                    <div class="flex items-center justify-between px-3 py-2">
+                      <DarkModeToggle bg="dark" />
+                      <UDropdown :items="userNavigation">
+                        <button class="flex items-center">
+                          <UAvatar :src="user.avatar" :alt="userName(user)" class="w-8 h-8" />
+                          <span class="ml-3 text-sm text-white">{{ userName(user) }}</span>
+                        </button>
+                      </UDropdown>
+                    </div>
+                  </div>
+                </nav>
+              </DialogPanel>
+            </TransitionChild>
+          </div>
+        </Dialog>
+      </TransitionRoot>
+
+      <!-- Main content -->
+      <main class="flex-1 md:pl-24">
+        <div class="h-full">
+          <NuxtErrorBoundary>
+            <template #error="{ error, clearError }">
+              <div class="p-4">
+                <VAlert type="error">{{ error }}</VAlert>
+                <button class="mt-4 text-sm text-gray-500 underline" @click="clearError">
+                  Try again
+                </button>
+              </div>
+            </template>
+            <div class="max-w-5xl mx-auto p-4">
+              <NuxtPage />
+            </div>
+          </NuxtErrorBoundary>
+        </div>
+      </main>
+    </div>
+
+    <!-- Command palette and notifications -->
+    <UModal v-model="showCommandPalette">
+      <PortalSearch @close="showCommandPalette = false" />
+    </UModal>
+    <UNotifications />
+  </div>
 </template>
 
 <style>
-html {
-	@apply h-full;
-}
-
-body {
-	@apply h-full antialiased;
-}
-
+html,
+body,
 #__nuxt {
-	@apply h-full;
+  @apply h-full;
+}
+
+.dark .dark\:bg-gray-950 {
+  background-color: rgb(3, 7, 18);
 }
 </style>

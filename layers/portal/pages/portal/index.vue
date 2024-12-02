@@ -42,9 +42,9 @@ const formatDate = (date) => {
   });
 };
 
-// Add new refs for map
 const mapContainer = ref(null);
 const containerReady = ref(false);
+const legendVisible = ref(true);
 
 const {
   loading,
@@ -52,77 +52,88 @@ const {
   fetchData,
   initializeMap,
   highlightUserSites,
+  sites,
 } = useKYWWMap();
+
+//fetch data immediately
+onMounted(async () => {
+  await fetchData();
+});
 
 // Watch for container and data
 watch(mapContainer, async (newValue) => {
   if (newValue && !loading.value) {
     containerReady.value = true;
-    await initializeMap(newValue);
+    await initializeMap(newValue, {
+      showSites: true, // Always show all sites
+      showHubs: true
+    });
     
-    // After map is initialized, fetch and add user's sites
+    // After map is initialized, fetch and highlight user's sites if they have any
     if (user.value?.id) {
-      // First get all samples for this user
-      const userSamples = await useDirectus(
-        readItems('base_samples', {
-          filter: { 
-            volunteer_id: { _eq: user.value.id }
-          },
-          fields: ['wwky_id', 'date'],
-          sort: ['-date']
-        })
-      );
-
-      // Process the data to get unique sites with latest dates
-      const siteMap = userSamples.reduce((acc, sample) => {
-        if (!acc.has(sample.wwky_id) || new Date(sample.date) > new Date(acc.get(sample.wwky_id).date)) {
-          acc.set(sample.wwky_id, sample);
-        }
-        return acc;
-      }, new Map());
-
-      // Get unique site IDs
-      const siteIds = [...siteMap.keys()];
-      
-      if (siteIds.length > 0) {
-        // Fetch site details for these IDs
-        const siteDetails = await useDirectus(
-          readItems('wwky_sites', {
-            filter: {
-              wwkyid_pk: { _in: siteIds }
+      try {
+        // Get user samples
+        const userSamples = await useDirectus(
+          readItems('base_samples', {
+            filter: { 
+              volunteer_id: { _eq: user.value.id }
             },
-            fields: [
-              'wwkyid_pk',
-              'latitude',
-              'longitude',
-              'stream_name',
-              'wwkybasin',
-              'description'
-            ]
+            fields: ['wwky_id', 'date'],
+            sort: ['-date']
           })
         );
 
-        // Combine the data
-        const userSitesWithDetails = siteDetails.map(site => {
-          const sampleInfo = siteMap.get(site.wwkyid_pk);
-          const sampleCount = userSamples.filter(sample => sample.wwky_id === site.wwkyid_pk).length;
-          return {
-            ...site,
-            date: sampleInfo?.date,
-            wwky_id: site.wwkyid_pk,
-            sampleCount
-          };
-        });
-        
-        await highlightUserSites(userSitesWithDetails);
+        if (userSamples.length > 0) {
+          // Process current user sites
+          const siteMap = userSamples.reduce((acc, sample) => {
+            if (!acc.has(sample.wwky_id) || new Date(sample.date) > new Date(acc.get(sample.wwky_id).date)) {
+              acc.set(sample.wwky_id, sample);
+            }
+            return acc;
+          }, new Map());
+
+          const siteIds = [...siteMap.keys()];
+          
+          if (siteIds.length > 0) {
+            const siteDetails = await useDirectus(
+              readItems('wwky_sites', {
+                filter: {
+                  wwkyid_pk: { _in: siteIds }
+                },
+                fields: [
+                  'wwkyid_pk',
+                  'latitude',
+                  'longitude',
+                  'stream_name',
+                  'wwkybasin',
+                  'description'
+                ]
+              })
+            );
+
+            const userSitesWithDetails = siteDetails.map(site => ({
+              ...site,
+              date: siteMap.get(site.wwkyid_pk)?.date,
+              wwky_id: site.wwkyid_pk,
+              sampleCount: userSamples.filter(sample => sample.wwky_id === site.wwkyid_pk).length
+            }));
+            
+            await highlightUserSites(userSitesWithDetails);
+          }
+        }
+      } catch (err) {
+        console.error('Error loading user sites:', err);
       }
     }
   }
-});
+ } , { immediate: true });
 
 // Fetch user's sampling data
 onMounted(async () => {
   try {
+    // First fetch the map data
+    await fetchData();
+
     if (user.value?.id) {
       // Get user's samples with more details
       const samples = await useDirectus(readItems('base_samples', {
@@ -205,7 +216,6 @@ onMounted(async () => {
         });
 
         await nextTick();
-        await fetchData();
       }
     }
   } catch (err) {
@@ -322,24 +332,70 @@ onMounted(async () => {
         </UCard>
 
         <UCard class="col-span-2">
-          <template #header>
+        <template #header>
+          <div class="flex justify-between items-center">
             <h2 class="text-lg font-semibold">Your Sampling Sites</h2>
-          </template>
-          <div class="relative w-full h-[400px] bg-gray-100">
-            <div 
-              ref="mapContainer" 
-              class="absolute inset-0 w-full h-full"
-            ></div>
-            
-            <div 
-              v-if="!containerReady" 
-              class="absolute inset-0 flex items-center justify-center bg-gray-100 bg-opacity-75"
+            <UButton
+              v-if="legendVisible"
+              icon="i-heroicons-map"
+              variant="ghost"
+              @click="legendVisible = !legendVisible"
             >
-              <ULoadingIcon />
-              <span class="ml-2">Loading map...</span>
+              Hide Legend
+            </UButton>
+            <UButton
+              v-else
+              icon="i-heroicons-map"
+              variant="ghost"
+              @click="legendVisible = !legendVisible"
+            >
+              Show Legend
+            </UButton>
+          </div>
+        </template>
+        
+        <div class="relative w-full h-[400px] bg-gray-100">
+          <!-- Map Container -->
+          <div 
+            ref="mapContainer" 
+            class="absolute inset-0 w-full h-full"
+          ></div>
+          
+          <!-- Loading State -->
+          <div 
+            v-if="!containerReady" 
+            class="absolute inset-0 flex items-center justify-center bg-gray-100 bg-opacity-75"
+          >
+            <ULoadingIcon />
+            <span class="ml-2">Loading map...</span>
+          </div>
+          
+          <!-- Custom Legend -->
+          <div 
+            v-if="legendVisible && containerReady"
+            class="absolute top-4 right-4 bg-white p-4 rounded-lg shadow-lg z-10 min-w-[200px]"
+          >
+            <h3 class="font-semibold mb-2">Map Legend</h3>
+            <div class="space-y-2">
+              <div class="flex items-center">
+                <div class="w-4 h-4 rounded-full bg-[#FFA500] opacity-70 mr-2"></div>
+                <span>Available Sampling Sites</span>
+              </div>
+              <div class="flex items-center">
+                <div class="w-4 h-4 rounded-full bg-blue-500 opacity-70 mr-2"></div>
+                <span>Your Sampling Sites</span>
+              </div>
+              <div class="flex items-center">
+                <div class="w-4 h-4 rounded-full bg-[#2ECC71] opacity-70 mr-2"></div>
+                <span>Sampling Hubs</span>
+              </div>
+            </div>
+            <div class="mt-4 text-xs text-gray-500">
+              Total Sites: {{ sites?.length || 0 }}
             </div>
           </div>
-        </UCard>
+        </div>
+      </UCard>
 
       <!-- Site Sampling History - Full Width -->
       <UCard class="col-span-2">
@@ -405,7 +461,6 @@ onMounted(async () => {
   left: 0;
 }
 
-/* Add explicit dimensions for map container */
 [ref="mapContainer"] {
   min-height: 400px;
   min-width: 100%;
