@@ -47,7 +47,7 @@ const sidebarNavigation = {
       : []
     ),
     ...(user_role == roles.admin || user_role == roles.basin_lead 
-      ? [{ name: 'New Hub', href: '/portal/hub', icon: 'material-symbols:hub-outline' }] 
+      ? [{ name: 'Add / Edit Hub', href: '/portal/hub', icon: 'material-symbols:hub-outline' }] 
       : []
     ),
 	...(user_role == roles.admin || user_role == roles.basin_lead || user_role == roles.trainer || user_role == roles.sampler

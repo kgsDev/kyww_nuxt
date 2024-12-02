@@ -50,6 +50,90 @@ const formErrors = reactive({
   basin: '',
 });
 
+//edit mode constants:
+const isEditMode = ref(false);
+const selectedHubId = ref(null);
+const existingHubs = ref([]);
+
+// Modify page title based on mode
+const pageTitle = computed(() => isEditMode.value ? 'Edit Hub' : 'New Hub');
+
+
+// Function to fetch all hubs
+async function fetchHubs() {
+  try {
+    const hubsList = await useDirectus(
+      readItems('wwky_hubs', {
+        sort: ['Description'],
+        fields: ['*']
+      })
+    );
+    existingHubs.value = hubsList.map(hub => ({
+      ...hub,
+      label: hub.Description,  // For select menu display
+      value: hub.hub_id       // For select menu value
+    }));
+  } catch (err) {
+    console.error('Error fetching hubs:', err);
+    error.value = 'Failed to load existing hubs';
+  }
+}
+
+// Function to load hub data into form
+async function loadHubData(hubId) {
+  if (!hubId?.value) {
+    return;
+  }
+
+  try {
+    loading.value = true;
+    const hubData = await useDirectus(
+      readItem('wwky_hubs', hubId.value, {
+        fields: ['*']
+      })
+    );
+
+    // Populate form data
+    formData.description = hubData.Description;
+    formData.organization = hubData.organization;
+    formData.full_address = hubData.Full_Address;
+    formData.mailing_address = hubData.mailing_address;
+    formData.contact_person = hubData.Contact_Person;
+    formData.phone = hubData.Phone;
+    formData.email = hubData.Email;
+    formData.availability = hubData.Availability;
+    formData.basin = hubData.Basin ? hubData.Basin.split(', ') : [];
+    formData.county = hubData.County ? hubData.County.split(', ') : [];
+    formData.sampling_kits = hubData.Sampling_kits;
+    formData.incubator = hubData.Incubator;
+    formData.biological_kit = hubData.Biological_kit;
+    formData.events_and_meetings = hubData.Events_and_meetings;
+    formData.site_selection_assist = hubData.Site_selection_assist;
+    formData.data_entry_assist = hubData.Data_entry_assistance;
+    formData.interpret_findings = hubData.Interpret_findings;
+    formData.coordinate_community = hubData.Coordinate_community;
+    formData.host_outreach_materials = hubData.Host_outreach_materials;
+    formData.latitude = hubData.latitude;
+    formData.longitude = hubData.longitude;
+  } catch (err) {
+    console.error('Error loading hub data:', err);
+    error.value = 'Failed to load hub data';
+  } finally {
+    loading.value = false;
+  }
+}
+
+// Watch for hub selection changes
+watch(selectedHubId, async (newId) => {
+  if (newId?.value) {
+    isEditMode.value = true;
+    await loadHubData(newId);
+  } else {
+    isEditMode.value = false;
+    resetForm();
+  }
+});
+
 // Validate form fields
 function validateForm() {
   let isValid = true;
@@ -238,6 +322,8 @@ const showSuccess = ref(false);
 async function resetForm() {
   showSuccessModal.value = false;
   isConfirmationModalOpen.value = false;
+  selectedHubId.value = null;
+  isEditMode.value = false;
   // Reset all form fields
   formData.description = '';
   formData.organization = '';
@@ -270,7 +356,6 @@ async function submitData() {
   try {
     loading.value = true;
     error.value = null;
-    showSuccess.value = false;
 
     const hubData = {
       Description: formData.description,
@@ -294,31 +379,38 @@ async function submitData() {
       Host_outreach_materials: formData.host_outreach_materials,
       latitude: formData.latitude,
       longitude: formData.longitude,
-      user_created: user.value?.id
+      user_updated: user.value?.id
     };
 
-    const result = await useDirectus(createItem('wwky_hubs', hubData));
- 
-    // Close confirmation modal and show success modal
+    if (isEditMode.value && selectedHubId.value) {
+      // Update existing hub
+      const hubId = selectedHubId.value;
+      await useDirectus(updateItem('wwky_hubs', selectedHubId.value.value, hubData));
+    } else {
+      // Create new hub
+      hubData.user_created = user.value?.id;
+      await useDirectus(createItem('wwky_hubs', hubData));
+    }
+
     isConfirmationModalOpen.value = false;
     showSuccessModal.value = true;
-
   } catch (err) {
-	isConfirmationModalOpen.value = false
     console.error('Submission error:', err);
-    error.value = `Failed to create hub: ${err.message}`;
+    error.value = `Failed to ${isEditMode.value ? 'update' : 'create'} hub: ${err.message}`;
+    isConfirmationModalOpen.value = false;
   } finally {
     loading.value = false;
   }
 }
 
+// Fetch hubs on mount
 onMounted(async () => {
+  await fetchHubs();
   await loadGoogleMaps();
   if (isLoaded.value) {
     initializeAutocomplete();
   }
 });
-
 const viewHubList = () => {
 	navigateTo('/portal/hub/hub-list');
 };
@@ -326,7 +418,7 @@ const viewHubList = () => {
 <template>
 	<div>
 	  <PortalPageHeader
-		title="New Hub"
+		:title="pageTitle"
 		:breadcrumbs="[
 		  {
 			title: 'Portal',
@@ -339,10 +431,18 @@ const viewHubList = () => {
 		]"
 	  />
   
-	  <div class="max-w-4xl mx-auto">
-		<h1 class="text-2xl font-bold text-center text-gray-900 mb-6">
-		  Kentucky Watershed Watch New Hub Form
-		</h1>
+    <div class="max-w-4xl mx-auto">
+      <!-- Hub Selection -->
+      <div class="mb-6 bg-white rounded-lg shadow p-6">
+        <UFormGroup label="Select Action">
+          <USelectMenu
+            v-model="selectedHubId"
+            :options="[{ label: 'Create New Hub', value: null }, ...existingHubs]"
+            placeholder="Create New Hub or Select Hub to Edit"
+            class="w-full"
+          />
+        </UFormGroup>
+      </div>
   
 		<!-- Existing alert for errors -->
 		<UAlert
@@ -537,17 +637,17 @@ const viewHubList = () => {
 			</UFormGroup>
 		</div>
 	</div>
-	<div class="flex justify-end">
-		<UButton
-			type="submit"
-			:loading="loading"
-			:disabled="!isFormValid"
-			color="primary"
-			variant="solid"
-		>
-			Create Hub
-		</UButton>
-	</div>
+  <div class="flex justify-end">
+        <UButton
+          type="submit"
+          :loading="loading"
+          :disabled="!isFormValid"
+          color="primary"
+          variant="solid"
+        >
+          {{ isEditMode ? 'Update Hub' : 'Create Hub' }}
+        </UButton>
+      </div>
   </div>
 </Form>
 
@@ -562,24 +662,27 @@ const viewHubList = () => {
       </template>
       
       <div class="p-4">
-        <p>Hub has been successfully created.</p>
+        <p>Hub has been successfully {{ isEditMode ? 'updated' : 'created' }}.</p>
       </div>
       <div class="flex justify-center space-x-4 p-4 text-center">
-        <UButton variant="outline" @click="resetForm" label="Submit Another Hub" />
+        <UButton 
+          variant="outline" 
+          @click="resetForm" 
+          :label="isEditMode ? 'Edit Another Hub' : 'Submit Another Hub'" 
+        />
         <UButton variant="solid" @click="viewHubList" label="View Hub List" />
       </div>
     </UCard>
   </UModal>
 
     <!-- Confirmation Modal -->
-    <UModal
-      v-model="isConfirmationModalOpen"
-      prevent-close
-    >
-      <UCard>
-        <template #header>
-          <div class="text-xl font-bold">Confirm Submission</div>
-        </template>
+    <UModal v-model="isConfirmationModalOpen" prevent-close>
+        <UCard>
+          <template #header>
+            <div class="text-xl font-bold">
+              Confirm {{ isEditMode ? 'Update' : 'Submission' }}
+            </div>
+          </template>
         
         <div class="space-y-4">
           <p>Please review the following information:</p>
@@ -642,7 +745,6 @@ const viewHubList = () => {
                   </ul>
                 </dd>
               </div>            
-              <!-- Add other important fields to review -->
             </dl>
           </div>
           
@@ -652,27 +754,27 @@ const viewHubList = () => {
         </div>
 
         <template #footer>
-          <div class="flex justify-end space-x-4">
-            <UButton
-              color="gray"
-              variant="soft"
-              @click="isConfirmationModalOpen = false"
-            >
-              Cancel
-            </UButton>
-            <UButton
-              color="primary"
-              :loading="loading"
-              @click="submitData"
-            >
-              Confirm & Create
-            </UButton>
-          </div>
-        </template>
-      </UCard>
-    </UModal>
+            <div class="flex justify-end space-x-4">
+              <UButton
+                color="gray"
+                variant="soft"
+                @click="isConfirmationModalOpen = false"
+              >
+                Cancel
+              </UButton>
+              <UButton
+                color="primary"
+                :loading="loading"
+                @click="submitData"
+              >
+                {{ isEditMode ? 'Confirm & Update' : 'Confirm & Create' }}
+              </UButton>
+            </div>
+          </template>
+        </UCard>
+      </UModal>
+    </div>
   </div>
-</div>
 </template>
 
 <style>
