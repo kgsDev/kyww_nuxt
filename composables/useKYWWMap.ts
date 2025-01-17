@@ -129,7 +129,7 @@ const KENTUCKY_ZOOM = 7;
         Point,
         PopupTemplate
       } = await loadArcGISModules();
-  
+      
       const mapInstance = new Map({
         basemap: 'topo-vector'
       });
@@ -175,7 +175,7 @@ const KENTUCKY_ZOOM = 7;
       });
   
       mapInstance.addMany([graphicsLayer, userSitesLayer]);
-  
+
     // Add sites if enabled
     if (options.showSites) {
         sites.value.forEach(site => {
@@ -217,10 +217,10 @@ const KENTUCKY_ZOOM = 7;
             });
 
             const pointGraphic = new Graphic({
-            geometry: point,
-            symbol: markerSymbol,
-            popupTemplate: popupTemplate,
-            attributes: site
+              geometry: point,
+              symbol: markerSymbol,
+              popupTemplate: popupTemplate,
+              attributes: site
             });
 
             graphicsLayer.add(pointGraphic);
@@ -263,8 +263,8 @@ const KENTUCKY_ZOOM = 7;
         }
         });
       }
-  
-      // Handle single site display
+      
+      // Zoom to extent if valid sites are available
       if (options.singleSite) {
         const site = options.singleSite;
         const point = new Point({
@@ -354,8 +354,18 @@ const KENTUCKY_ZOOM = 7;
       
         const { Graphic, Point, PopupTemplate } = await loadArcGISModules();
       
+        //load extent for calculating boundary extents
+        const Extent = await import('@arcgis/core/geometry/Extent').then(m => m.default);
+
+        const validSites: Array<{longitude: number, latitude: number}> = [];
+
         userSites.forEach(site => {
           if (site.latitude && site.longitude) {
+            validSites.push({
+              longitude: site.longitude,
+              latitude: site.latitude
+            });
+
             const point = new Point({
               longitude: site.longitude,
               latitude: site.latitude
@@ -421,6 +431,53 @@ const KENTUCKY_ZOOM = 7;
         // Make layer visible when sites are added
         userSitesVisible.value = true;
         userSitesLayer.visible = true;
+        
+        // Calculate and zoom to extent if we have valid sites
+        if (validSites.length > 0) {
+          const xCoords = validSites.map(c => c.longitude);
+          const yCoords = validSites.map(c => c.latitude);
+
+          const minX = Math.min(...xCoords);
+          const maxX = Math.max(...xCoords);
+          const minY = Math.min(...yCoords);
+          const maxY = Math.max(...yCoords);
+
+          // Add padding to the extent (10% of the range)
+          const xPadding = Math.max((maxX - minX) * 0.05, 0.01); // Minimum 0.01 degrees
+          const yPadding = Math.max((maxY - minY) * 0.05, 0.01); // Minimum 0.01 degrees
+
+          const extent = new Extent({
+            xmin: minX - xPadding,
+            xmax: maxX + xPadding,
+            ymin: minY - yPadding,
+            ymax: maxY + yPadding,
+            spatialReference: { wkid: 4326 }
+          });
+
+          // Add options to the goTo for tighter zoom
+          await view.goTo({
+            target: extent,
+            options: {
+              animate: true,
+              duration: 1000,
+              easing: "ease-out"
+            }
+          });
+
+          // If it's a single site, zoom in further
+          if (validSites.length === 1) {
+            await view.goTo({
+              target: extent,
+              zoom: 13 // Closer zoom for single site
+            });
+          }
+        } else {
+          // If no valid sites, zoom to Kentucky
+          await view.goTo({
+            center: KENTUCKY_CENTER,
+            zoom: KENTUCKY_ZOOM
+          });
+        }
       }
     
       // Add toggle function for user sites

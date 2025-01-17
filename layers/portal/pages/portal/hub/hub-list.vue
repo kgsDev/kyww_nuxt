@@ -116,7 +116,7 @@ onMounted(async () => {
                 </div>
                 <div class="flex items-center">
                   <div class="w-4 h-4 rounded-full bg-[#2ECC71] opacity-70 mr-2"></div>
-                  <span>Sampling Hubs</span>
+                  <span>Support Hubs</span>
                 </div>
               </div>
               <div class="mt-4 text-xs text-gray-500">
@@ -178,7 +178,7 @@ onMounted(async () => {
                       <p class="font-medium">Services</p>
                       <ul class="list-disc list-inside">
                         <li v-if="hub.Sampling_kits">Sampling kits</li>
-                        <li v-if="hub.Incubator">E. coli analysis</li>
+                        <li v-if="hub.Incubator">Incubator for E. coli analysis</li>
                         <li v-if="hub.Biological_kit">Biological sampling</li>
                         <li v-if="hub.Events_and_meetings">Sampler training events</li>
                         <li v-if="hub.Site_selection_assist">Sampling site selection</li>

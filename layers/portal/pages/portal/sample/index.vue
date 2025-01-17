@@ -2,29 +2,141 @@
 import MapSelector from '../sites/MapSelector.vue';
 import PhotoUpload from '../../components/PhotoUpload.vue';
 
-// Add these to your reactive variables
-const toast = useToast();
-const formErrors = ref([]);
+const route = useRoute();
+const isEditMode = computed(() => !!route.query.edit);
+const sampleId = computed(() => route.query.edit as string);
 
 const { user } = useDirectusAuth();
 
-const wwkyid_pk = ref<number | null>(null);
-const stream_name = ref('');
-const wwkybasin = ref('');
-
-const isConfirmationModalOpen = ref(false);
-
-// ConfirmSubmission function
-const confirmSubmission = () => {
-  if (isFormValid.value) {
-    isConfirmationModalOpen.value = true;
-  } else {
-    toast.add({ title: 'Form Error', description: formErrors.value.join(' '), color: 'red' });
-  }
+//initialize form refs
+const formRefs = {
+	originalSampler: ref(''),
+	wwkyid_pk: ref<number | null>(null),
+	stream_name: ref(''),
+	wwkybasin: ref(''),
+	sampler: ref(user?.value?.display_name),
+	adults: ref(),
+	youths: ref(),
+	date: ref(),
+	startTime: ref(),
+	totalVolunteerMinutes: ref(),
+	milesDriven: ref(),
+	currentWeather: ref(),
+	rainfall: ref(),
+	waterColor: ref(),
+	odorNone: ref(),
+	odorRottenEggs: ref(),
+	odorChlorine: ref(),
+	odorRancidSour: ref(),
+	odorGasPetro: ref(),
+	odorMusty: ref(),
+	odorSweetFruity: ref(),
+	odorSharpPungent: ref(),
+	waterSurfaceNone: ref(),
+	waterSurfaceOilSheen: ref(),
+	waterSurfaceAlgae: ref(),
+	waterSurfaceSoapSuds: ref(),
+	waterSurfaceSewage: ref(),
+	waterSurfaceErosion: ref(),
+	streamFlowVisual: ref(),
+	negsample: ref(),
+	streamFlowMeasured: ref(),
+	waterTemperature: ref(),
+	pH: ref(),
+	dissolvedOxygen: ref(),
+	conductivity: ref(),
+	iCertifyCheckbox: ref(),
+	timeINIncubator: ref<string | null>(null),
+	timeOUTIncubator: ref<string | null>(null),
+	bacteriaRCardInitials: ref(),
+	bacterialSourceHuman: ref(),
+	bacterialSourceDuckGoose: ref(),
+	bacterialSourceLivestock: ref(),
+	bacterialSourcePetWaste: ref(),
+	bacterialSourceWildlife: ref(),
+	ecoliA_count: ref(),
+	sampleVolA: ref(),
+	ecoliB_count: ref(),
+	sampleVolB: ref(),
+	ecoliC_count: ref(),
+	sampleVolC: ref(),
+	conductivityMeterCalibrationDate: ref(),
+	otherMeterCalibrationDate: ref(),
+	streamMeter: ref(),
+	bacterialSourceOther: ref(),
+	trash: ref(),
+	turbidity: ref(),
+	useTurbidMeter: ref(false),
+	useTransparencyTube: ref(false),
+	transparencyTubeMeasured: ref(),
+	turbidMeterMeasured: ref(),
+	availableSamplers: ref([]),
+	otherObs: ref(''),
+	allFilesSelected: ref(false),
+	selectedSamplerIds: ref([]),
 };
 
-const isMapOpen = ref(false);
-const mapModalRef = ref(null);
+//initialize component refs
+const componentRefs = {
+	photoUpload: ref(null),
+	mapModalRef: ref(null),
+	existingPhotos: ref([]),
+};
+
+//initialize state refs
+const stateRefs = {
+	toast: useToast(),
+	formErrors: ref([]),
+	isConfirmationModalOpen: ref(false),
+	showValidationErrors: ref(false),
+	isLoading: ref(false),
+	isMapOpen: ref(false),
+	directSiteId: ref<string>(''),
+	isSiteIdValid: ref<boolean | null>(null),
+	isCheckingSiteId: ref(false),
+};
+
+// Destructure for convenience
+const { originalSampler, wwkyid_pk, stream_name, wwkybasin, sampler, adults, youths, date, startTime, totalVolunteerMinutes, milesDriven, currentWeather, rainfall, 
+	waterColor, odorNone, odorRottenEggs, odorChlorine, odorRancidSour, odorGasPetro, odorMusty, odorSweetFruity, odorSharpPungent, 
+	waterSurfaceNone, waterSurfaceOilSheen, waterSurfaceAlgae, waterSurfaceSoapSuds, waterSurfaceSewage, waterSurfaceErosion, streamFlowVisual, 
+	negsample, streamFlowMeasured, waterTemperature, pH, dissolvedOxygen, conductivity, iCertifyCheckbox, timeINIncubator, timeOUTIncubator, 
+	bacteriaRCardInitials, bacterialSourceHuman, bacterialSourceDuckGoose, bacterialSourceLivestock, bacterialSourcePetWaste, bacterialSourceWildlife, 
+	ecoliA_count, sampleVolA, ecoliB_count, sampleVolB, ecoliC_count, sampleVolC, conductivityMeterCalibrationDate, otherMeterCalibrationDate, streamMeter, 
+	bacterialSourceOther, trash, turbidity, useTurbidMeter, useTransparencyTube, transparencyTubeMeasured, turbidMeterMeasured, availableSamplers, otherObs, 
+	allFilesSelected, selectedSamplerIds } = formRefs;
+const { photoUpload, mapModalRef, existingPhotos } = componentRefs;
+const { isLoading, isMapOpen, toast, formErrors, isConfirmationModalOpen, showValidationErrors, directSiteId, isSiteIdValid, isCheckingSiteId } = stateRefs;
+
+const configPublic = useRuntimeConfig().public;
+
+const isAdmin = computed(() => {
+  return user.value?.role === configPublic.ADMIN_ROLE_ID;
+});
+
+const viewSite = () => {
+  navigateTo(`/portal/sites/${wwkyid_pk.value}`);
+};
+
+// Function to check if user can edit the form
+const canEditForm = async () => {
+  if (isAdmin.value) return true;
+  if (!isEditMode.value || !sampleId.value) return true; // Allow new sample creation
+  
+  try {
+    // Fetch the sample to check ownership
+    const sample = await useDirectus(
+      readItem('base_samples', sampleId.value, {
+        fields: ['volunteer_id']
+      })
+    );
+
+    return sample?.volunteer_id === user.value?.id;
+  } catch (error) {
+    console.error('Error checking permissions:', error);
+    return false;
+  }
+};
 
 const openMap = () => {
   isMapOpen.value = true;
@@ -47,11 +159,6 @@ const handleSiteSelection = (site: { wwkyid_pk: number, stream_name: string, wwk
   wwkybasin.value = site.wwkybasin;
   closeMap();
 };
-
-//this handles the site entered directly by the user
-const directSiteId = ref<string>('');
-const isSiteIdValid = ref<boolean | null>(null);
-const isCheckingSiteId = ref(false);
 
 const validateSiteId = async () => {
   if (!directSiteId.value) {
@@ -100,7 +207,6 @@ const handleSiteIdInput = (event: Event) => {
   directSiteId.value = target.value;
   isSiteIdValid.value = null; // Reset validation state when user starts typing
 };
-
 
 //All the options for the form:
 const currentWeatherOptions = [
@@ -254,120 +360,255 @@ const turbidityOptions = [
 	},
 ];
 
-const sampler = ref(user?.value?.display_name);
-const adults = ref();
-const youths = ref();
-const date = ref();
-const startTime = ref();
-const totalVolunteerMinutes = ref();
-const milesDriven = ref();
-const currentWeather = ref();
-const rainfall = ref();
-const waterColor = ref();
-const odorNone = ref();
-const odorRottenEggs = ref();
-const odorChlorine = ref();
-const odorRancidSour = ref();
-const odorGasPetro = ref();
-const odorMusty = ref();
-const odorSweetFruity = ref();
-const odorSharpPungent = ref();
-const waterSurfaceNone = ref();
-const waterSurfaceOilSheen = ref();
-const waterSurfaceAlgae = ref();
-const waterSurfaceSoapSuds = ref();
-const waterSurfaceSewage = ref();
-const waterSurfaceErosion = ref();
-const streamFlowVisual = ref();
-const negsample = ref();
-const streamFlowMeasured = ref();
-const waterTemperature = ref();
-const pH = ref();
-const dissolvedOxygen = ref();
-const conductivity = ref();
-const manufacturer = ref();
-const model = ref();
-const iCertifyCheckbox = ref();
-const timeINIncubator = ref();
-const timeOUTIncubator = ref();
-const bacterialSourceHuman = ref();
-const bacterialSourceDuckGoose = ref();
-const bacterialSourceLivestock = ref();
-const bacterialSourcePetWaste = ref();
-const bacterialSourceWildlife = ref();
-const ecoliA_count = ref();
-const sampleVolA = ref();
-const ecoliB_count = ref();
-const sampleVolB = ref();
-const ecoliC_count = ref();
-const sampleVolC = ref();
-const conductivityMeterCalibrationDate = ref();
-const streamMeter = ref();
-const bacterialSourceOther = ref();
-const trash = ref();
-const turbidity = ref();
-const useTurbidMeter = ref(false)
-const useTransparencyTube = ref(false)
-const transparencyTubeMeasured= ref();
-const turbidMeterMeasured = ref()
+//this gets the sample data if the user is in edit mode	
+const fetchSampleData = async (id: string) => {
+  isLoading.value = true;
+  try {
+    // First, fetch the base sample data
+	const sampleData = await useDirectus(
+      readItem('base_samples', id, {
+        fields: [
+          '*',
+          'volunteer_id.first_name',
+          'volunteer_id.last_name',
+          'primary_sampler_id.*',
+          'base_samples_directus_users.directus_users_id.*'
+        ]
+      })
+    );
 
-const selectedSamplers = ref([]);
-const availableSamplers = ref([]);
+    if (!sampleData) {
+      toast.add({
+        title: 'Error',
+        description: 'Sample not found',
+        color: 'red'
+      });
+      return;
+    }
 
-//photo upload
-const photoUpload = ref(null);
-const allFilesSelected = ref(false)
+    if (sampleData.volunteer_id) {
+      originalSampler.value = `${sampleData.volunteer_id.first_name} ${sampleData.volunteer_id.last_name}`;
+      sampler.value = originalSampler.value;  // Update the sampler field to show original sampler
+    }
 
-//***********THIS IS FOR TESTING _ REMOVE LATER
-const fillFormWithTestData = () => {
-  // Sample data
-  adults.value = 3;
-  youths.value = 2;
-  totalVolunteerMinutes.value = 120;
-  milesDriven.value = 15;
-  currentWeather.value = 1; // Assuming 1 represents 'Clear/Sunny'
-  rainfall.value = 2; // Assuming 2 represents '0.1"'
-  waterColor.value = 1; // Assuming 1 represents 'Clear'
-  odorChlorine.value = true;
-  odorGasPetro.value = true;
-  waterSurfaceOilSheen.value = true;
-  waterSurfaceAlgae.value = true;
-  waterTemperature.value = 20.5;
-  pH.value = 7.2;
-  dissolvedOxygen.value = 8.5;
-  conductivity.value = 1500;
-  conductivityMeterCalibrationDate.value = new Date().toISOString().split('T')[0]; // Today's date
-  conductivityMeterCalibrationDate.value = new Date().toISOString().split('T')[0]; // Today's date
-  streamFlowVisual.value = 3; // Assuming 3 represents 'Normal'
-  streamFlowMeasured.value = 2.5;
-  manufacturer.value = 'TestManufacturer';
-  model.value = 'TestModel';
-  iCertifyCheckbox.value = true;
-  timeINIncubator.value = '09:00';
-  timeOUTIncubator.value = '09:00';
-  ecoliA_count.value = 12;
-  sampleVolA.value = 10;
-  ecoliB_count.value = 10;
-  sampleVolB.value = 10;
-  ecoliC_count.value = 14;
-  sampleVolC.value = 10;
-  bacterialSourceHuman.value = true;
-  bacterialSourceLivestock.value = true;
-  other.value = 'This is a test observation.';
-  date.value = new Date().toISOString().split('T')[0]; // Today's date
-  startTime.value = '08:00';
-  wwkyid_pk.value = 3253;
-  turbidity.value = 2; // Assuming 2 represents 'Slightly Cloudy'
-  transparencyTubeMeasured.value = 60;
-  turbidMeterMeasured.value = 5;
-  useTransparencyTube.value = true;
-  useTurbidMeter.value = true;
-  trash.value = 2; // Assuming 2 represents 'Minimal'
+    // Basic fields
+	wwkyid_pk.value = sampleData.wwky_id ? parseInt(sampleData.wwky_id) : null;
+	date.value = sampleData.date?.split('T')[0] || null;
+	startTime.value = sampleData.start_time || null;
+	adults.value = sampleData.participants_adults !== null ? parseInt(sampleData.participants_adults) : null;
+    youths.value = sampleData.participants_youth !== null ? parseInt(sampleData.participants_youth) : null;
+    totalVolunteerMinutes.value = sampleData.total_volunteer_minutes !== null ? parseInt(sampleData.total_volunteer_minutes) : null;
+    milesDriven.value = sampleData.miles_driven !== null ? parseInt(sampleData.miles_driven) : null;
+	currentWeather.value = sampleData.current_weather ? parseInt(sampleData.current_weather) : null;
+	rainfall.value = sampleData.rainfall_amount ? parseInt(sampleData.rainfall_amount) : null;
+	streamFlowVisual.value = sampleData.stream_flow_visual ? parseInt(sampleData.stream_flow_visual) : null;
+	negsample.value = sampleData.negsample || false;
+	streamFlowMeasured.value = sampleData.stream_flow_measurement ? parseFloat(sampleData.stream_flow_measurement) : null;
+	waterTemperature.value = sampleData.water_temperature ? parseFloat(sampleData.water_temperature) : null;
+	pH.value = sampleData.pH ? parseFloat(sampleData.pH) : null;
+	dissolvedOxygen.value = sampleData.dissolved_oxygen ? parseFloat(sampleData.dissolved_oxygen) : null;
+	conductivity.value = sampleData.conductivity ? parseFloat(sampleData.conductivity) : null;
+
+	await fetchSamplers();
+
+	if (sampleData.base_samples_directus_users) {
+		selectedSamplerIds.value = sampleData.base_samples_directus_users
+			.map(user => user.directus_users_id.id)
+			.filter(id => id !== sampleData.primary_sampler_id);
+	}
+
+	//conductivity meter calibration date
+	conductivityMeterCalibrationDate.value = sampleData.conductivity_meter_calibration_date?.split('T')[0] || null;
+	otherMeterCalibrationDate.value = sampleData.other_meter_calibration_date?.split('T')[0] || null;
+
+	// Meter calibration data
+    iCertifyCheckbox.value = sampleData.field_multimeter_certify;
+
+	// Observations with safe assignment
+    if (otherObs && typeof otherObs.value !== 'undefined') {
+		otherObs.value = sampleData.other_observations_or_measurements || '';
+    }
+
+    // Trash and turbidity
+    trash.value = parseInt(sampleData.trash);
+    turbidity.value = parseInt(sampleData.turbidity);
+    
+    // Bacteria-related fields with more detailed handling
+	if (sampleData.bacteria_timedate_in || sampleData.bacteria_timedate_out) {
+		useRCard.value = true;
+		timeINIncubator.value = sampleData.bacteria_timedate_in;
+		timeOUTIncubator.value = sampleData.bacteria_timedate_out;
+		bacteriaRCardInitials.value = sampleData.bacteria_rcard_initials;
+		
+		// Sample A - Fix count vs calculated value mix-up
+		ecoliA_count.value = sampleData.bacteria_sample_a_ecoli_count !== null ? parseInt(sampleData.bacteria_sample_a_ecoli_count) : null;
+		ecoliA.value = parseInt(sampleData.bacteria_sample_a_ecoli);
+		sampleVolA.value = parseFloat(sampleData.bacteria_sample_a_volume);
+		
+		// Sample B
+		ecoliB_count.value = sampleData.bacteria_sample_b_ecoli_count !== null ? parseInt(sampleData.bacteria_sample_b_ecoli_count) : null;
+		ecoliB.value = parseInt(sampleData.bacteria_sample_b_ecoli);
+		sampleVolB.value = parseFloat(sampleData.bacteria_sample_b_volume);
+		
+		// Sample C
+		ecoliC_count.value = sampleData.bacteria_sample_c_ecoli_count !== null ? parseInt(sampleData.bacteria_sample_c_ecoli_count) : null;
+		ecoliC.value = parseInt(sampleData.bacteria_sample_c_ecoli);
+		sampleVolC.value = parseFloat(sampleData.bacteria_sample_c_volume);
+
+	    // Preserve all calibration dates, even if null
+	    conductivityMeterCalibrationDate.value = sampleData.conductivity_meter_calibration_date || null;
+	}
+
+
+    // Turbidity measurements with better validation
+    if (sampleData.turbidtube_measure !== null && sampleData.turbidtube_measure !== undefined) {
+      useTurbidMeter.value = true;
+      turbidMeterMeasured.value = parseFloat(sampleData.turbidtube_measure);
+    }
+    if (sampleData.transparency_tube_measure !== null && sampleData.transparency_tube_measure !== undefined) {
+      useTransparencyTube.value = true;
+      transparencyTubeMeasured.value = parseFloat(sampleData.transparency_tube_measure);
+    }
+
+    // Photos handling
+	if (sampleData.photos_added || sampleData.form_added) {
+		try {
+			const photoRecords = await useDirectus(
+			readItems('lu_sample_photos', {
+				filter: { sample_id: { _eq: id } },
+				fields: ['*']
+			})
+			);
+
+			console.log('Fetched photo records:', {
+			records: photoRecords,
+			photosAdded: sampleData.photos_added,
+			formAdded: sampleData.form_added
+			});
+
+			if (photoRecords?.length > 0) {
+			existingPhotos.value = photoRecords.map(record => ({
+				id: record.id,
+				type: record.type,
+				filePath: record.file_path,
+				url: `${record.file_path}`,
+				name: record.origphotoname || `${record.type}_${id}.${record.file_path.split('.').pop()}`,
+				origphotoname: record.origphotoname,
+				sample_id: id
+			}));
+
+			if (photoUpload.value && typeof photoUpload.value.setExistingPhotos === 'function') {
+				photoUpload.value.setExistingPhotos(existingPhotos.value);
+			}
+			}
+		} catch (error) {
+			console.error('Error fetching photo records:', error);
+			toast.add({
+			title: 'Warning',
+			description: 'Unable to load existing photos',
+			color: 'yellow'
+			});
+		}
+	}
+
+    // Fetch and set related data with better error handling
+	try {
+		const [odors, waterSurfaces, bacterialSources, waterColors, additionalSamplers] = await Promise.all([
+			fetchRelatedData('base_samples_lu_odor', id),
+			fetchRelatedData('base_samples_lu_water_surface', id),
+			fetchRelatedData('base_samples_lu_bacterial_sources', id),
+			fetchRelatedData('base_samples_lu_water_color', id),
+			useDirectus(readItems('base_samples_directus_users', {
+			filter: { base_samples_id: { _eq: id } },
+			fields: ['directus_users_id.*']
+			}))
+		]);
+
+		// Set water color
+		if (waterColors && waterColors.length > 0) {
+			waterColor.value = waterColors[0];
+		}
+
+		// Set additional samplers
+		if (additionalSamplers && additionalSamplers.length > 0) {
+			selectedSamplerIds.value = additionalSamplers
+			.map(s => s.directus_users_id.id)
+			.filter(id => id !== user.value?.id);
+		}
+
+      // Set odor checkboxes with null checking
+      odorNone.value = odors?.includes(1) ?? false;
+      odorRottenEggs.value = odors?.includes(2) ?? false;
+      odorChlorine.value = odors?.includes(3) ?? false;
+      odorRancidSour.value = odors?.includes(4) ?? false;
+      odorGasPetro.value = odors?.includes(6) ?? false;
+      odorMusty.value = odors?.includes(7) ?? false;
+      odorSweetFruity.value = odors?.includes(8) ?? false;
+      odorSharpPungent.value = odors?.includes(9) ?? false;
+
+      // Set water surface checkboxes with null checking
+      waterSurfaceNone.value = waterSurfaces?.includes(1) ?? false;
+      waterSurfaceOilSheen.value = waterSurfaces?.includes(2) ?? false;
+      waterSurfaceAlgae.value = waterSurfaces?.includes(3) ?? false;
+      waterSurfaceSoapSuds.value = waterSurfaces?.includes(4) ?? false;
+      waterSurfaceSewage.value = waterSurfaces?.includes(5) ?? false;
+      waterSurfaceErosion.value = waterSurfaces?.includes(6) ?? false;
+
+      // Set bacterial source checkboxes with null checking
+      bacterialSourceDuckGoose.value = bacterialSources?.includes(1) ?? false;
+      bacterialSourceHuman.value = bacterialSources?.includes(2) ?? false;
+      bacterialSourceLivestock.value = bacterialSources?.includes(3) ?? false;
+      bacterialSourcePetWaste.value = bacterialSources?.includes(4) ?? false;
+      bacterialSourceWildlife.value = bacterialSources?.includes(5) ?? false;
+      bacterialSourceOther.value = bacterialSources?.includes(6) ?? false;
+
+    } catch (error) {
+      console.error('Error loading related data:', error);
+      toast.add({
+        title: 'Warning',
+        description: 'Some related data could not be loaded',
+        color: 'yellow'
+      });
+    }
+
+  } catch (error) {
+    console.error('Error fetching sample data:', error);
+    toast.add({
+      title: 'Error',
+      description: 'Failed to load sample data',
+      color: 'red'
+    });
+  } finally {
+    isLoading.value = false;
+  }
 };
-//END DEV TESTING
 
-// Fetch available samplers
-const selectedSamplerIds = ref([]);
+// Helper function to fetch related data
+const fetchRelatedData = async (table: string, sampleId: string) => {
+  const response = await useDirectus(
+    readItems(table, {
+      filter: {
+        base_samples_id: { _eq: sampleId }
+      }
+    })
+  );
+  return response.map(item => item[`${table.replace('base_samples_', '')}_id`]);
+};
+
+// ConfirmSubmission function
+const confirmSubmission = () => {
+  showValidationErrors.value = true; // Set to true when submit is clicked
+  
+  if (isFormValid.value) {
+    isConfirmationModalOpen.value = true;
+  } else {
+    toast.add({ 
+      title: 'Form Validation Error', 
+      description: 'Please fill in all required fields and correct any errors.',
+      color: 'red'
+    });
+  }
+};
 
 const fetchSamplers = async () => {
   try {
@@ -400,24 +641,33 @@ const sampleVolOptions = [
   { value: 0.25, label: '0.25 mL' }
 ];
 
-watch(useRCard, (newValue) => {
-  if (newValue) {
-    sampleVolA.value = 1.0;
-    sampleVolB.value = 1.0;
-    sampleVolC.value = 1.0;
+const initializeSampleVolumes = () => {
+  if (!isEditMode.value) {
+    sampleVolA.value = defaultSampleVol;
+    sampleVolB.value = defaultSampleVol;
+    sampleVolC.value = defaultSampleVol;
   }
-});
+};
 
-onMounted(() => {
-  fetchSamplers();
-  if (process.env.NODE_ENV === 'development') {
-    window.addEventListener('keydown', (e) => {
-      if (e.ctrlKey && e.key === 'f') {
-        fillFormWithTestData();
+const initializeComponent = async () => {
+  try {
+   
+    await nextTick();
+    
+    if (isEditMode.value && sampleId.value) {
+      try {
+        await fetchSampleData(sampleId.value);
+      } catch (error) {
+        console.error('Error fetching sample data:', error);
       }
-    });
+    }
+    
+    await fetchSamplers();
+    
+  } catch (error) {
+    console.error('Error during component initialization:', error);
   }
-});
+};
 
 //Validations:
 const isPHValid = computed(() => {
@@ -447,6 +697,50 @@ const isConductivityHigh = computed(() => {
   return value > 2000;
 });
 
+const incubationTime = computed(() => {
+  if (!timeINIncubator.value || !timeOUTIncubator.value) return null;
+  
+  const timeIn = new Date(timeINIncubator.value);
+  const timeOut = new Date(timeOUTIncubator.value);
+  
+  // Check if times are exactly the same
+  if (timeIn.getTime() === timeOut.getTime()) {
+    return 0;  // Return 0 to indicate same time
+  }
+  
+  const diffHours = (timeOut.getTime() - timeIn.getTime()) / (1000 * 60 * 60);
+  return diffHours;
+});
+
+// Validation computed property
+const isIncubationTimeValid = computed(() => {
+  if (!incubationTime.value && incubationTime.value !== 0) return true;
+  
+  // Check for same time (when incubationTime is 0)
+  if (incubationTime.value === 0) return false;
+  
+  // Check if time out is before time in
+  if (incubationTime.value < 0) return false;
+  
+  // Check if within valid range
+  return incubationTime.value >= 20 && incubationTime.value <= 24;
+});
+
+// Display message computed property
+const displayIncubationTime = computed(() => {
+  if (!incubationTime.value && incubationTime.value !== 0) return '';
+  
+  if (incubationTime.value === 0) {
+    return 'Error: Time In and Time Out cannot be the same';
+  }
+  
+  if (incubationTime.value < 0) {
+    return 'Error: Time Out cannot be before Time In';
+  }
+  
+  return `Entered incubation time: ${Math.abs(incubationTime.value).toFixed(1)} hours`;
+});
+
 //calculate the ecoli amount in the samples
 const ecoliA = computed(() => {
 	return ecoliA_count.value && sampleVolA.value ? (ecoliA_count.value / sampleVolA.value) * 100 : 0;
@@ -462,7 +756,7 @@ const ecoliC = computed(() => {
 
 //calculate the ecoli variation
 const ecoliVariation = computed(() => {
-  const values = [ecoliA.value, ecoliB.value, ecoliC.value].map(v => parseFloat(v) || 0);
+  const values = [ecoliA_count.value, ecoliB_count.value, ecoliC_count.value].map(v => parseFloat(v) || 0);
   const max = Math.max(...values);
   const min = Math.min(...values);
   return max - min;
@@ -482,8 +776,6 @@ const averageEcoli = computed(() => {
 	return Math.round((a + b + c) / 3);
 });
 
-const other = ref();
-
 const isSubmitting = ref(false);
 const isSubmitted = ref(false);
 const submittedSampleId = ref('');
@@ -497,35 +789,48 @@ const errorMessage = ref('');
 const isFormValid = computed(() => {
   formErrors.value = [];
   
-  if (!sampler.value || !adults.value || !youths.value || !date.value || !startTime.value || !wwkyid_pk.value || 
-  	!totalVolunteerMinutes.value || !milesDriven.value || !currentWeather.value || !rainfall.value || 
-	!streamFlowVisual.value || !trash.value) {	
-    formErrors.value.push('Please fill in all required fields.');
-  }
+  // Check required personal info
+  if (sampler.value === undefined || sampler.value === null) formErrors.value.push('Primary Sampler');
+  if (adults.value === undefined || adults.value === null) formErrors.value.push('Number of Adult Participants');
+  if (youths.value === undefined || youths.value === null) formErrors.value.push('Number of Youth Participants');
+  if (totalVolunteerMinutes.value === undefined || totalVolunteerMinutes.value === null) formErrors.value.push('Total Volunteer Minutes');
+  if (milesDriven.value === undefined || milesDriven.value === null) formErrors.value.push('Miles Driven');
   
+  // Check required site info
+  if (!wwkyid_pk.value) formErrors.value.push('Site ID');
+  
+  // Check required date/time info
+  if (!date.value) formErrors.value.push('Sample Date');
+  if (!startTime.value) formErrors.value.push('Start Time');
+  
+  // Check required environmental conditions
+  if (!currentWeather.value) formErrors.value.push('Current Weather');
+  if (!rainfall.value) formErrors.value.push('Rainfall Amount');
+  if (!streamFlowVisual.value) formErrors.value.push('Stream Flow (Visual)');
+  if (!trash.value) formErrors.value.push('Trash/Litter assessment');
+  
+  // Validate measurements if provided
   if (pH.value && !isPHValid.value) {
-    formErrors.value.push('pH must be between 0 and 14. Please check your measurement/value.');
+    formErrors.value.push('pH must be between 0 and 14');
   }
   
   if (dissolvedOxygen.value && !isDOValid.value) {
-    formErrors.value.push('Dissolved oxygen value is too high (>25). Please check your measurement/value.');
+    formErrors.value.push('Dissolved oxygen value is too high (>25)');
   }
 
-  if (!validateFiles(selectedFiles.value)) {
-    formErrors.value.push('One or more files exceed the 10 MB size limit.');
-  }
-  
-
-  // Add R-Card validations only if R-Card method is selected
+  // Validate R-Card method if selected
   if (useRCard.value) {
-    if (!timeINIncubator.value || !timeOUTIncubator.value) {
-      formErrors.value.push('Incubator times are required for R-Card method.');
+	if (!bacteriaRCardInitials.value) formErrors.value.push('Initials are required for R-Card method');
+    if (!timeINIncubator.value) formErrors.value.push('Incubator Time In is required for R-Card method');
+    if (!timeOUTIncubator.value) formErrors.value.push('Incubator Time Out is required for R-Card method');
+    if (incubationTime.value !== null && !isIncubationTimeValid.value) {
+      formErrors.value.push('Incubation time should be between 20 and 24 hours');
     }
     if (!ecoliA_count.value || !ecoliB_count.value || !ecoliC_count.value) {
-      formErrors.value.push('All E. coli counts are required for R-Card method.');
+      formErrors.value.push('All three E. coli counts are required for R-Card method');
     }
     if (!sampleVolA.value || !sampleVolB.value || !sampleVolC.value) {
-      formErrors.value.push('All sample volumes are required for R-Card method.');
+      formErrors.value.push('All three sample volumes are required for R-Card method');
     }
   }
 
@@ -536,9 +841,15 @@ const selectedFiles = ref({}); // ref to store the selected files
 
 // Handle file selection
 const handleFilesSelected = (files) => {
-  selectedFiles.value = files;
-  if (!validateFiles(files)) {
-    toast.add({ title: 'File Size Error', description: 'One or more files exceed the 10 MB size limit.', color: 'red' });
+  if (!files) return;
+  try {
+    // Your existing file handling logic
+    selectedFiles.value = files;
+	if (!validateFiles(files)) {
+		toast.add({ title: 'File Size Error', description: 'One or more files exceed the 10 MB size limit.', color: 'red' });
+    }
+  } catch (error) {
+    console.error('Error handling files:', error);
   }
 };
 
@@ -591,45 +902,74 @@ const submitData = async () => {
 	let sampleSiteId = null;
 
   try {
-   // Submit form data
-   submissionStatus.value = 'Submitting form data...';
+    // Submit form data
+    submissionStatus.value = 'Submitting form data...';
     submissionProgress.value = 25;
 
     const sampleData = prepareSampleData();
 
-    // Remove relationship fields from initial submission
-    const { odor, water_surface, bacterial_sources, water_color, ...baseData } = sampleData;
-    const createdSample = await useDirectus(createItem('base_samples', baseData));
+    if (isEditMode.value) {
+		const { baseData, relationshipData } = prepareSampleData();
+  
+		// Update base table
+		await useDirectus(updateItem('base_samples', sampleId.value, baseData));
+		
+		// Update relationships
+		await updateJoinTable('base_samples_lu_odor', sampleId.value, relationshipData.odor);
+		await updateJoinTable('base_samples_lu_water_surface', sampleId.value, relationshipData.water_surface);
+		await updateJoinTable('base_samples_lu_bacterial_sources', sampleId.value, relationshipData.bacterial_sources);
+		await updateJoinTable('base_samples_lu_water_color', sampleId.value, relationshipData.water_color);
+		await updateJoinTable('base_samples_directus_users', sampleId.value, selectedSamplerIds.value);
+        
+		if (selectedFiles.value && (Object.keys(selectedFiles.value).length > 0 || selectedFiles.value.sampleFormFile)) {
+			// Upload new photos
+			const uploadedFileTypes = await uploadFiles(sampleId.value, wwkyid_pk.value, selectedFiles.value, "base");
+				
+			// Create new photo records
+			await createOrUpdatePhotoRecords(sampleId.value, wwkyid_pk.value, uploadedFileTypes);
+				
+			// Update photo and form counts
+			await updateSampleWithPhotoInfo(sampleId.value, selectedFiles.value);
+		}
 
-    createdSampleId = createdSample.id;
-	sampleSiteId = createdSample.wwky_id;
 
-    // Step 2: Update join tables
-    submissionStatus.value = 'Updating relationships...';
-    submissionProgress.value = 50;
+      toast.add({
+        title: 'Success',
+        description: 'Sample updated successfully',
+        color: 'green'
+      });
+	} else {
+		// Create a new sample
+		const { baseData, relationshipData } = prepareSampleData();
+		const createdSample = await useDirectus(createItem('base_samples', baseData));
 
-    await updateJoinTable('base_samples_lu_odor', createdSampleId, odor);
-    await updateJoinTable('base_samples_lu_water_surface', createdSampleId, water_surface);
-    await updateJoinTable('base_samples_lu_bacterial_sources', createdSampleId, bacterial_sources);
-    await updateJoinTable('base_samples_lu_water_color', createdSampleId, water_color);
-	await updateJoinTable('base_samples_directus_users', createdSampleId, selectedSamplerIds.value);
+		createdSampleId = createdSample.id;
+		sampleSiteId = createdSample.wwky_id;
 
-    // Step 3: Handle file uploads
-    submissionStatus.value = 'Uploading photos...';
-    submissionProgress.value = 75;
+		// Step 2: Update join tables
+		await updateJoinTable('base_samples_lu_odor', createdSampleId, relationshipData.odor);
+		await updateJoinTable('base_samples_lu_water_surface', createdSampleId, relationshipData.water_surface);
+		await updateJoinTable('base_samples_lu_bacterial_sources', createdSampleId, relationshipData.bacterial_sources);
+		await updateJoinTable('base_samples_lu_water_color', createdSampleId, relationshipData.water_color);
+		await updateJoinTable('base_samples_directus_users', createdSampleId, selectedSamplerIds.value);
 
-    const formType = "base";
-    const uploadedFileTypes = await uploadFiles(createdSampleId, sampleSiteId, files, formType);
+		// Step 3: Handle file uploads
+		submissionStatus.value = 'Uploading photos...';
+		submissionProgress.value = 75;
 
-    // Step 4: Create records in lu_sample_photos
-    await createPhotoRecords(createdSampleId, sampleSiteId, uploadedFileTypes);
+		const formType = "base";
+		const uploadedFileTypes = await uploadFiles(createdSampleId, sampleSiteId, files, formType);
 
-    // Step 5: Update base_samples with photo information
-    await updateSampleWithPhotoInfo(createdSampleId, files);
+		// Step 4: Create records in lu_sample_photos
+		await createOrUpdatePhotoRecords(createdSampleId, sampleSiteId, uploadedFileTypes);
 
-    submissionProgress.value = 100;
-    submittedSampleId.value = createdSampleId;
-    isSubmitted.value = true;
+		// Step 5: Update base_samples with photo information
+		await updateSampleWithPhotoInfo(createdSampleId, files);
+	}
+	submissionProgress.value = 100;
+	submittedSampleId.value = createdSampleId;
+	isSubmitted.value = true;
+		
   } catch (error) {
     console.error('Error during submission:', error);
     errorMessage.value = `An error occurred: ${error.message}. `;
@@ -647,96 +987,133 @@ const submitData = async () => {
 //updates the join tables
 const updateJoinTable = async (tableName, sampleId, relatedIds) => {
   try {
-    // First, remove any existing relationships
-    await useDirectus(deleteItems(tableName, {
-      filter: { base_samples_id: { _eq: sampleId } }
-    }));
+	// First, remove any existing relationships
+	await useDirectus(deleteItems(tableName, {
+	filter: { base_samples_id: { _eq: sampleId } }
+	}));
 
-    // Handle the special case for samplers table
-    const relatedIdColumn = tableName === 'base_samples_directus_users' 
-      ? 'directus_users_id' 
-      : tableName.replace('base_samples_', '') + '_id';
+	// Skip if no relatedIds or empty array
+	if (!relatedIds || !relatedIds.length) {
+	return;
+	}
 
-    // Then, create new relationships
-    if (relatedIds && relatedIds.length > 0) {
+	// Handle the special case for samplers table
+	const relatedIdColumn = tableName === 'base_samples_directus_users' 
+	? 'directus_users_id' 
+	: tableName.replace('base_samples_', '') + '_id';
 
-      const items = relatedIds.map(id => ({
-        base_samples_id: sampleId,
-        [relatedIdColumn]: id // This should now be a UUID
-      }));
+	const items = relatedIds.map(id => ({
+	base_samples_id: sampleId,
+	[relatedIdColumn]: id
+	}));
 
-      await useDirectus(createItems(tableName, items));
-    }
+	await useDirectus(createItems(tableName, items));
   } catch (error) {
     console.error(`Error updating join table ${tableName}:`, error);
     console.error('RelatedIds:', relatedIds);
     throw new Error(`Failed to update ${tableName}: ${error.message}`);
   }
 };
+
 const prepareSampleData = () => {
-  // Helper functions (unchanged)
-  const toNullableNumber = (value) => {
-    const num = parseFloat(value);
-    return isNaN(num) ? null : num;
-  };
+	// Helper functions with range validation
+	const toNullableNumber = (value, min = -Infinity, max = Infinity) => {
+		// Check if value is explicitly 0
+		if (value === 0 || value === '0') return 0;
+		
+		const num = parseFloat(value);
+		if (isNaN(num) || num < min || num > max) return null;
+		return num;
+	};
 
-  const toNullableInteger = (value) => {
-    const num = parseInt(value, 10);
-    return isNaN(num) ? null : num;
-  };
+	const toNullableInteger = (value, min = -2147483648, max = 2147483647) => {
+		// Check if value is explicitly 0
+		if (value === 0 || value === '0') return 0;
+		
+		const num = parseInt(value, 10);
+		if (isNaN(num) || num < min || num > max) return null;
+		return num;
+	};
 
-  // Prepare sample data
-  const sampleData = {
-    status: 'draft',
-	primary_sampler_id: user.value?.id,
-    participants_adults: toNullableInteger(adults.value),
-    participants_youth: toNullableInteger(youths.value),
-    total_volunteer_minutes: toNullableInteger(totalVolunteerMinutes.value),
-    miles_driven: toNullableInteger(milesDriven.value),
-    water_temperature: toNullableNumber(waterTemperature.value),
-    pH: toNullableNumber(pH.value),
-    dissolved_oxygen: toNullableNumber(dissolvedOxygen.value),
-    conductivity: toNullableNumber(conductivity.value),
-    stream_flow_measurement: toNullableNumber(streamFlowMeasured.value),
-	negsample: negsample.value || null,
-    field_multimeter_manufacturer: manufacturer.value || null,
-    field_multimeter_model: model.value || null,
-    field_multimeter_certify: iCertifyCheckbox.value,
-    bacteria_time_in: timeINIncubator.value || null,
-    bacteria_time_out: timeOUTIncubator.value || null,
-	bacteria_sample_a_ecoli_count: toNullableInteger(ecoliA_count.value),
-    bacteria_sample_a_ecoli: toNullableNumber(ecoliA.value),
-    bacteria_sample_a_volume: toNullableNumber(sampleVolA.value),
-	bacteria_sample_b_ecoli_count: toNullableInteger(ecoliB_count.value),
-    bacteria_sample_b_ecoli: toNullableNumber(ecoliB.value),
-    bacteria_sample_b_volume: toNullableNumber(sampleVolB.value),
-	bacteria_sample_c_ecoli_count: toNullableInteger(ecoliC_count.value),
-    bacteria_sample_c_ecoli: toNullableNumber(ecoliC.value),
-    bacteria_sample_c_volume: toNullableNumber(sampleVolC.value),
-    other_observations_or_measurements: other.value || null,
-    volunteer_id: user.value?.id || null,
-    date: date.value || null,
-    start_time: startTime.value || null,
-    wwky_id: toNullableInteger(wwkyid_pk.value),
-    rainfall_amount: toNullableInteger(rainfall.value),
-    current_weather: toNullableInteger(currentWeather.value),
-    stream_flow_visual: toNullableInteger(streamFlowVisual.value),
-    turbidity: toNullableInteger(turbidity.value),
-    transparency_tube_measure: toNullableInteger(transparencyTubeMeasured.value),
-    turbidtube_measure: toNullableInteger(turbidMeterMeasured.value),
-    trash: toNullableInteger(trash.value),
-    odor: getSelectedOdors(),
-    water_surface: getSelectedWaterSurfaces(),
-    bacterial_sources: getSelectedBacterialSources(),
-    water_color: waterColor.value ? [parseInt(waterColor.value)] : []
-  };
+	// Get the average E. coli value with range validation
+	let avgEcoli = null;
+	if (typeof averageEcoli.value === 'number') {
+		avgEcoli = toNullableNumber(averageEcoli.value, 0, 2147483647);
+	} else if (typeof averageEcoli.value === 'string' && !averageEcoli.value.includes('Please enter')) {
+		avgEcoli = toNullableNumber(averageEcoli.value, 0, 2147483647);
+	}
 
-  // Remove any properties with null values
-  Object.keys(sampleData).forEach(key => 
-    sampleData[key] === null && delete sampleData[key]
-  );
+	// Prepare sample data with range validations
+	const baseData = {
+		status: 'draft',
+		participants_adults: adults.value === 0 ? 0 : toNullableInteger(adults.value),
+		participants_youth: youths.value === 0 ? 0 : toNullableInteger(youths.value),
+		total_volunteer_minutes: totalVolunteerMinutes.value === 0 ? 0 : toNullableInteger(totalVolunteerMinutes.value),
+		miles_driven: milesDriven.value === 0 ? 0 : toNullableInteger(milesDriven.value),
+		water_temperature: toNullableNumber(waterTemperature.value),
+		pH: toNullableNumber(pH.value),
+		dissolved_oxygen: toNullableNumber(dissolvedOxygen.value),
+		conductivity: toNullableNumber(conductivity.value),
+		stream_flow_measurement: toNullableNumber(streamFlowMeasured.value),
+		negsample: negsample.value || null,
+		field_multimeter_certify: iCertifyCheckbox.value,
+		other_observations_or_measurements: otherObs.value || null,
+		volunteer_id: user.value?.id || null,
+		date: date.value || null,
+		start_time: startTime.value || null,
+		wwky_id: toNullableInteger(wwkyid_pk.value),
+		rainfall_amount: toNullableInteger(rainfall.value),
+		current_weather: toNullableInteger(currentWeather.value),
+		stream_flow_visual: toNullableInteger(streamFlowVisual.value),
+		turbidity: toNullableInteger(turbidity.value),
+		transparency_tube_measure: toNullableInteger(transparencyTubeMeasured.value),
+		turbidtube_measure: toNullableInteger(turbidMeterMeasured.value),
+		trash: toNullableInteger(trash.value),
+		conductivity_meter_calibration_date: conductivityMeterCalibrationDate.value || null,
+		other_meter_calibration_date: otherMeterCalibrationDate.value || null
+	};
 
-  return sampleData;
+	// Only include bacteria-related fields if R-Card method is selected
+	if (useRCard.value) {
+		Object.assign(baseData, {
+		bacteria_timedate_in: timeINIncubator.value || null,
+		bacteria_timedate_out: timeOUTIncubator.value || null,
+		bacteria_rcard_initials: bacteriaRCardInitials.value || null,
+		bacteria_sample_a_ecoli_count: toNullableInteger(ecoliA_count.value),
+		bacteria_sample_a_ecoli: toNullableNumber(ecoliA.value),
+		bacteria_sample_a_volume: toNullableNumber(sampleVolA.value),
+		bacteria_sample_b_ecoli_count: toNullableInteger(ecoliB_count.value),
+		bacteria_sample_b_ecoli: toNullableNumber(ecoliB.value),
+		bacteria_sample_b_volume: toNullableNumber(sampleVolB.value),
+		bacteria_sample_c_ecoli_count: toNullableInteger(ecoliC_count.value),
+		bacteria_sample_c_ecoli: toNullableNumber(ecoliC.value),
+		bacteria_sample_c_volume: toNullableNumber(sampleVolC.value),
+		bacteria_avg_ecoli_cfu: avgEcoli
+		});
+	}
+
+	// Remove null values
+	Object.keys(baseData).forEach(key => 
+		baseData[key] === null && delete baseData[key]
+	);
+
+	// Only include non-null values
+	const cleanedData = {};
+	for (const [key, value] of Object.entries(baseData)) {
+		if (value !== null && value !== undefined) {
+			cleanedData[key] = value;
+		}
+	}
+
+	return {
+		baseData: cleanedData,
+		relationshipData: {
+		odor: getSelectedOdors(),
+		water_surface: getSelectedWaterSurfaces(),
+		bacterial_sources: getSelectedBacterialSources(),
+		water_color: [toNullableInteger(waterColor.value)]
+		}
+	};
 };
 
 const getSelectedOdors = () => {
@@ -784,68 +1161,113 @@ const uploadFiles = async (sampleId, siteId, files, formType) => {
   formData.append('sampleId', sampleId);
   formData.append('siteId', siteId);
   formData.append('formType', formType);
-  formData.append('formAdded', files.formAdded ? 'true' : 'false');
+  
+  const uploadedFiles = [];
 
-  // Append each file with a unique key
-  const fileKeys = ['upstream', 'downstream', 'other'];
-  fileKeys.forEach(key => {
-    if (files.files && files.files[key] instanceof File) {
-      //console.log(`Appending file: ${key}, Type: ${files.files[key].type}, Size: ${files.files[key].size} bytes`);
-      formData.append(key, files.files[key], files.files[key].name);
-    } else {
-      console.log(`No file found for key: ${key}`);
-    }
-  });
-
-  // Append the sample form file
-  if (files.sampleFormFile instanceof File) {
-    //console.log(`Appending file: sampleFormFile, Type: ${files.sampleFormFile.type}, Size: ${files.sampleFormFile.size} bytes`);
-    formData.append('sampleFormFile', files.sampleFormFile, files.sampleFormFile.name);
-  } else {
-    console.log('No sample form file found');
+  // Handle regular photos
+  if (files.files) {
+    Object.entries(files.files).forEach(([key, fileObj]) => {
+      if (fileObj && fileObj.file instanceof File) {
+        formData.append(key, fileObj.file);
+        uploadedFiles.push({
+          type: key,
+          extension: 'png',
+          origPhotoName: fileObj.name // Store original name
+        });
+      }
+    });
   }
 
+  // Handle sample form file
+  if (files.sampleFormFile && files.sampleFormFile.file instanceof File) {
+    const formFile = files.sampleFormFile.file;
+    const extension = formFile.name.split('.').pop().toLowerCase();
+    formData.append('sampleFormFile', formFile);
+    uploadedFiles.push({
+      type: 'form',
+      extension: extension,
+      origPhotoName: formFile.name // Store original name
+    });
+  }
+
+  formData.append('formAdded', !!files.sampleFormFile ? 'true' : 'false');
+
   try {
-    //console.log('Sending request to /api/upload-files');
     const response = await fetch('/api/upload-files', {
       method: 'POST',
       body: formData,
     });
 
     if (!response.ok) throw new Error(`Failed to upload files: ${response.statusText}`);
-
-    const result = await response.json();
-    return result.uploadedFileTypes;
-
+    
+    return uploadedFiles;
   } catch (error) {
     console.error('Error uploading files:', error);
-    alert(`Error uploading files: ${error.message}`);
     throw error;
   }
 };
 
-const createPhotoRecords = async (sampleId, siteId, uploadedFileTypes) => {
-  for (const type of uploadedFileTypes) {
-    const filePath = `/webshare/kyww_images/base/${sampleId}/${siteId}/${type}_${sampleId}.jpg`;
-    await useDirectus(
-      createItem('lu_sample_photos', {
-        sample_id: sampleId,
-        type,
-        file_path: filePath,
+const createOrUpdatePhotoRecords = async (sampleId, siteId, uploadedFiles) => {
+  try {
+    const existingRecords = await useDirectus(
+      readItems('lu_sample_photos', {
+        filter: { sample_id: { _eq: sampleId } }
       })
     );
+
+    for (const { type, extension, origPhotoName } of uploadedFiles) {
+      const filePath = `https://kyww.uky.edu/webshare/kyww_images/base/${siteId}/${sampleId}/${type}_${sampleId}.${extension}`;
+      const existingRecord = existingRecords.find(record => record.type === type);
+
+      const photoData = {
+        file_path: filePath,
+        origphotoname: origPhotoName // Save original filename
+      };
+
+      if (existingRecord) {
+        await useDirectus(
+          updateItem('lu_sample_photos', existingRecord.id, photoData)
+        );
+      } else {
+        await useDirectus(
+          createItem('lu_sample_photos', {
+            sample_id: sampleId,
+            type,
+            ...photoData
+          })
+        );
+      }
+    }
+  } catch (error) {
+    console.error('Error updating photo records:', error);
+    throw error;
   }
 };
 
 const updateSampleWithPhotoInfo = async (sampleId, files) => {
-  const photoCount = files.photoCount;
-  const formAdded = files.formAdded;
+  try {
+    // Count regular photos (excluding form)
+    const photoCount = Object.keys(files.files || {}).length;
+    
+    // Check if form is present (either new or existing)
+    const hasForm = !!(files.sampleFormFile || files.existingFormFile);
 
-  if (photoCount > 0 || formAdded) {
+    console.log('Updating sample photo info:', {
+      sampleId,
+      photoCount,
+      hasForm,
+      files
+    });
+
+    // Update the base_samples table
     await useDirectus(updateItem('base_samples', sampleId, {
       photos_added: photoCount,
-      form_added: formAdded,
+      form_added: hasForm
     }));
+
+  } catch (error) {
+    console.error('Error updating sample photo info:', error);
+    throw error;
   }
 };
 
@@ -868,10 +1290,7 @@ const rollbackChanges = async (sampleId) => {
     }));
     
     // Delete uploaded files - not done yet
-    // Note: This assumes you have a method to delete files from the server
-    //await deleteUploadedFiles(sampleId);
-    
-    console.log('Rollback completed successfully');
+   
   } catch (rollbackError) {
     console.error('Error during rollback:', rollbackError);
     errorMessage.value += ' Rollback failed. Please contact support.';
@@ -883,7 +1302,6 @@ const deleteJoinTableEntries = async (tableName, sampleId) => {
     await useDirectus(deleteItems(tableName, {
       filter: { base_samples_id: { _eq: sampleId } }
     }));
-    console.log(`Deleted entries from ${tableName} for sample ${sampleId}`);
   } catch (error) {
     console.error(`Error deleting entries from ${tableName}:`, error);
     // We don't throw here to allow the rollback process to continue with other tables
@@ -899,118 +1317,268 @@ const showErrorModal = () => {
 const isErrorModalVisible = ref(false);
 
 const resetForm = () => {
-  // Reset submission state
-  isSubmitted.value = false;
-  submittedSampleId.value = '';
-  uploadedFileTypes.value = [];
-  isSubmitting.value = false;
-  submissionStatus.value = '';
-  submissionProgress.value = 0;
-  errorMessage.value = '';
+  // Safely reset refs
+  Object.values(formRefs).forEach(ref => {
+    if (ref && typeof ref.value !== 'undefined') {
+      if (typeof ref.value === 'boolean') ref.value = false;
+      else if (typeof ref.value === 'number') ref.value = null;
+      else ref.value = '';
+    }
+  });
 
-  // Reset form fields
-  wwkyid_pk.value = null;
-  stream_name.value = '';
-  wwkybasin.value = '';
-  adults.value = null;
-  youths.value = null;
-  date.value = null;
-  startTime.value = null;
-  totalVolunteerMinutes.value = null;
-  milesDriven.value = null;
-  currentWeather.value = null;
-  rainfall.value = null;
-  waterColor.value = null;
-  odorNone.value = false;
-  odorRottenEggs.value = false;
-  odorChlorine.value = false;
-  odorRancidSour.value = false;
-  odorGasPetro.value = false;
-  odorMusty.value = false;
-  odorSweetFruity.value = false;
-  odorSharpPungent.value = false;
-  waterSurfaceNone.value = false;
-  waterSurfaceOilSheen.value = false;
-  waterSurfaceAlgae.value = false;
-  waterSurfaceSoapSuds.value = false;
-  waterSurfaceSewage.value = false;
-  waterSurfaceErosion.value = false;
-  streamFlowVisual.value = null;
-  negsample.value = null;
-  streamFlowMeasured.value = null;
-  waterTemperature.value = null;
-  pH.value = null;
-  dissolvedOxygen.value = null;
-  conductivity.value = null;
-  manufacturer.value = null;
-  model.value = null;
-  iCertifyCheckbox.value = false;
-  timeINIncubator.value = null;
-  timeOUTIncubator.value = null;
-  bacterialSourceHuman.value = false;
-  bacterialSourceDuckGoose.value = false;
-  bacterialSourceLivestock.value = false;
-  bacterialSourcePetWaste.value = false;
-  bacterialSourceWildlife.value = false;
-  ecoliA_count.value = null;
-  ecoliA.value = null;
-  sampleVolA.value = null;
-  ecoliB_count.value = null;
-  ecoliB.value = null;
-  sampleVolB.value = null;
-  ecoliC_count.value = null;
-  ecoliC.value = null;
-  sampleVolC.value = null;
-  conductivityMeterCalibrationDate.value = null;
-  streamMeter.value = false;
-  bacterialSourceOther.value = false;
-  trash.value = null;
-  turbidity.value = null;
-  useTurbidMeter.value = false;
-  useTransparencyTube.value = false;
-  transparencyTubeMeasured.value = null;
-  turbidMeterMeasured.value = null;
-  other.value = null;
+  // Reset state refs
+  Object.values(stateRefs).forEach(ref => {
+    if (ref && typeof ref.value !== 'undefined') {
+      ref.value = false;
+    }
+  });
 
-  // Reset file upload
-  if (photoUpload.value) {
-    photoUpload.value.reset(); // Assuming your PhotoUpload component has a reset method
-  }
-  allFilesSelected.value = false;
-
-  // Reset any computed properties if necessary
-  // For example, you might want to call any methods that update computed properties based on form field values
+  nextTick(() => {
+    if (photoUpload.value && typeof photoUpload.value.reset === 'function') {
+      photoUpload.value.reset();
+    }
+    allFilesSelected.value = false;
+  });
 };
+
+//***********THIS IS FOR TESTING _ REMOVE LATER
+const fillFormWithTestData = () => {
+  // Sample data
+  adults.value = 3;
+  youths.value = 2;
+  totalVolunteerMinutes.value = 120;
+  milesDriven.value = 15;
+  currentWeather.value = 1; // Assuming 1 represents 'Clear/Sunny'
+  rainfall.value = 2; // Assuming 2 represents '0.1"'
+  waterColor.value = 1; // Assuming 1 represents 'Clear'
+  odorChlorine.value = true;
+  odorGasPetro.value = true;
+  waterSurfaceOilSheen.value = true;
+  waterSurfaceAlgae.value = true;
+  waterTemperature.value = 20.5;
+  pH.value = 7.2;
+  dissolvedOxygen.value = 8.5;
+  conductivity.value = 1500;
+  conductivityMeterCalibrationDate.value = new Date().toISOString().split('T')[0]; // Today's date
+  otherMeterCalibrationDate.value = new Date().toISOString().split('T')[0]; // Today's date
+  streamFlowVisual.value = 3; // Assuming 3 represents 'Normal'
+  streamFlowMeasured.value = 2.5;
+  bacteriaRCardInitials.value = 'DCC';
+  iCertifyCheckbox.value = true;
+  timeINIncubator.value = '09:00';
+  timeOUTIncubator.value = '09:00';
+  ecoliA_count.value = 12;
+  sampleVolA.value = 10;
+  ecoliB_count.value = 10;
+  sampleVolB.value = 10;
+  ecoliC_count.value = 14;
+  sampleVolC.value = 10;
+  bacterialSourceHuman.value = true;
+  bacterialSourceLivestock.value = true;
+  otherObs.value = 'This is a test observation.';
+  date.value = new Date().toISOString().split('T')[0]; // Today's date
+  startTime.value = '08:00';
+  wwkyid_pk.value = 3253;
+  turbidity.value = 2; // Assuming 2 represents 'Slightly Cloudy'
+  transparencyTubeMeasured.value = 60;
+  turbidMeterMeasured.value = 5;
+  useTransparencyTube.value = true;
+  useTurbidMeter.value = true;
+  trash.value = 2; // Assuming 2 represents 'Minimal'
+};
+//END DEV TESTING
 
 const viewDashboard = () => {
 	navigateTo('/portal/');
 };
 
+const handleCancel = () => {
+  if (wwkyid_pk.value) {
+    navigateTo(`/portal/sites/${wwkyid_pk.value}`);
+  } else {
+    navigateTo('/portal/');
+  }
+};
+
+onMounted(async () => {
+  try {
+    if (isEditMode.value) {
+      const hasPermission = await canEditForm();
+      if (!hasPermission) {
+        toast.add({
+          title: 'Access Denied',
+          description: 'You do not have permission to edit this sample.',
+          color: 'red'
+        });
+        navigateTo('/portal/');
+        return;
+      }
+    }
+    await initializeComponent();
+    
+    window.addEventListener('keydown', (e) => {
+      if (e.ctrlKey && e.key === 'q') {
+        fillFormWithTestData();
+      }
+    });
+    
+  } catch (error) {
+    console.error('Error in onMounted hook:', error);
+  }
+});
+
+// Add a watch effect for incubator times to show warnings
+watch([timeINIncubator, timeOUTIncubator], ([newIn, newOut]) => {
+  if (!newIn || !newOut) return;
+  
+  const timeIn = new Date(newIn);
+  const timeOut = new Date(newOut);
+  
+  if (timeIn.getTime() === timeOut.getTime()) {
+    toast.add({
+      title: 'Warning',
+      description: 'Time In and Time Out cannot be the same',
+      color: 'red'
+    });
+    return;
+  }
+  
+  if (timeOut < timeIn) {
+    toast.add({
+      title: 'Warning',
+      description: 'Time Out cannot be before Time In',
+      color: 'red'
+    });
+    return;
+  }
+  
+  if (!isIncubationTimeValid.value) {
+    toast.add({
+      title: 'Warning',
+      description: 'Incubation time should be between 20 and 24 hours',
+      color: 'yellow'
+    });
+  }
+});
+
+watch(useRCard, (newValue) => {
+  if (newValue) {
+    initializeSampleVolumes();
+  }
+});
+
+//watch to trigger data fetching when query parameters change
+watch(
+  () => route.fullPath,
+  async (newPath) => {
+    if (newPath.includes('edit=') && isEditMode.value) {
+      const hasPermission = await canEditForm();
+      if (!hasPermission) {
+        toast.add({
+          title: 'Access Denied',
+          description: 'You do not have permission to edit this sample.',
+          color: 'red'
+        });
+        navigateTo('/portal/');
+      }
+    }
+    // Rest of your existing watch logic...
+    if (newPath === '/portal/sample') {
+      resetForm();
+      if (photoUpload.value) {
+        photoUpload.value.reset();
+      }
+    }
+  }
+);
+
+// Separate watch for edit mode
+watch([isEditMode, sampleId], ([newIsEditMode, newSampleId]) => {
+  if (newIsEditMode && newSampleId) {
+    fetchSampleData(newSampleId);
+  }
+});
+
+// Add to your component's script
+const isCancelModalOpen = ref(false);
+
+const showCancelConfirmation = () => {
+  isCancelModalOpen.value = true;
+};
+
+const confirmCancel = () => {
+  isCancelModalOpen.value = false;
+  handleCancel();
+};	
+
 </script>
 <template>
-	<div>
+  <div>
+    <ClientOnly>
+      <!-- Loading state -->
+      <div v-if="isLoading" class="flex justify-center items-center min-h-screen">
+        <ULoader />
+      </div>
+	
+      <!-- Error state -->
+      <div v-else-if="error" class="p-4 bg-red-100 text-red-700">
+        {{ error }}
+      </div>
+
+	<div v-else>
 		<PortalPageHeader
-			title="New Sample"
-			:breadcrumbs="[
+			:title="isEditMode ? 'Edit Sample ('+ sampleId +')' : 'New Sample'"
+			:breadcrumbs="isEditMode ? [
 				{
-					title: 'Portal',
-					href: '/portal',
+				title: 'Portal',
+				href: '/portal',
 				},
 				{
-					title: 'Sample',
-					href: '/portal/sample',
+				title: 'Edit Sample',
+				href: '#',
+				}
+			] : [
+				{
+				title: 'Portal',
+				href: '/portal',
 				},
+				{
+				title: 'New Sample',
+				href: '#',
+				}
 			]"
-		></PortalPageHeader>
+		/>
 
 		<!-- Submission Confirmation Screen -->
 		<div v-if="isSubmitted" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
 			<div class="bg-white p-8 rounded-lg shadow-xl text-center">
-			<h2 class="text-2xl font-bold mb-4">Thank You!</h2>
-			<p class="mb-4">Your sample (number: {{ submittedSampleId }}) has been successfully submitted.</p>
-			<p v-if="uploadedFileTypes.length > 0" class="mb-4">Photos have also been uploaded.</p>
-			<UButton variant="solid" @click="viewDashboard" label="View Dashboard" />
-			<UButton variant="outline" @click="resetForm" label="Submit Another Sample" />
+				<h2 class="text-2xl font-bold mb-4">Thank You!</h2>
+				<p class="mb-4">
+				{{ isEditMode 
+					? `Sample ${sampleId} has been successfully updated.`
+					: `Your sample (number: ${submittedSampleId}) has been successfully submitted.`
+				}}
+				</p>
+				<p v-if="uploadedFileTypes.length > 0" class="mb-4">Photos have also been uploaded.</p>
+				<div class="space-x-4">
+				<UButton 
+					variant="solid" 
+					@click="viewDashboard" 
+					label="View Dashboard" 
+				/>
+				<UButton 
+					v-if="!isEditMode"
+					variant="outline" 
+					@click="resetForm" 
+					label="Submit Another Sample" 
+				/>
+				<UButton
+					v-if="wwkyid_pk"
+					variant="outline"
+					@click="viewSite"
+					:label="`View Site ${wwkyid_pk}`"
+				/>
+				</div>
 			</div>
 		</div>
 
@@ -1028,8 +1596,18 @@ const viewDashboard = () => {
 					</div>
 					<div class="flex">
 						<UFormGroup class="p-2 basis-1/3" required>
-							<label class="block mb-1 required-field">Primary Sampler (you)</label>
-							<UInput v-model="sampler" icon="i-ic-baseline-person" disabled required />
+							<label class="block mb-1 required-field">
+								{{ isEditMode ? 'Original Sampler' : 'Primary Sampler (you)' }}
+							</label>
+							<UInput 
+								v-model="sampler" 
+								icon="i-ic-baseline-person" 
+								disabled 
+								required 
+							/>
+							<p v-if="isEditMode && isAdmin" class="text-sm text-gray-500 mt-1">
+								Originally sampled /entered by {{ originalSampler }}
+							</p>
 						</UFormGroup>
 						<UFormGroup class="p-2 basis-2/3">
 							<label class="block mb-1">Additional Samplers</label>
@@ -1167,7 +1745,7 @@ const viewDashboard = () => {
 							<UCheckbox v-model="odorSharpPungent" name="odorSharpPungent" label="Sharp/Pungent" value="9"/>
 						</UFormGroup>
 						<UFormGroup class="p-2 basis-1/3 border-l border-gray-500">
-							<label class="block mb-1">Water Surface:</label>
+							<label class="block mb-1">Water Surface/Other:</label>
 							<UCheckbox v-model="waterSurfaceNone" name="waterSurfaceNone" label="None" value="1" />
 							<UCheckbox v-model="waterSurfaceOilSheen" name="waterSurfaceOilSheen" label="Oil Sheen" value="2" />
 							<UCheckbox v-model="waterSurfaceAlgae" name="waterSurfaceAlgae" label="Algae" value="3" />
@@ -1304,7 +1882,7 @@ const viewDashboard = () => {
 						</UFormGroup>
 						Other electronic meters
 						<UFormGroup class="p-2" label=" Calibration Date">
-							<UInput v-model="elecDates" type="date" />
+							<UInput v-model="otherMeterCalibrationDate" type="date" />
 						</UFormGroup>
 						<UFormGroup class="p-2">
 							<UCheckbox
@@ -1323,38 +1901,51 @@ const viewDashboard = () => {
 
 					<template v-if="useRCard">
 						<div class="flex items-center mb-4">
-							<div class="flex items-center">
-								<img
-								src="assets/form_icons/bacteria.png"
-								alt="Bacteria"
-								class="w-20 mr-4"
-								/>
-							</div>
-							<h2 class="text-xl font-bold mr-4 flex-shrink-0">Bacteria: R-Card Method</h2>
-							</div>
-							<div class="flex items-center mb-4">
-							<p class="text-center bact-msg">Time Out should be between 20 and 24 hrs at 35-38°C after placing cards in incubator</p>
-							</div>
-							<div class="flex items-start">
-							<!-- Left Column -->
-							<div class="flex-2 pr-4">
-								<UFormGroup class="mb-2">
-								<label class="text-sm required-field">Time In Incubator</label>
-								<UInput v-model="timeINIncubator" icon="mdi:clock-outline" type="time" />
+						<div class="flex items-center">
+							<img
+							src="assets/form_icons/bacteria.png"
+							alt="Bacteria"
+							class="w-20 mr-4"
+							/>
+						</div>
+						<h2 class="text-xl font-bold mr-4 flex-shrink-0">Bacteria: R-Card Method</h2>
+						</div>
+						<div class="flex items-center mb-4">
+						<p class="text-center bact-msg">Time Out should be between 20 and 24 hrs at 35-38°C after placing cards in incubator</p>
+						</div>
+						
+						<!-- New two-row layout -->
+						<div class="space-y-6">
+						<!-- Top row with time inputs and calculations -->
+						<div class="grid grid-cols-[1fr_2fr] gap-6">
+							<!-- Left Column - Time inputs -->
+							<div class="space-y-4">
+								<UFormGroup>
+									<label class="text-sm required-field">Time In Incubator</label>
+									<UInput v-model="timeINIncubator" type="datetime-local" icon="mdi:clock-outline" />
 								</UFormGroup>
-								<UFormGroup class="mb-2">
-								<label class="text-sm required-field">Time Out Incubator</label>
-								<UInput v-model="timeOUTIncubator" icon="mdi:clock-outline" type="time" />
+								<UFormGroup>
+									<label class="text-sm required-field">Time Out Incubator</label>
+									<UInput v-model="timeOUTIncubator" type="datetime-local" icon="mdi:clock-outline" />
 								</UFormGroup>
-								<UFormGroup class="mb-2">
-								<label class="text-sm required-field">Initials of R-Card Reader</label>
-								<UInput v-model="manufacturer" />
+								<div v-if="timeINIncubator && timeOUTIncubator && !isIncubationTimeValid" 
+									class="mt-2 p-2 bg-yellow-100 text-yellow-800 rounded">
+									Warning: Incubation time should be between 20 and 24 hours. 
+									{{ displayIncubationTime }}
+								</div>
+								<div v-if="timeINIncubator && timeOUTIncubator && isIncubationTimeValid" 
+									class="mt-2 p-2 rounded">
+									<b>{{ displayIncubationTime }}</b>
+								</div>
+								<UFormGroup>
+									<label class="text-sm required-field">Initials of R-Card Reader</label>
+									<UInput v-model="bacteriaRCardInitials" />
 								</UFormGroup>
 							</div>
 
-							<!-- Middle Column -->
-							<div class="flex-1 px-6">
-								<div class="grid grid-cols-[auto_1fr_auto_1fr_auto_1fr] gap-2">
+							<!-- Right Column - E.coli counts -->
+							<div class="border-l border-gray-200 pl-6">
+							<div class="grid grid-cols-[auto_1fr_auto_1fr_auto_1fr] gap-2">
 								<!-- Headers -->
 								<div></div>
 								<label class="text-sm font-semibold whitespace-nowrap required-field"># E.coli/card</label>
@@ -1368,9 +1959,9 @@ const viewDashboard = () => {
 								<UInput v-model="ecoliA_count" type="number" required />
 								<span class="self-center text-sm font-semibold px-1">÷</span>
 								<USelect
-									v-model="sampleVolA"
-									:options="sampleVolOptions"
-									:default-value="defaultSampleVol"
+								v-model="sampleVolA"
+								:options="sampleVolOptions"
+								:default-value="defaultSampleVol"
 								/>
 								<span class="self-center text-sm font-semibold px-1 whitespace-nowrap">× 100 =</span>
 								<UInput v-model="ecoliA" type="number" disabled />
@@ -1380,9 +1971,9 @@ const viewDashboard = () => {
 								<UInput v-model="ecoliB_count" type="number" required/>
 								<span class="self-center text-sm font-semibold px-1">÷</span>
 								<USelect
-									v-model="sampleVolB"
-									:options="sampleVolOptions"
-									:default-value="defaultSampleVol"
+								v-model="sampleVolB"
+								:options="sampleVolOptions"
+								:default-value="defaultSampleVol"
 								/>
 								<span class="self-center text-sm font-semibold px-1 whitespace-nowrap">× 100 =</span>
 								<UInput v-model="ecoliB" type="number" disabled />
@@ -1392,49 +1983,65 @@ const viewDashboard = () => {
 								<UInput v-model="ecoliC_count" type="number" />
 								<span class="self-center text-sm font-semibold px-1">÷</span>
 								<USelect
-									v-model="sampleVolC"
-									:options="sampleVolOptions"
-									:default-value="defaultSampleVol"
-								/>			
+								v-model="sampleVolC"
+								:options="sampleVolOptions"
+								:default-value="defaultSampleVol"
+								/>          
 								<span class="self-center text-sm font-semibold px-1 whitespace-nowrap">× 100 =</span>
 								<UInput v-model="ecoliC" type="number" disabled />
-
-									<!-- Average -->
-									<label class="text-sm font-semibold col-span-3 self-center px-1 required-field">Average E.&nbsp;coli/100mL:</label>
-									<UInput v-model="averageEcoli" class="col-span-3 px-1" disabled />
-								</div>
-								
-								<div v-if="isEcoliVariationHigh" class="mt-2 p-2 bg-yellow-100 text-yellow-800 rounded">
-									The variation between E. Coli samples is high (> 1000).
-								</div>
 							</div>
 
-							<!-- Right Column -->
-							<div class="flex-3 pl-4 border-l border-gray-500">
-								<h3 class="text-m font-semibold mb-2 whitespace-nowrap required-field">Possible Bacterial Sources:</h3>
-								<UFormGroup>
-								<UCheckbox v-model="bacterialSourceDuckGoose" label="Duck/Goose" value="1" />
-								<UCheckbox v-model="bacterialSourceHuman" label="Human" value="2" />
-								<UCheckbox v-model="bacterialSourceLivestock" label="Livestock" value="3" />
-								<UCheckbox v-model="bacterialSourcePetWaste" label="Pet Waste" value="4" />
-								<UCheckbox v-model="bacterialSourceWildlife" label="Wildlife" value="5" />
-								<UCheckbox v-model="bacterialSourceOther" label="Other" @click="!bacterialSourceOther" value="6" />
-								<UInput v-if="bacterialSourceOther" v-model="bacterialSourceOtherData" />
-								</UFormGroup>
+							<!-- Average -->
+							<div class="mt-4 grid grid-cols-2 gap-2">
+								<label class="text-sm font-semibold self-center required-field">Average E.&nbsp;coli/100mL:</label>
+								<UInput v-model="averageEcoli" disabled />
 							</div>
+
+							<div v-if="isEcoliVariationHigh" class="mt-2 p-2 bg-yellow-100 text-yellow-800 rounded">
+								The variation between E. Coli samples is high ( > 1000).
+							</div>
+							</div>
+						</div>
+
+						<!-- Bottom row - Bacterial Sources -->
+						<div class="border-t border-gray-200 pt-4">
+							<h3 class="text-m font-semibold mb-2 whitespace-nowrap required-field">Possible Bacterial Sources:</h3>
+							<div class="grid grid-cols-1 gap-x-1 gap-y-1">
+							<UCheckbox v-model="bacterialSourceDuckGoose" label="Duck/Goose" value="1" />
+							<UCheckbox v-model="bacterialSourceHuman" label="Human" value="2" />
+							<UCheckbox v-model="bacterialSourceLivestock" label="Livestock" value="3" />
+							<UCheckbox v-model="bacterialSourcePetWaste" label="Pet Waste" value="4" />
+							<UCheckbox v-model="bacterialSourceWildlife" label="Wildlife" value="5" />
+							<UCheckbox v-model="bacterialSourceOther" label="Other" @click="!bacterialSourceOther" value="6" />
+							<div v-if="bacterialSourceOther" class="col-span-2 mt-1">
+								<UInput v-model="bacterialSourceOtherData" class="w-full" placeholder="Specify other bacterial source..." />
+							</div>
+							</div>
+						</div>
 						</div>
 					</template>
 				</div>
 				<div class="flex">
 					<div class="border-4 p-1 border-gray-900 w-1/2">
-						<h2 class="text-lg">Other Observations or Measurements</h2>
-						<UFormGroup class="p-2">
-						<UTextarea v-model="other" />
-						</UFormGroup>
+					<h2 class="text-lg">Other Observations or Measurements</h2>
+					<UFormGroup class="p-2">
+						<UTextarea 
+						v-model="otherObs" 
+						rows="10"
+						class="w-full min-h-[200px] resize-y"
+						placeholder="Enter any additional observations or measurements here..."
+						/>
+					</UFormGroup>
 					</div>
 					<div class="border-4 p-1 border-gray-900 w-1/2">
 						<UFormGroup class="p-2">
-						<PhotoUpload ref="photoUpload" @filesSelected="handleFilesSelected" />
+							<PhotoUpload 
+								ref="photoUpload"
+								@filesSelected="handleFilesSelected"
+								:key="sampleId"
+								:initial-photos="existingPhotos"
+								:site-id="wwkyid_pk"
+							/>
 						</UFormGroup>
 					</div>
 					<div class="border-4 p-1 border-gray-900 w-1/2">
@@ -1450,43 +2057,89 @@ const viewDashboard = () => {
 							<h2 class="text-lg">
 							Visit
 							<a href="https://www.kywater.org" target="_blank" class="text-blue-600 hover:text-blue-800">www.kywater.org</a>
-							to view data. For questions or feedback, email contact@kywater.org.
+							to view data. For questions or feedback, email <a href="mailto:contact@kywater.org" class="text-blue-600 hover:text-blue-800">contact@kywater.org</a>.
 							</h2>
 						</div>
 						</div>
 					</div>
 				</div>
-					<!-- Submit Button -->
-					<div class="flex justify-end mt-6">
+					<!-- Submit and Cancel Buttons -->
+					<div class="flex justify-end space-x-4 mt-6">
 						<UButton
-						@click="confirmSubmission"
-						class="text-gray-900"
-						variant="solid"
-						:disabled="!isFormValid || isSubmitting"
+							@click="showCancelConfirmation"
+							variant="outline"
+							color="gray"
 						>
-						{{ isSubmitting ? 'Submitting...' : 'Submit' }}
+							Cancel
+						</UButton>
+						<UButton
+							@click="confirmSubmission"
+							class="text-gray-900"
+							variant="solid"
+							:disabled="!isFormValid || isSubmitting"
+						>
+							{{ isSubmitting ? 'Submitting...' : isEditMode ? 'Save Changes' : 'Submit Sample' }}
 						</UButton>
 					</div>
 				</div>
 			</Form>
 
+			<!-- Cancel Confirmation Modal -->
+			<UModal v-model="isCancelModalOpen">
+				<UCard>
+					<template #header>
+					<div class="text-xl font-bold text-yellow-600">
+						Confirm Cancel
+					</div>
+					</template>
+					<div class="p-4">
+					<p class="mb-4">
+						Are you sure you want to cancel? Any unsaved changes will be lost.
+					</p>
+					</div>
+					<template #footer>
+					<div class="flex justify-end space-x-4">
+						<UButton 
+						@click="isCancelModalOpen = false" 
+						color="gray"
+						>
+						No, Continue Editing
+						</UButton>
+						<UButton 
+						@click="confirmCancel" 
+						color="yellow"
+						>
+						Yes, Cancel
+						</UButton>
+					</div>
+					</template>
+				</UCard>
+			</UModal>
+
 			<!-- Confirmation Modal -->
 			<UModal v-model="isConfirmationModalOpen">
 				<UCard>
-				<template #header>
-					<div class="text-xl font-bold">Confirm Submission</div>
-				</template>
-				<p>Are you sure you want to submit this sample data? Please review your entries before confirming.</p>
-				<template #footer>
-					<div class="flex justify-end space-x-4">
-					<UButton @click="isConfirmationModalOpen = false" color="gray">
-						Cancel
-					</UButton>
-					<UButton @click="submitData" color="primary">
-						Submit Sample Data
-					</UButton>
+					<template #header>
+					<div class="text-xl font-bold">
+						{{ isEditMode ? 'Confirm Changes' : 'Confirm Submission' }}
 					</div>
-				</template>
+					</template>
+					<p>
+					{{ isEditMode 
+						? 'Are you sure you want to save these changes to the sample data? Please review your modifications before confirming.'
+						: 'Are you sure you want to submit this new sample data? Please review your entries before confirming.'
+					}}
+					</p>
+					<template #footer>
+					<div class="flex justify-end space-x-4">
+						<UButton @click="isConfirmationModalOpen = false" color="gray">
+						Cancel
+						</UButton>
+						<UButton @click="submitData" color="primary">
+						{{ isEditMode ? 'Save Changes' : 'Submit Sample Data' }}
+						</UButton>
+					</div>
+					</template>
 				</UCard>
 			</UModal>
 
@@ -1527,6 +2180,33 @@ const viewDashboard = () => {
 			</Transition>
 		</Teleport>
 	</div>
+
+	<div v-if="formErrors.length > 0" class="mb-4 mt-6 mx-auto max-w-4xl"> <!-- Added mt-6 for top margin -->
+		<div class="bg-orange-50 border-2 border-orange-400 p-4 rounded-lg"> <!-- Changed to border-2 and added rounded-lg -->
+			<div class="flex">
+			<div class="flex-shrink-0">
+				<UIcon 
+				name="i-heroicons-exclamation-triangle" 
+				class="h-5 w-5 text-orange-400"
+				/>
+			</div>
+			<div class="ml-3">
+				<h3 class="text-sm font-medium text-orange-800">
+				Please make sure these are filled:
+				</h3>
+				<div class="mt-2 text-sm text-orange-700">
+				<ul class="list-disc pl-5 space-y-1">
+					<li v-for="(error, index) in formErrors" :key="index">
+					{{ error }}
+					</li>
+				</ul>
+				</div>
+			</div>
+			</div>
+		</div>
+	</div>
+	</ClientOnly>
+</div>
 </template>
 
 <style scoped>
@@ -1585,4 +2265,10 @@ const viewDashboard = () => {
 .water-color-green i { color: #228B22; }
 .water-color-grey i { color: #808080; }
 .water-color-orange i { color: #FFA500; }
+
+:deep(.textarea) {
+  min-height: 200px;
+  line-height: 1.5;
+  padding: 0.75rem;
+}
 </style>

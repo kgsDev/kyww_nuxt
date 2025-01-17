@@ -9,13 +9,15 @@ export const config = {
   },
 };
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+const MAX_FILE_SIZE = 12 * 1024 * 1024; // 12 MB per file
+const MAX_TOTAL_FILE_SIZE = 50 * 1024 * 1024; // 50MB total for all files
 
 export default defineEventHandler(async (event) => {
   const form = new IncomingForm({
     multiples: true,
     uploadDir: '/tmp',
     maxFileSize: MAX_FILE_SIZE,
+    maxTotalFileSize: MAX_TOTAL_FILE_SIZE,
   });
 
   return new Promise((resolve, reject) => {

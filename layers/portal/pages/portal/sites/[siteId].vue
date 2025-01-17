@@ -1,5 +1,22 @@
 <script setup lang="ts">
 import { useKYWWMap } from '~/composables/useKYWWMap';
+import SampleForm from '../sample/index.vue'; // Import form
+
+const { user } = useDirectusAuth();
+const configPublic = useRuntimeConfig().public;
+
+// Add these computed properties for permission checking
+const isAdmin = computed(() => {
+  return user.value?.role === configPublic.ADMIN_ROLE_ID;
+});
+
+const canEditSample = (sample) => {
+  if (!sample || !user.value) return false;
+  return isAdmin.value || user.value.id === sample.volunteer_id;
+};
+
+const showEditForm = ref(false);
+const selectedSample = ref(null);
 
 const route = useRoute();
 const siteId = computed(() => route.params.siteId);
@@ -16,7 +33,33 @@ const {
   initializeMap,
 } = useKYWWMap();
 
-// Keep your helper functions
+const handleEdit = (sample) => {
+  selectedSample.value = sample;
+  showEditForm.value = true;
+};
+
+const handleEditComplete = async () => {
+  showEditForm.value = false;
+  selectedSample.value = null;
+  
+  // Refresh the samples data
+  try {
+    const samplesResponse = await useDirectus(
+      readItems('base_samples', {
+        filter: {
+          wwky_id: { _eq: siteId.value }
+        },
+        fields: ['*'],
+        sort: ['-date']
+      })
+    );
+    samples.value = samplesResponse;
+  } catch (err) {
+    console.error('Error refreshing samples:', err);
+  }
+};
+
+//helper functions
 const calculateAverage = (field) => {
   // Filter out null, undefined, and NaN values first
   const validValues = samples.value
@@ -46,14 +89,14 @@ const siteStats = computed(() => {
       avgConductivity: calculateAverage('conductivity'),
     },
     bacteria: {
-      avgEColi: calculateAverage('bacteria_sample_a_ecoli'),
+      avgEColi: calculateAverage('bacteria_avg_ecoli_cfu'),
       maxEColi: Math.max(...samples.value
-        .map(s => parseFloat(s.bacteria_sample_a_ecoli))
+        .map(s => parseFloat(s.bacteria_avg_ecoli_cfu))
         .filter(val => !isNaN(val) && val !== null)
         .concat([0])), // Add 0 as fallback if no valid values
       minEColi: Math.min(...samples.value
-        .filter(s => s.bacteria_sample_a_ecoli)
-        .map(s => parseFloat(s.bacteria_sample_a_ecoli))
+        .filter(s => s.bacteria_avg_ecoli_cfu)
+        .map(s => parseFloat(s.bacteria_avg_ecoli_cfu))
         .filter(val => !isNaN(val) && val !== null)
         .concat([0])) // Add 0 as fallback if no valid values
     },
@@ -183,6 +226,26 @@ onMounted(async () => {
 
 <template>
   <PageContainer>
+  <!-- Show edit form when editing -->
+  <div v-if="showEditForm" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+      <div class="relative top-5 mx-auto p-5 border w-4/5 shadow-lg rounded-md bg-white">
+        <div class="flex justify-between items-center mb-4">
+          <h2 class="text-xl font-bold">Edit Sample</h2>
+          <UButton
+            icon="i-heroicons-x-mark"
+            variant="ghost"
+            @click="handleEditComplete"
+          />
+        </div>
+        
+        <SampleForm
+          :initial-data="selectedSample"
+          @submit-complete="handleEditComplete"
+        />
+      </div>
+  </div>
+
+
     <!-- Loading State -->
     <div v-if="loading" class="flex items-center justify-center h-64">
       <ULoadingIcon />
@@ -258,8 +321,8 @@ onMounted(async () => {
             <div>
               <h3 class="font-medium text-gray-700">E. coli Results</h3>
               <div class="grid grid-cols-2 gap-2 mt-2">
-                <div>Average: {{ formatMeasurement(siteStats.bacteria.avgEColi, 'MPN/100mL') }}</div>
-                <div>Maximum: {{ formatMeasurement(siteStats.bacteria.maxEColi, 'MPN/100mL') }}</div>
+                <div>Average: {{ formatMeasurement(siteStats.bacteria.avgEColi, 'CFU/100mL') }}</div>
+                <div>Maximum: {{ formatMeasurement(siteStats.bacteria.maxEColi, 'CFU/100mL') }}</div>
               </div>
             </div>
             <div>
@@ -293,7 +356,7 @@ onMounted(async () => {
                 <th class="px-4 py-2 text-left">pH</th>
                 <th class="px-4 py-2 text-left">DO (mg/L)</th>
                 <th class="px-4 py-2 text-left">Conductivity (μS/cm)</th>
-                <th class="px-4 py-2 text-left">E. coli (MPN/100mL)</th>
+                <th class="px-4 py-2 text-left">Average E. coli (CFU/100mL)</th>
                 <th class="px-4 py-2 text-center">Details</th>
               </tr>
             </thead>
@@ -304,17 +367,40 @@ onMounted(async () => {
                 <td class="px-4 py-2">{{ formatMeasurement(sample.pH, '') }}</td>
                 <td class="px-4 py-2">{{ formatMeasurement(sample.dissolved_oxygen, '') }}</td>
                 <td class="px-4 py-2">{{ formatMeasurement(sample.conductivity, '') }}</td>
-                <td class="px-4 py-2">{{ formatMeasurement(sample.bacteria_sample_a_ecoli, '') }}</td>
+                <td class="px-4 py-2">{{ formatMeasurement(sample.bacteria_avg_ecoli_cfu, '') }}</td>
                 <td class="px-4 py-2 text-center">
-                  <UButton
-                    size="sm"
-                    variant="soft"
-                    @click="navigateTo(`/portal/sample/${sample.id}`)"
-                    icon="i-heroicons-eye"
-                  >
-                    View
-                  </UButton>
-                </td>
+                    <div class="flex justify-center space-x-2">
+                      <UButton
+                        size="sm"
+                        variant="soft"
+                        @click="navigateTo(`/portal/sample/${sample.id}`)"
+                        icon="i-heroicons-eye"
+                      >
+                        View
+                      </UButton>
+                      <UTooltip v-if="!canEditSample(sample)" text="Only sample owners and administrators can edit samples">
+                        <UButton
+                          size="sm"
+                          variant="soft"
+                          color="gray"
+                          disabled
+                          icon="i-heroicons-pencil-square"
+                        >
+                          Edit
+                        </UButton>
+                      </UTooltip>
+                      <UButton
+                        v-else
+                        size="sm"
+                        variant="soft"
+                        color="blue"
+                        @click="navigateTo(`/portal/sample?edit=${sample.id}`)"
+                        icon="i-heroicons-pencil-square"
+                      >
+                        Edit
+                      </UButton>
+                    </div>
+                  </td>
               </tr>
             </tbody>
           </table>

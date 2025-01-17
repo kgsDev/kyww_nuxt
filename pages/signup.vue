@@ -423,7 +423,7 @@
     { id: 'jefferson', name: 'Jefferson' },
     { id: 'jessamine', name: 'Jessamine' },
     { id: 'johnson', name: 'Johnson' },
-    { id: 'kentont', name: 'Kenton' },
+    { id: 'kenton', name: 'Kenton' },
     { id: 'knott', name: 'Knott' },
     { id: 'knox', name: 'Knox' },
     { id: 'larue', name: 'LaRue' },
