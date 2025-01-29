@@ -64,7 +64,7 @@
             <div class="flex flex-col">
               <span>Existing Sample Form</span>
               <span class="text-gray-600">Original name: {{ existingFormFile.origPhotoName || 'Not available' }}</span>
-              <span class="text-gray-600">Stored as: form_{{ existingFormFile.sample_id }}.{{ existingFormFile.file_path?.split('.').pop() || 'pdf' }}</span>
+              <span class="text-gray-600">Stored as: form_{{ existingFormFile.sample_id }}.{{ getStoredExtension(existingFormFile) }}</span>
             </div>
           </div>
           <div class="flex gap-2">
@@ -209,17 +209,6 @@ const sampleFormRef = ref(null);
 const existingPhotos = ref([]);
 const existingFiles = ref({});
 const existingFormFile = ref(null);
-const allFilesSelected = ref(false);
-const requireOther = ref(false);
-
-const logState = () => {
-  console.log('Current component state:', {
-    initialPhotos: props.initialPhotos,
-    existingFormFile: existingFormFile.value,
-    existingFiles: existingFiles.value,
-    files: files.value
-  });
-};
 
 onMounted(() => {
   fields.forEach(field => {
@@ -273,6 +262,11 @@ const getFileInfo = (filePath) => {
     console.error('Error parsing file path:', error);
     return { name: 'unknown', extension: 'pdf' };
   }
+};
+
+const getStoredExtension = (file) => {
+  if (!file || !file.file_path) return 'pdf';
+  return file.file_path.toLowerCase().includes('.png') ? 'png' : 'pdf';
 };
 
 const deleteFile = (field) => {
@@ -403,6 +397,21 @@ const handleFileChange = (field) => {
   }
 };
 
+const getFileExtension = (file) => {
+  // First try to get extension from file type
+  if (file.type === 'application/pdf') return 'pdf';
+  if (file.type.startsWith('image/')) {
+    const imageType = file.type.split('/')[1];
+    return imageType === 'jpeg' ? 'jpg' : imageType;
+  }
+  
+  // Fallback to filename extension
+  const extension = file.name.split('.').pop().toLowerCase();
+  return ['pdf', 'jpg', 'jpeg', 'png', 'gif'].includes(extension) ? 
+    (extension === 'jpeg' ? 'jpg' : extension) : 'pdf';
+};
+
+
 const handleSampleFormChange = () => {
   const file = sampleFormRef.value.files[0];
   if (file) {
@@ -415,10 +424,18 @@ const handleSampleFormChange = () => {
       });
       sampleFormRef.value.value = '';
     } else {
+      // Determine if it's an image or PDF
+      const isImage = file.type.startsWith('image/');
+      const storedExtension = isImage ? 'png' : 'pdf'; // Images get converted to PNG
+      const originalExtension = getFileExtension(file);
+      
       sampleFormFile.value = {
         file,
         name: file.name,
-        type: 'form'
+        type: 'form',
+        storedExtension, // The extension it will be stored as
+        originalExtension, // The original file extension
+        isImage
       };
       emitFiles();
     }
@@ -437,20 +454,15 @@ const emitFiles = () => {
 
   const allFiles = {
     files: files.value,
-    sampleFormFile: sampleFormFile.value,
+    sampleFormFile: {
+      ...sampleFormFile.value,
+      extension: sampleFormFile.value ? getFileExtension(sampleFormFile.value.file) : null
+    },
     existingFormFile: existingFormFile.value,
-    existingFiles: existingFiles.value,
     formAdded: hasForm,
     photoCount: existingPhotoCount + newPhotoCount
   };
 
-  console.log('Emitting file state:', {
-    ...allFiles,
-    existingPhotoCount,
-    newPhotoCount,
-    hasForm
-  });
-  
   emit('filesSelected', allFiles);
 };
 
@@ -484,14 +496,12 @@ const setExistingPhotos = (photos) => {
 };
 
 const handleInitialPhotos = (photos) => {
-  console.log('Processing initial photos:', photos);
   
   // Clear existing state
   existingFiles.value = {};
   existingFormFile.value = null;
   
   if (!photos || !Array.isArray(photos)) {
-    console.log('No photos to process');
     updateFilesSelected();
     return;
   }
@@ -501,49 +511,39 @@ const handleInitialPhotos = (photos) => {
     if (!photo) return;
     
     const fileInfo = getFileInfo(photo.file_path);
-    console.log('Processing photo:', { photo, fileInfo });
-
-    // Get extension from file path or use default
-    const extension = photo.file_path ? 
-      photo.file_path.split('.').pop().toLowerCase() : 
-      (photo.type === 'form' ? 'pdf' : 'png');
 
     if (photo.type === 'form') {
+      // Check both file_path and url for the extension
+      const filePath = photo.file_path || photo.url || '';
+      const fileExtension = filePath.toLowerCase().includes('.png') ? 'png' : 'pdf';
+      
       existingFormFile.value = {
         url: photo.file_path || photo.url || '',
-        name: `form_${photo.sample_id}.${extension}`,
+        name: `form_${photo.sample_id}.${fileExtension}`,
         type: 'form',
         origPhotoName: photo.origphotoname || fileInfo.name || '',
         sample_id: photo.sample_id,
-        file_path: photo.file_path,
+        file_path: photo.file_path || photo.url, // Use url as fallback
+        storedExtension: fileExtension,
         ...photo
       };
-      console.log('Set form file:', existingFormFile.value);
     } else if (['upstream', 'downstream', 'other'].includes(photo.type)) {
       existingFiles.value[photo.type] = {
         url: photo.file_path || photo.url || '',
-        name: `${photo.type}_${photo.sample_id}.${extension}`,
+        name: `${photo.type}_${photo.sample_id}.png`,  // Photos are always PNG
         type: photo.type,
         origPhotoName: photo.origphotoname || fileInfo.name || '',
         sample_id: photo.sample_id,
         file_path: photo.file_path,
         ...photo
       };
-      console.log(`Added ${photo.type} to existingFiles:`, existingFiles.value[photo.type]);
     }
   });
 
-  logState();
   updateFilesSelected();
 };
 
 const updateFilesSelected = () => {
-  console.log('Updating files selected. Current state:', {
-    hasExistingFormFile: !!existingFormFile.value,
-    existingFormFile: existingFormFile.value,
-    existingFilesCount: Object.keys(existingFiles.value).length
-  });
-
   // Note: Don't require other photos for the form to be shown
   const allFiles = {
     files: existingFiles.value,
@@ -553,7 +553,6 @@ const updateFilesSelected = () => {
     photoCount: Object.keys(existingFiles.value).length
   };
 
-  console.log('Emitting file state:', allFiles);
   emit('filesSelected', allFiles);
 };
 
@@ -577,26 +576,16 @@ const reset = () => {
 };
 
 watch(() => props.initialPhotos, (newPhotos) => {
-  console.log('Initial photos changed:', {
-    photosLength: newPhotos?.length,
-    hasPhotos: !!newPhotos?.length,
-    photos: newPhotos
-  });
 
   // Always process photos, even if array is empty
   handleInitialPhotos(newPhotos || []);
 }, { immediate: true, deep: true });
 
 watch([existingFormFile, files], ([newFormFile, newFiles]) => {
-  console.log('File state changed:', {
-    existingFormFile: newFormFile,
-    files: newFiles
-  });
 }, { deep: true });
 
 watch(() => props.initialPhotos, (newPhotos) => {
   if (newPhotos && newPhotos.length > 0) {
-    console.log('Received new photos via props:', newPhotos);
     handleInitialPhotos(newPhotos);
   }
 }, { immediate: true });

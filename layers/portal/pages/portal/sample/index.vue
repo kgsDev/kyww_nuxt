@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import CustomNumberInput from '../../components/CustomNumberInput.vue';
 import MapSelector from '../sites/MapSelector.vue';
 import PhotoUpload from '../../components/PhotoUpload.vue';
 
@@ -17,7 +18,7 @@ const formRefs = {
 	sampler: ref(user?.value?.display_name),
 	adults: ref(),
 	youths: ref(),
-	date: ref(),
+	date: ref(new Date().toISOString().split('T')[0]), // This will set it to current date in YYYY-MM-DD format
 	startTime: ref(),
 	totalVolunteerMinutes: ref(),
 	milesDriven: ref(),
@@ -62,6 +63,8 @@ const formRefs = {
 	sampleVolC: ref(),
 	conductivityMeterCalibrationDate: ref(),
 	otherMeterCalibrationDate: ref(),
+	field_multimeter_model: ref(''),
+	field_multimeter_manuf: ref(''),
 	streamMeter: ref(),
 	bacterialSourceOther: ref(),
 	trash: ref(),
@@ -102,9 +105,9 @@ const { originalSampler, wwkyid_pk, stream_name, wwkybasin, sampler, adults, you
 	waterSurfaceNone, waterSurfaceOilSheen, waterSurfaceAlgae, waterSurfaceSoapSuds, waterSurfaceSewage, waterSurfaceErosion, streamFlowVisual, 
 	negsample, streamFlowMeasured, waterTemperature, pH, dissolvedOxygen, conductivity, iCertifyCheckbox, timeINIncubator, timeOUTIncubator, 
 	bacteriaRCardInitials, bacterialSourceHuman, bacterialSourceDuckGoose, bacterialSourceLivestock, bacterialSourcePetWaste, bacterialSourceWildlife, 
-	ecoliA_count, sampleVolA, ecoliB_count, sampleVolB, ecoliC_count, sampleVolC, conductivityMeterCalibrationDate, otherMeterCalibrationDate, streamMeter, 
-	bacterialSourceOther, trash, turbidity, useTurbidMeter, useTransparencyTube, transparencyTubeMeasured, turbidMeterMeasured, availableSamplers, otherObs, 
-	allFilesSelected, selectedSamplerIds } = formRefs;
+	ecoliA_count, sampleVolA, ecoliB_count, sampleVolB, ecoliC_count, sampleVolC, conductivityMeterCalibrationDate, otherMeterCalibrationDate, field_multimeter_model,
+	field_multimeter_manuf, streamMeter, bacterialSourceOther, trash, turbidity, useTurbidMeter, useTransparencyTube, transparencyTubeMeasured, turbidMeterMeasured, 
+	availableSamplers, otherObs, allFilesSelected, selectedSamplerIds } = formRefs;
 const { photoUpload, mapModalRef, existingPhotos } = componentRefs;
 const { isLoading, isMapOpen, toast, formErrors, isConfirmationModalOpen, showValidationErrors, directSiteId, isSiteIdValid, isCheckingSiteId } = stateRefs;
 
@@ -419,7 +422,11 @@ const fetchSampleData = async (id: string) => {
 
 	//conductivity meter calibration date
 	conductivityMeterCalibrationDate.value = sampleData.conductivity_meter_calibration_date?.split('T')[0] || null;
+
+	//other meter calibration date and info
 	otherMeterCalibrationDate.value = sampleData.other_meter_calibration_date?.split('T')[0] || null;
+	field_multimeter_model.value = sampleData.field_multimeter_model || '';
+    field_multimeter_manuf.value = sampleData.field_multimeter_manuf || '';
 
 	// Meter calibration data
     iCertifyCheckbox.value = sampleData.field_multimeter_certify;
@@ -454,9 +461,6 @@ const fetchSampleData = async (id: string) => {
 		ecoliC_count.value = sampleData.bacteria_sample_c_ecoli_count !== null ? parseInt(sampleData.bacteria_sample_c_ecoli_count) : null;
 		ecoliC.value = parseInt(sampleData.bacteria_sample_c_ecoli);
 		sampleVolC.value = parseFloat(sampleData.bacteria_sample_c_volume);
-
-	    // Preserve all calibration dates, even if null
-	    conductivityMeterCalibrationDate.value = sampleData.conductivity_meter_calibration_date || null;
 	}
 
 
@@ -479,12 +483,6 @@ const fetchSampleData = async (id: string) => {
 				fields: ['*']
 			})
 			);
-
-			console.log('Fetched photo records:', {
-			records: photoRecords,
-			photosAdded: sampleData.photos_added,
-			formAdded: sampleData.form_added
-			});
 
 			if (photoRecords?.length > 0) {
 			existingPhotos.value = photoRecords.map(record => ({
@@ -610,6 +608,7 @@ const confirmSubmission = () => {
   }
 };
 
+//bunch of helper functions:
 const fetchSamplers = async () => {
   try {
     const response = await $fetch('/api/samplers');
@@ -883,30 +882,29 @@ const validateFiles = (files) => {
 };
 
 const submitData = async () => {
-	isConfirmationModalOpen.value = false;
-	if (!isFormValid.value) {
-    	errorMessage.value = 'Please fill in all required fields.';
-    	return;
-  	}
-	// Get and validate file sizes before proceeding
-	const files = selectedFiles.value;
-	const validationResult = validateFiles(files);
-	if (validationResult !== true) {
-		errorMessage.value = 'File validation failed:\n' + validationResult.join('\n');
-		return;
-	}
+  isConfirmationModalOpen.value = false;
+  if (!isFormValid.value) {
+    errorMessage.value = 'Please fill in all required fields.';
+    return;
+  }
 
-	isSubmitting.value = true;
-  	errorMessage.value = '';
-	let createdSampleId = null;
-	let sampleSiteId = null;
+  // Get and validate file sizes before proceeding
+  const files = selectedFiles.value;
+  const validationResult = validateFiles(files);
+  if (validationResult !== true) {
+    errorMessage.value = 'File validation failed:\n' + validationResult.join('\n');
+    return;
+  }
+
+  isSubmitting.value = true;
+  errorMessage.value = '';
+  let createdSampleId = null;
+  let sampleSiteId = null;
 
   try {
     // Submit form data
     submissionStatus.value = 'Submitting form data...';
     submissionProgress.value = 25;
-
-    const sampleData = prepareSampleData();
 
     if (isEditMode.value) {
 		const { baseData, relationshipData } = prepareSampleData();
@@ -966,9 +964,15 @@ const submitData = async () => {
 		// Step 5: Update base_samples with photo information
 		await updateSampleWithPhotoInfo(createdSampleId, files);
 	}
-	submissionProgress.value = 100;
-	submittedSampleId.value = createdSampleId;
-	isSubmitted.value = true;
+
+    submissionProgress.value = 100;
+    submittedSampleId.value = createdSampleId || sampleId.value;
+    
+    // Small delay to ensure smooth transition
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    isSubmitting.value = false;
+    isSubmitted.value = true;
 		
   } catch (error) {
     console.error('Error during submission:', error);
@@ -1070,7 +1074,9 @@ const prepareSampleData = () => {
 		turbidtube_measure: toNullableInteger(turbidMeterMeasured.value),
 		trash: toNullableInteger(trash.value),
 		conductivity_meter_calibration_date: conductivityMeterCalibrationDate.value || null,
-		other_meter_calibration_date: otherMeterCalibrationDate.value || null
+		other_meter_calibration_date: otherMeterCalibrationDate.value || null,
+		field_multimeter_model: field_multimeter_model.value || null,
+		field_multimeter_manuf: field_multimeter_manuf.value || null,
 	};
 
 	// Only include bacteria-related fields if R-Card method is selected
@@ -1154,6 +1160,45 @@ const getSelectedBacterialSources = () => {
   return bacterialSourceValues.filter(source => source.field.value).map(source => source.value);
 };
 
+//helper time/date functions
+const formatDateTime = (dateString) => {
+  if (!dateString) return '';
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) return '';
+  
+  // Format to YYYY-MM-DDThh:mm
+  return date.toISOString().slice(0, 16);
+};
+
+const validateDateTime = (value) => {
+  if (!value) return '';
+  // Ensure year is between 1900 and 2100
+  const date = new Date(value);
+  if (isNaN(date.getTime()) || date.getFullYear() < 1900 || date.getFullYear() > 2100) {
+    return '';
+  }
+  return formatDateTime(value);
+};
+
+// Add these computed properties
+const timeInModel = computed({
+  get() {
+    return timeINIncubator.value;
+  },
+  set(value) {
+    timeINIncubator.value = validateDateTime(value);
+  }
+});
+
+const timeOutModel = computed({
+  get() {
+    return timeOUTIncubator.value;
+  },
+  set(value) {
+    timeOUTIncubator.value = validateDateTime(value);
+  }
+});
+
 
 // File upload handler
 const uploadFiles = async (sampleId, siteId, files, formType) => {
@@ -1172,7 +1217,7 @@ const uploadFiles = async (sampleId, siteId, files, formType) => {
         uploadedFiles.push({
           type: key,
           extension: 'png',
-          origPhotoName: fileObj.name // Store original name
+          origPhotoName: fileObj.name
         });
       }
     });
@@ -1180,15 +1225,33 @@ const uploadFiles = async (sampleId, siteId, files, formType) => {
 
   // Handle sample form file
   if (files.sampleFormFile && files.sampleFormFile.file instanceof File) {
-    const formFile = files.sampleFormFile.file;
-    const extension = formFile.name.split('.').pop().toLowerCase();
-    formData.append('sampleFormFile', formFile);
-    uploadedFiles.push({
-      type: 'form',
-      extension: extension,
-      origPhotoName: formFile.name // Store original name
-    });
-  }
+	const formFile = files.sampleFormFile.file;
+	const isImage = formFile.type.startsWith('image/');
+	const storedExtension = isImage ? 'png' : 'pdf'; // This is the extension we'll actually use
+	
+	formData.append('sampleFormFile', formFile);
+	formData.append('isFormImage', isImage.toString());
+	formData.append('storedExtension', storedExtension); // Add this to formData
+	
+	uploadedFiles.push({
+		type: 'form',
+		extension: storedExtension, // Use the actual extension it will be stored as
+		origPhotoName: formFile.name,
+		isImage
+	});
+
+	// If replacing file, we need to check for existing form file
+	if (isEditMode.value) {
+		const existingForm = existingPhotos.value?.find?.(p => p?.type === 'form');
+		if (existingForm?.file_path) {
+		const oldExtension = existingForm.file_path.split('.').pop();
+		if (oldExtension !== storedExtension) {
+			formData.append('deleteOldFormFile', 'true');
+			formData.append('oldFormExtension', oldExtension);
+		}
+		}
+	}
+	}
 
   formData.append('formAdded', !!files.sampleFormFile ? 'true' : 'false');
 
@@ -1215,13 +1278,16 @@ const createOrUpdatePhotoRecords = async (sampleId, siteId, uploadedFiles) => {
       })
     );
 
-    for (const { type, extension, origPhotoName } of uploadedFiles) {
-      const filePath = `https://kyww.uky.edu/webshare/kyww_images/base/${siteId}/${sampleId}/${type}_${sampleId}.${extension}`;
+    for (const { type, extension, origPhotoName, isImage } of uploadedFiles) {
+      // Use the correct extension based on file type
+      const finalExtension = type === 'form' ? extension : 'png';
+      const filePath = `https://kyww.uky.edu/webshare/kyww_images/base/${siteId}/${sampleId}/${type}_${sampleId}.${finalExtension}`;
       const existingRecord = existingRecords.find(record => record.type === type);
 
       const photoData = {
         file_path: filePath,
-        origphotoname: origPhotoName // Save original filename
+        origphotoname: origPhotoName,
+        is_image: type === 'form' ? isImage : true // Add this if you want to track if form is an image
       };
 
       if (existingRecord) {
@@ -1251,13 +1317,6 @@ const updateSampleWithPhotoInfo = async (sampleId, files) => {
     
     // Check if form is present (either new or existing)
     const hasForm = !!(files.sampleFormFile || files.existingFormFile);
-
-    console.log('Updating sample photo info:', {
-      sampleId,
-      photoCount,
-      hasForm,
-      files
-    });
 
     // Update the base_samples table
     await useDirectus(updateItem('base_samples', sampleId, {
@@ -1317,28 +1376,57 @@ const showErrorModal = () => {
 const isErrorModalVisible = ref(false);
 
 const resetForm = () => {
-  // Safely reset refs
+  // Reset form refs
   Object.values(formRefs).forEach(ref => {
     if (ref && typeof ref.value !== 'undefined') {
       if (typeof ref.value === 'boolean') ref.value = false;
+      else if (Array.isArray(ref.value)) ref.value = [];
       else if (typeof ref.value === 'number') ref.value = null;
       else ref.value = '';
     }
   });
 
   // Reset state refs
-  Object.values(stateRefs).forEach(ref => {
-    if (ref && typeof ref.value !== 'undefined') {
-      ref.value = false;
-    }
-  });
-
+  formErrors.value = [];
+  isConfirmationModalOpen.value = false;
+  showValidationErrors.value = false;
+  isLoading.value = false;
+  isMapOpen.value = false;
+  directSiteId.value = '';
+  isSiteIdValid.value = null;
+  isCheckingSiteId.value = false;
+  
+  // Reset submission state
+  isSubmitting.value = false;
+  isSubmitted.value = false;
+  submittedSampleId.value = '';
+  submissionStatus.value = '';
+  submissionProgress.value = 0;
+  uploadedFileTypes.value = [];
+  errorMessage.value = '';
+  
+  // Reset file upload related state
+  selectedFiles.value = {};
+  if (photoUpload.value && typeof photoUpload.value.reset === 'function') {
+    photoUpload.value.reset();
+  }
+  existingPhotos.value = [];
+  
+  // Reset R-Card specific fields
+  useRCard.value = false;
+  timeINIncubator.value = null;
+  timeOUTIncubator.value = null;
+  
+  // Force a re-render of file upload component
   nextTick(() => {
-    if (photoUpload.value && typeof photoUpload.value.reset === 'function') {
-      photoUpload.value.reset();
-    }
     allFilesSelected.value = false;
   });
+};
+
+const handleNewSample = () => {
+  resetForm();
+  isSubmitted.value = false;
+  navigateTo('/portal/sample');
 };
 
 //***********THIS IS FOR TESTING _ REMOVE LATER
@@ -1470,7 +1558,7 @@ watch(useRCard, (newValue) => {
 //watch to trigger data fetching when query parameters change
 watch(
   () => route.fullPath,
-  async (newPath) => {
+  async (newPath, oldPath) => {
     if (newPath.includes('edit=') && isEditMode.value) {
       const hasPermission = await canEditForm();
       if (!hasPermission) {
@@ -1483,8 +1571,9 @@ watch(
       }
     }
     // Rest of your existing watch logic...
-    if (newPath === '/portal/sample') {
+	if (newPath === '/portal/sample' && oldPath !== newPath) {
       resetForm();
+      await nextTick();
       if (photoUpload.value) {
         photoUpload.value.reset();
       }
@@ -1569,7 +1658,7 @@ const confirmCancel = () => {
 				<UButton 
 					v-if="!isEditMode"
 					variant="outline" 
-					@click="resetForm" 
+					@click="handleNewSample" 
 					label="Submit Another Sample" 
 				/>
 				<UButton
@@ -1585,6 +1674,19 @@ const confirmCancel = () => {
 		<!-- Main Form -->
 		<div v-else>
 			<h3 class="text-3xl text-center text-gray-900">Kentucky Watershed Watch Monitoring Data Form</h3>
+			<div class="my-4 text-center">
+				<a 
+					href="https://drive.google.com/file/d/1KPgdTTckYaXQmQsySBg3_WyEsrovBRqk/view" 
+					target="_blank" 
+					rel="noopener noreferrer" 
+					class="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors shadow-sm"
+				>
+					<UIcon name="i-heroicons-document-text" class="mr-2" />
+					Download PDF Version of Form
+				</a>
+				<p class="mt-2 text-sm text-gray-600">Access the printable version of this form for field use</p>
+			</div>
+
 			<Form @submit.prevent="submitData">
 				<div class="relative items-start">
 				<div class="border-4 p-1 border-gray-900">
@@ -1649,11 +1751,19 @@ const confirmCancel = () => {
 
 						<UFormGroup class="p-2 basis-1/3" required>
 							<label class="block mb-1 required-field"># Adult Participants:</label>
-							<UInput v-model="adults" icon="ic:baseline-group" type="number" required />
+							<CustomNumberInput
+								v-model="adults"
+								icon="ic:baseline-group"
+								required
+							/>
 						</UFormGroup>
 						<UFormGroup class="p-2 basis-1/3" required>
 							<label class="block mb-1 required-field"># Youth Participants:</label>
-							<UInput v-model="youths" icon="healthicons:child-program" type="number" required />
+							<CustomNumberInput
+								v-model="youths"
+								icon="healthicons:child-program"
+								required
+							/>
 						</UFormGroup>
 					</div>
 					<div class="flex">
@@ -1700,11 +1810,19 @@ const confirmCancel = () => {
 						</UFormGroup>
 						<UFormGroup class="p-2 basis-1/4" required>
 							<label class="block mb-1 required-field">Total Volunteer Minutes:</label>
-							<UInput v-model="totalVolunteerMinutes" placeholder="Travel+Sampling" tuiype="number" required />
+							<CustomNumberInput
+								v-model="totalVolunteerMinutes"
+								placeholder="Travel+Sampling"
+								required
+							/>
 						</UFormGroup>
 						<UFormGroup class="p-2 basis-1/4">
 							<label class="block mb-1 required-field">Miles Driven:</label>
-							<UInput v-model="milesDriven" type="number" icon="fa-solid:car-side" required />
+							<CustomNumberInput
+								v-model="milesDriven"
+								icon="fa-solid:car-side"
+								required
+							/>
 						</UFormGroup>
 					</div>
 					<div class="p-2 text-sm text-right">
@@ -1880,7 +1998,7 @@ const confirmCancel = () => {
 						<UFormGroup class="p-2" label="Calibration Date">
 							<UInput v-model="conductivityMeterCalibrationDate" type="date" />
 						</UFormGroup>
-						Other electronic meters
+						Other Meter
 						<UFormGroup class="p-2" label=" Calibration Date">
 							<UInput v-model="otherMeterCalibrationDate" type="date" />
 						</UFormGroup>
@@ -1922,11 +2040,23 @@ const confirmCancel = () => {
 							<div class="space-y-4">
 								<UFormGroup>
 									<label class="text-sm required-field">Time In Incubator</label>
-									<UInput v-model="timeINIncubator" type="datetime-local" icon="mdi:clock-outline" />
-								</UFormGroup>
-								<UFormGroup>
+									<UInput 
+										v-model="timeInModel"
+										type="datetime-local"
+										icon="mdi:clock-outline"
+										min="1900-01-01T00:00"
+										max="2100-12-31T23:59"
+									/>
+									</UFormGroup>
+									<UFormGroup>
 									<label class="text-sm required-field">Time Out Incubator</label>
-									<UInput v-model="timeOUTIncubator" type="datetime-local" icon="mdi:clock-outline" />
+									<UInput 
+										v-model="timeOutModel"
+										type="datetime-local"
+										icon="mdi:clock-outline"
+										min="1900-01-01T00:00"
+										max="2100-12-31T23:59"
+									/>
 								</UFormGroup>
 								<div v-if="timeINIncubator && timeOUTIncubator && !isIncubationTimeValid" 
 									class="mt-2 p-2 bg-yellow-100 text-yellow-800 rounded">

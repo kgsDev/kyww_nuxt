@@ -45,6 +45,9 @@ const newSiteData = ref({
 // Add new ref for hubs data
 const hubsData: Ref<any> = ref(null);
 
+const searchType = ref('siteId'); // Options: 'siteId', 'address', 'coordinates'
+const toast = useToast();
+
 const formErrors = ref({
   stream_name: false,
   description: false,
@@ -719,25 +722,6 @@ const createPopup = (coordinates: mapboxgl.LngLat, content: string, isHub: boole
   }, 0);
 };
 
-const setupNewSiteData = async (lngLat: { lng: number, lat: number }) => {
-  const basinOption = await getBasinAtPoint(lngLat);
-  
-  const newData = {
-    latitude: lngLat.lat,
-    longitude: lngLat.lng,
-    address: '',
-    stream_name: '',
-    description: '',
-    wwkybasin: basinOption ? basinOption.name : '',
-    wwkybasin_id: basinOption ? basinOption.id : '',
-    comments: '',
-  };
-
-  newSiteData.value = newData;
-  await nextTick();
-  openCreateSiteModal();
-};
-
 // Also add a watcher to debug when the value changes
 watch(
   () => newSiteData.value.wwkybasin_id,
@@ -836,42 +820,63 @@ const searchSiteById = async (siteId: string) => {
   }
 };
 
+const searchPlaceholder = computed(() => {
+  switch (searchType.value) {
+    case 'siteId':
+      return 'Enter Site ID (e.g., 3253)';
+    case 'address':
+      return 'Enter street address';
+    case 'coordinates':
+      return 'Enter coordinates (lat,lon)';
+    default:
+      return 'Search...';
+  }
+});
+
 const locateAddress = async () => {
   if (!map.value || !address.value) {
     console.error('Map is not initialized or address is empty');
     return;
   }
 
-  // First, try to find a site by ID
+  // Clear existing markers
+  if (addressMarker.value) addressMarker.value.remove();
+  if (clickMarker.value) {
+    clickMarker.value.remove();
+    clickMarker.value = null;
+  }
+
+  switch (searchType.value) {
+    case 'siteId':
+      await handleSiteIdSearch();
+      break;
+    case 'coordinates':
+      await handleCoordinatesSearch();
+      break;
+    case 'address':
+      await handleAddressSearch();
+      break;
+  }
+};
+
+const handleSiteIdSearch = async () => {
   const siteResult = await searchSiteById(address.value);
   
   if (siteResult) {
-    // Found a site, center the map on it
     const coordinates = new mapboxgl.LngLat(siteResult.longitude, siteResult.latitude);
     
-    // Remove existing markers
-    if (addressMarker.value) addressMarker.value.remove();
-    if (clickMarker.value) {
-      clickMarker.value.remove();
-      clickMarker.value = null;
-    }
-    
-    // Add new marker
     addressMarker.value = new mapboxgl.Marker()
       .setLngLat(coordinates)
       .addTo(map.value);
 
-    // Fly to the site
     map.value.flyTo({
       center: [siteResult.longitude, siteResult.latitude],
       zoom: 14
     });
 
-    // Highlight the site
     highlightedSite.value = siteResult.wwkyid_pk;
     map.value.setFilter('highlighted-site-layer', ['==', 'wwkyid_pk', siteResult.wwkyid_pk]);
 
-    // Show the site popup
     createPopup(coordinates, renderSitePopupContent({
       wwkyid_pk: siteResult.wwkyid_pk,
       stream_name: siteResult.stream_name,
@@ -879,53 +884,90 @@ const locateAddress = async () => {
       description: siteResult.description
     }));
   } else {
-    // If no site found, proceed with geocoding address
-    try {
-      const response = await fetch(
-        `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(address.value)}.json?` +
-        `access_token=${mapboxgl.accessToken}&` +
-        'bbox=-89.571067,36.497129,-81.964788,39.147732' // Bounding box for Kentucky
-      );
-      
-      const data = await response.json();
-      
-      if (data.features && data.features.length > 0) {
-        const [lng, lat] = data.features[0].center;
-        const placeName = data.features[0].place_name;
-        
-        if (addressMarker.value) addressMarker.value.remove();
-        if (clickMarker.value) {
-          clickMarker.value.remove();
-          clickMarker.value = null;
-        }
-        
-        addressMarker.value = new mapboxgl.Marker()
-          .setLngLat([lng, lat])
-          .addTo(map.value);
+    toast.add({ 
+      title: 'Site Not Found', 
+      description: 'No matching site ID found', 
+      color: 'yellow'
+    });
+  }
+};
 
-        map.value.flyTo({
-          center: [lng, lat],
-          zoom: 14
-        });
+const handleCoordinatesSearch = async () => {
+  const coords = address.value.split(',').map(coord => parseFloat(coord.trim()));
+  
+  if (coords.length !== 2 || isNaN(coords[0]) || isNaN(coords[1])) {
+    toast.add({ 
+      title: 'Invalid Coordinates', 
+      description: 'Please enter coordinates in format: latitude,longitude', 
+      color: 'yellow'
+    });
+    return;
+  }
 
-        // Get basin info and create popup
-        const basinInfo = await getBasinAtPoint({ lng, lat });
-        createAddSitePopup(new mapboxgl.LngLat(lng, lat), placeName);
-      } else {
-        toast.add({ 
-          title: 'Location Not Found', 
-          description: 'No matching site ID or address found', 
-          color: 'yellow'
-        });
-      }
-    } catch (error) {
-      console.error('Error in address search:', error);
+  const [lat, lon] = coords;
+  
+  // Basic validation for lat/lon ranges
+  if (lat < -90 || lat > 90 || lon < -180 || lon > 180) {
+    toast.add({ 
+      title: 'Invalid Coordinates', 
+      description: 'Coordinates out of valid range', 
+      color: 'yellow'
+    });
+    return;
+  }
+
+  const lngLat = new mapboxgl.LngLat(lon, lat);
+  addressMarker.value = new mapboxgl.Marker()
+    .setLngLat(lngLat)
+    .addTo(map.value);
+
+  map.value.flyTo({
+    center: [lon, lat],
+    zoom: 14
+  });
+
+  const basinInfo = await getBasinAtPoint({ lng: lon, lat });
+  createAddSitePopup(lngLat);
+};
+
+const handleAddressSearch = async () => {
+  try {
+    const response = await fetch(
+      `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(address.value)}.json?` +
+      `access_token=${mapboxgl.accessToken}&` +
+      'bbox=-89.571067,36.497129,-81.964788,39.147732' // Bounding box for Kentucky
+    );
+    
+    const data = await response.json();
+    
+    if (data.features && data.features.length > 0) {
+      const [lng, lat] = data.features[0].center;
+      const placeName = data.features[0].place_name;
+      
+      addressMarker.value = new mapboxgl.Marker()
+        .setLngLat([lng, lat])
+        .addTo(map.value);
+
+      map.value.flyTo({
+        center: [lng, lat],
+        zoom: 14
+      });
+
+      createAddSitePopup(new mapboxgl.LngLat(lng, lat), placeName);
+    } else {
       toast.add({ 
-        title: 'Search Error', 
-        description: 'Error searching for location', 
-        color: 'red'
+        title: 'Location Not Found', 
+        description: 'No matching address found', 
+        color: 'yellow'
       });
     }
+  } catch (error) {
+    console.error('Error in address search:', error);
+    toast.add({ 
+      title: 'Search Error', 
+      description: 'Error searching for address', 
+      color: 'red'
+    });
   }
 };
 
@@ -971,8 +1013,17 @@ onMounted(async () => {
       </div>
     </div>
     <div class="address-bar">
-      <input v-model="address" placeholder="Search by site ID, street address or coordinates (lat,lon)" class="address-input" />
-      <button @click="locateAddress" class="locate-button">Locate Site</button>
+      <select v-model="searchType" class="search-type-select">
+        <option value="siteId">Site ID</option>
+        <option value="address">Address</option>
+        <option value="coordinates">Coordinates</option>
+      </select>
+      <input 
+        v-model="address" 
+        :placeholder="searchPlaceholder" 
+        class="address-input" 
+      />
+      <button @click="locateAddress" class="locate-button">Locate</button>
     </div>
 
 <!-- Create Site Modal -->
@@ -1413,5 +1464,23 @@ onMounted(async () => {
   background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="black" width="18px" height="18px"><path d="M0 0h24v24H0z" fill="none"/><path d="M11.99 18.54l-7.37-5.73L3 14.07l9 7 9-7-1.63-1.27-7.38 5.74zM12 16l7.36-5.73L21 9l-9-7-9 7 1.63 1.27L12 16z"/></svg>');
   background-repeat: no-repeat;
   background-position: center;
+}
+
+.search-type-select {
+  padding: 10px;
+  font-size: 16px;
+  border: 1px solid #ccc;
+  border-radius: 4px 0 0 4px;
+  background-color: #fff;
+  cursor: pointer;
+}
+
+.address-input {
+  border-radius: 0;
+  border-left: none;
+}
+
+.locate-button {
+  border-radius: 0 4px 4px 0;
 }
 </style>

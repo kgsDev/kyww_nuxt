@@ -514,46 +514,64 @@ onMounted(async () => {
           <p class="whitespace-pre-wrap">{{ sampleData.other_observations_or_measurements }}</p>
         </UCard>
 
-        <!-- Photos Section -->
-        <UCard v-if="!loadingPhotos && photos.length > 0">
-          <template #header>
-            <h2 class="text-lg font-semibold">Sample Photos & Documents</h2>
+      <!-- Photos Section -->
+      <UCard v-if="!loadingPhotos && photos.length > 0">
+        <template #header>
+          <h2 class="text-lg font-semibold">Sample Photos & Documents</h2>
+        </template>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <template v-for="photo in photos" :key="photo.id">
+            <!-- Form File Display -->
+            <div v-if="photo.type === 'form'" class="relative group">
+              <!-- Image Form Preview -->
+              <a 
+                v-if="photo.url?.toLowerCase().endsWith('.png')"
+                :href="photo.url" 
+                target="_blank" 
+                class="block"
+              >
+                <img 
+                  :src="photo.url" 
+                  alt="Sample Form"
+                  class="w-full h-48 object-cover rounded-lg hover:opacity-90 transition-opacity"
+                />
+                <div class="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white p-2 rounded-b-lg">
+                  Sample Form (Image)
+                </div>
+              </a>
+              <!-- PDF Form Preview -->
+              <a 
+                v-else
+                :href="photo.url" 
+                target="_blank" 
+                class="block h-48 bg-gray-50 rounded-lg border-2 border-gray-200 hover:border-blue-400 transition-colors duration-200"
+              >
+                <div class="flex flex-col items-center justify-center h-full p-4">
+                  <i class="fas fa-file-pdf text-4xl text-red-500 mb-2"></i>
+                  <span class="text-sm font-medium text-gray-700">Sample Form</span>
+                  <span class="text-xs text-gray-500 mt-1">Click to view PDF</span>
+                </div>
+                <!-- Hover overlay -->
+                <div class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-5 transition-opacity duration-200 rounded-lg"></div>
+              </a>
+            </div>
+            
+            <!-- Regular Photo Display -->
+            <div v-else class="relative group">
+              <a :href="photo.url" target="_blank" class="block">
+                <img 
+                  :src="photo.url" 
+                  :alt="getPhotoLabel(photo.type)"
+                  class="w-full h-48 object-cover rounded-lg hover:opacity-90 transition-opacity"
+                />
+                <div class="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white p-2 rounded-b-lg">
+                  {{ getPhotoLabel(photo.type) }}
+                </div>
+              </a>
+            </div>
           </template>
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <template v-for="photo in photos" :key="photo.id">
-              <!-- PDF Display -->
-              <div v-if="photo.type === 'form'" class="relative group">
-                <a 
-                  :href="photo.url" 
-                  target="_blank" 
-                  class="block h-48 bg-gray-50 rounded-lg border-2 border-gray-200 hover:border-blue-400 transition-colors duration-200"
-                >
-                  <div class="flex flex-col items-center justify-center h-full p-4">
-                    <i class="fas fa-file-pdf text-4xl text-red-500 mb-2"></i>
-                    <span class="text-sm font-medium text-gray-700">Sample Form</span>
-                    <span class="text-xs text-gray-500 mt-1">Click to view PDF</span>
-                  </div>
-                  <!-- Hover overlay -->
-                  <div class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-5 transition-opacity duration-200 rounded-lg"></div>
-                </a>
-              </div>
-              
-              <!-- Image Display -->
-              <div v-else class="relative group">
-                <a :href="photo.url" target="_blank" class="block">
-                  <img 
-                    :src="photo.url" 
-                    :alt="getPhotoLabel(photo.type)"
-                    class="w-full h-48 object-cover rounded-lg hover:opacity-90 transition-opacity"
-                  />
-                  <div class="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white p-2 rounded-b-lg">
-                    {{ getPhotoLabel(photo.type) }}
-                  </div>
-                </a>
-              </div>
-            </template>
-          </div>
-        </UCard>
+        </div>
+      </UCard>
 
         <!-- Edit Button -->
         <div class="mt-6 flex justify-end">

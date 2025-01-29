@@ -116,7 +116,7 @@ onMounted(async () => {
                 </div>
                 <div class="flex items-center">
                   <div class="w-4 h-4 rounded-full bg-[#2ECC71] opacity-70 mr-2"></div>
-                  <span>Supoort Hubs</span>
+                  <span>Support Hubs</span>
                 </div>
               </div>
               <div class="mt-4 text-xs text-gray-500">
