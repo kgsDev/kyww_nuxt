@@ -73,12 +73,13 @@ const KENTUCKY_ZOOM = 7;
         import('@arcgis/core/layers/GraphicsLayer').then(m => m.default),
         import('@arcgis/core/Graphic').then(m => m.default),
         import('@arcgis/core/geometry/Point').then(m => m.default),
-        import('@arcgis/core/PopupTemplate').then(m => m.default)
+        import('@arcgis/core/PopupTemplate').then(m => m.default),
       ]);
   
       return { Map, MapView, GraphicsLayer, Graphic, Point, PopupTemplate };
     }
   
+    
     // Fetch data
     async function fetchData() {
       try {
@@ -127,7 +128,7 @@ const KENTUCKY_ZOOM = 7;
         GraphicsLayer,
         Graphic,
         Point,
-        PopupTemplate
+        PopupTemplate,
       } = await loadArcGISModules();
       
       const mapInstance = new Map({
@@ -193,34 +194,71 @@ const KENTUCKY_ZOOM = 7;
                 width: 1
             }
             };
-
+            
             const popupTemplate = new PopupTemplate({
               title: `Site: ${site.wwkyid_pk}`,
-              content: `
-                <div class="bg-gray-50 p-4 rounded">
-                  <dl class="space-y-2">
-                    <div>
-                      <dt class="font-medium">Stream Name:</dt>
-                      <dd>${site.stream_name || 'Unnamed'}</dd>
-                    </div>
-                    <div>
-                      <dt class="font-medium">Basin:</dt>
-                      <dd>${site.wwkybasin}</dd>
-                    </div>
-                    <div>
-                      <dt class="font-medium">Description:</dt>
-                      <dd>${site.description || 'No description available'}</dd>
-                    </div>
-                    </dl>
-                 </div>
-              `
+              // Instead of an HTML string, use a function to generate a DOM node.
+              content: function () {
+                // Create a container div
+                const container = document.createElement("div");
+                container.className = "bg-gray-50 p-4 rounded";
+            
+                // Create a description list (dl)
+                const dl = document.createElement("dl");
+                dl.className = "space-y-2";
+            
+                // Helper function to create a dt/dd pair
+                function addDetail(term, detail) {
+                  const div = document.createElement("div");
+            
+                  const dt = document.createElement("dt");
+                  dt.className = "font-medium";
+                  dt.textContent = term;
+                  div.appendChild(dt);
+            
+                  const dd = document.createElement("dd");
+                  dd.textContent = detail || "No description available";
+                  div.appendChild(dd);
+            
+                  dl.appendChild(div);
+                }
+            
+                addDetail("Stream Name:", site.stream_name || "Unnamed");
+                addDetail("Basin:", site.wwkybasin);
+                addDetail("Description:", site.description || "No description available");
+            
+                container.appendChild(dl);
+            
+                // Create a div to hold the button
+                const buttonContainer = document.createElement("div");
+                buttonContainer.className = "mt-4";
+
+                // Create the button element
+                const button = document.createElement("button");
+                button.className = "esri-button esri-button--secondary";
+                button.style.cursor = "pointer";
+                button.textContent = "View Site Samples";
+                
+                // Add onclick event to navigate
+                button.onclick = function () {
+                  navigateTo(`/portal/sites/${site.wwkyid_pk}`);
+                };
+
+                buttonContainer.appendChild(button);
+                container.appendChild(buttonContainer);
+
+                return container;
+              }
             });
 
-            const pointGraphic = new Graphic({
+          const pointGraphic = new Graphic({
               geometry: point,
               symbol: markerSymbol,
               popupTemplate: popupTemplate,
-              attributes: site
+              attributes: {
+                ...site,  // Spread all site attributes
+                wwkyid_pk: site.wwkyid_pk  // Ensure this specific attribute is present
+              }
             });
 
             graphicsLayer.add(pointGraphic);
@@ -248,15 +286,15 @@ const KENTUCKY_ZOOM = 7;
             };
 
             const popupTemplate = new PopupTemplate({
-            title: `Hub: ${hub.Description}`,
-            content: createHubPopupContent(hub)
+              title: `Hub: ${hub.Description}`,
+              content: createHubPopupContent(hub)
             });
 
             const pointGraphic = new Graphic({
-            geometry: point,
-            symbol: markerSymbol,
-            popupTemplate: popupTemplate,
-            attributes: hub
+              geometry: point,
+              symbol: markerSymbol,
+              popupTemplate: popupTemplate,
+              attributes: hub
             });
 
             graphicsLayer.add(pointGraphic);
@@ -282,11 +320,67 @@ const KENTUCKY_ZOOM = 7;
             width: 2
           }
         };
-  
+
+        const singleSitePopupTemplate = new PopupTemplate({
+          title: `Site: ${site.wwkyid_pk}`,
+          // Instead of an HTML string, use a function to generate a DOM node.
+          content: function () {
+            // Create a container div
+            const container = document.createElement("div");
+            container.className = "bg-gray-50 p-4 rounded";
+        
+            // Create a description list (dl)
+            const dl = document.createElement("dl");
+            dl.className = "space-y-2";
+        
+            // Helper function to create a dt/dd pair
+            function addDetail(term, detail) {
+              const div = document.createElement("div");
+        
+              const dt = document.createElement("dt");
+              dt.className = "font-medium";
+              dt.textContent = term;
+              div.appendChild(dt);
+        
+              const dd = document.createElement("dd");
+              dd.textContent = detail || "No description available";
+              div.appendChild(dd);
+        
+              dl.appendChild(div);
+            }
+        
+            addDetail("Stream Name:", site.stream_name || "Unnamed");
+            addDetail("Basin:", site.wwkybasin);
+            addDetail("Description:", site.description || "No description available");
+        
+            container.appendChild(dl);
+        
+            // Create a div to hold the button
+            const buttonContainer = document.createElement("div");
+            buttonContainer.className = "mt-4";
+
+            // Create the button element
+            const button = document.createElement("button");
+            button.className = "esri-button esri-button--secondary";
+            button.style.cursor = "pointer";
+            button.textContent = "View Site Samples";
+            
+            // Add onclick event to navigate
+            button.onclick = function () {
+              navigateTo(`/portal/sites/${site.wwkyid_pk}`);
+            };
+
+            buttonContainer.appendChild(button);
+            container.appendChild(buttonContainer);
+
+            return container;
+          }
+        });
+
         const sitegraphic = new Graphic({
           geometry: point,
           symbol: markerSymbol,
-          popupTemplate: site.popupTemplate,
+          popupTemplate: site.popupTemplate || singleSitePopupTemplate, // Allow custom template override
           attributes: site
         });
   
@@ -319,27 +413,27 @@ const KENTUCKY_ZOOM = 7;
           <dl class="space-y-2">
             <div>
               <dt class="font-medium">Organization:</dt>
-              <dd>${hub.organization}</dd>
+              <dd>${hub.organization || 'Organization not specified'}</dd>
             </div>
             <div>
               <dt class="font-medium">Address:</dt>
-              <dd>${hub.Full_Address}</dd>
+              <dd>${hub.Full_Address || 'Address not available'}</dd>
             </div>
             <div>
               <dt class="font-medium">Contact:</dt>
-              <dd>${hub.Contact_Person}</dd>
+              <dd>${hub.Contact_Person || 'Contact not specified'}</dd>
             </div>
             <div>
               <dt class="font-medium">Phone:</dt>
-              <dd>${hub.Phone}</dd>
+              <dd>${hub.Phone || 'Phone number not available'}</dd>
             </div>
             <div>
               <dt class="font-medium">Email:</dt>
-              <dd>${hub.Email}</dd>
+              <dd>${hub.Email || 'Email not available'}</dd>
             </div>
             <div>
               <dt class="font-medium">Basin(s):</dt>
-              <dd>${hub.Basin}</dd>
+              <dd>${hub.Basin || 'Basin not specified'}</dd>
             </div>
           </dl>
         </div>
@@ -380,43 +474,63 @@ const KENTUCKY_ZOOM = 7;
                 width: 2
               }
             };
-      
+
             const popupTemplate = new PopupTemplate({
               title: `Your Sample Site: ${site.stream_name || 'Unnamed Stream'}`,
-              content: `
-                <div class="bg-blue-50 p-4 rounded">
-                  <dl class="space-y-2">
-                    <div>
-                      <dt class="font-medium">Site ID:</dt>
-                      <dd>${site.wwky_id}</dd>
-                    </div>
-                    <div>
-                      <dt class="font-medium">Basin:</dt>
-                      <dd>${site.wwkybasin}</dd>
-                    </div>
-                    <div>
-                      <dt class="font-medium">Times Sampled:</dt>
-                      <dd>${site.sampleCount}</dd>
-                    </div>
-                    <div>
-                      <dt class="font-medium">Last Sampled:</dt>
-                      <dd>${new Date(site.date).toLocaleDateString()}</dd>
-                    </div>
-                    <div>
-                      <dt class="font-medium">Description:</dt>
-                      <dd>${site.description || 'No description available'}</dd>
-                    </div>
-                  </dl>
-                  <button 
-                    onclick="window.location.href='/portal/samples/${site.wwky_id}'"
-                    class="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-                  >
-                    View Site Details
-                  </button>
-                </div>
-              `
+              // Instead of an HTML string, use a function to generate a DOM node.
+              content: function () {
+                // Create a container div
+                const container = document.createElement("div");
+                container.className = "bg-blue-50 p-4 rounded";
+            
+                // Create a description list (dl)
+                const dl = document.createElement("dl");
+                dl.className = "space-y-2";
+            
+                // Helper function to create a dt/dd pair
+                function addDetail(term, detail) {
+                  const div = document.createElement("div");
+            
+                  const dt = document.createElement("dt");
+                  dt.className = "font-medium";
+                  dt.textContent = term;
+                  div.appendChild(dt);
+            
+                  const dd = document.createElement("dd");
+                  dd.textContent = detail || "No description available";
+                  div.appendChild(dd);
+            
+                  dl.appendChild(div);
+                }
+            
+                addDetail("Stream Name:", site.stream_name || "Unnamed");
+                addDetail("Basin:", site.wwkybasin);
+                addDetail("Description:", site.description || "No description available");
+            
+                container.appendChild(dl);
+            
+               // Create a div to hold the button
+                const buttonContainer = document.createElement("div");
+                buttonContainer.className = "mt-4";
+
+                // Create the button element
+                const button = document.createElement("button");
+                button.className = "esri-button esri-button--secondary";
+                button.style.cursor = "pointer";
+                button.textContent = "View Site Samples";
+                
+                // Add onclick event to navigate
+                button.onclick = function () {
+                  navigateTo(`/portal/sites/${site.wwkyid_pk}`);
+                };
+
+                buttonContainer.appendChild(button);
+                container.appendChild(buttonContainer);
+
+                return container;
+              }
             });
-      
+
             const graphic = new Graphic({
               geometry: point,
               symbol: markerSymbol,

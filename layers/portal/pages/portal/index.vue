@@ -37,9 +37,9 @@ const formatDate = (date) => {
   if (!date) return 'Not recorded';
   return new Date(date).toLocaleDateString('en-US', {
     year: 'numeric',
-    month: 'long',
+    month: 'numeric',
     day: 'numeric'
-  });
+  })
 };
 
 const mapContainer = ref(null);
@@ -379,7 +379,7 @@ onMounted(async () => {
             <div class="space-y-2">
               <div class="flex items-center">
                 <div class="w-4 h-4 rounded-full bg-[#FFA500] opacity-70 mr-2"></div>
-                <span>Available Sampling Sites</span>
+                <span>Sampling Sites</span>
               </div>
               <div class="flex items-center">
                 <div class="w-4 h-4 rounded-full bg-blue-500 opacity-70 mr-2"></div>
@@ -403,7 +403,12 @@ onMounted(async () => {
           <h2 class="text-lg font-semibold">Site Sampling History</h2>
         </template>
         
-        <div class="overflow-x-auto">
+       <!-- Message if no primary samples -->
+       <div v-if="samplingStats.siteSamplingHistory.length === 0" class="text-center py-4 text-gray-500">
+        You have no site sampling history yet. Get started by sampling a site!
+       </div>
+
+        <div v-else class="overflow-x-auto">
           <table class="min-w-full divide-y divide-gray-200">
             <thead>
               <tr>

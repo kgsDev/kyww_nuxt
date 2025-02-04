@@ -9,13 +9,14 @@ const sampleId = computed(() => route.query.edit as string);
 
 const { user } = useDirectusAuth();
 
+const originalSampler = ref('');
+
 //initialize form refs
 const formRefs = {
-	originalSampler: ref(''),
+	volunteer_id: ref(user.value?.id), // Primary sampler (set initially to logged-in user but can be changed)
 	wwkyid_pk: ref<number | null>(null),
 	stream_name: ref(''),
 	wwkybasin: ref(''),
-	sampler: ref(user?.value?.display_name),
 	adults: ref(),
 	youths: ref(),
 	date: ref(new Date().toISOString().split('T')[0]), // This will set it to current date in YYYY-MM-DD format
@@ -100,7 +101,7 @@ const stateRefs = {
 };
 
 // Destructure for convenience
-const { originalSampler, wwkyid_pk, stream_name, wwkybasin, sampler, adults, youths, date, startTime, totalVolunteerMinutes, milesDriven, currentWeather, rainfall, 
+const { volunteer_id, wwkyid_pk, stream_name, wwkybasin, adults, youths, date, startTime, totalVolunteerMinutes, milesDriven, currentWeather, rainfall, 
 	waterColor, odorNone, odorRottenEggs, odorChlorine, odorRancidSour, odorGasPetro, odorMusty, odorSweetFruity, odorSharpPungent, 
 	waterSurfaceNone, waterSurfaceOilSheen, waterSurfaceAlgae, waterSurfaceSoapSuds, waterSurfaceSewage, waterSurfaceErosion, streamFlowVisual, 
 	negsample, streamFlowMeasured, waterTemperature, pH, dissolvedOxygen, conductivity, iCertifyCheckbox, timeINIncubator, timeOUTIncubator, 
@@ -130,11 +131,15 @@ const canEditForm = async () => {
     // Fetch the sample to check ownership
     const sample = await useDirectus(
       readItem('base_samples', sampleId.value, {
-        fields: ['volunteer_id']
+        fields: [
+          'volunteer_id',
+          'user_created.id'
+        ]
       })
     );
 
-    return sample?.volunteer_id === user.value?.id;
+    return sample?.volunteer_id === user.value?.id || // Primary sampler
+           sample?.user_created?.id === user.value?.id; // Created the sample
   } catch (error) {
     console.error('Error checking permissions:', error);
     return false;
@@ -367,11 +372,16 @@ const turbidityOptions = [
 const fetchSampleData = async (id: string) => {
   isLoading.value = true;
   try {
-    // First, fetch the base sample data
+	// First, load available samplers
+	await fetchSamplers();
+    
+	// First, fetch the base sample data
 	const sampleData = await useDirectus(
       readItem('base_samples', id, {
         fields: [
           '*',
+		  'user_created.first_name',
+          'user_created.last_name',
           'volunteer_id.first_name',
           'volunteer_id.last_name',
           'primary_sampler_id.*',
@@ -389,9 +399,21 @@ const fetchSampleData = async (id: string) => {
       return;
     }
 
+	// Set primary sampler (volunteer_id) and store original sampler info
+	if (sampleData.user_created) {
+		originalSampler.value = `${sampleData.user_created.first_name} ${sampleData.user_created.last_name}`;
+	}
+
+
+    // Set primary sampler (volunteer_id)
     if (sampleData.volunteer_id) {
-      originalSampler.value = `${sampleData.volunteer_id.first_name} ${sampleData.volunteer_id.last_name}`;
-      sampler.value = originalSampler.value;  // Update the sampler field to show original sampler
+      const matchingSampler = availableSamplers.value.find(s => 
+        s.first_name === sampleData.volunteer_id.first_name && 
+        s.last_name === sampleData.volunteer_id.last_name
+      );
+      if (matchingSampler) {
+        volunteer_id.value = matchingSampler.id;
+      }
     }
 
     // Basic fields
@@ -517,8 +539,8 @@ const fetchSampleData = async (id: string) => {
 			fetchRelatedData('base_samples_lu_bacterial_sources', id),
 			fetchRelatedData('base_samples_lu_water_color', id),
 			useDirectus(readItems('base_samples_directus_users', {
-			filter: { base_samples_id: { _eq: id } },
-			fields: ['directus_users_id.*']
+				filter: { base_samples_id: { _eq: id } },
+				fields: ['directus_users_id.*']
 			}))
 		]);
 
@@ -612,7 +634,8 @@ const confirmSubmission = () => {
 const fetchSamplers = async () => {
   try {
     const response = await $fetch('/api/samplers');
-    availableSamplers.value = response.filter(sampler => sampler.id !== user.value?.id);
+    console.log('Fetched samplers:', response); // Add this line
+    availableSamplers.value = response;
   } catch (error) {
     toast.add({
       title: 'Error',
@@ -651,6 +674,10 @@ const initializeSampleVolumes = () => {
 const initializeComponent = async () => {
   try {
    
+    // Initialize form creator with logged in user (automatic in Directus)
+    // Initialize primary sampler as logged in user (but can be changed)
+    volunteer_id.value = user.value?.id;
+
     await nextTick();
     
     if (isEditMode.value && sampleId.value) {
@@ -667,6 +694,17 @@ const initializeComponent = async () => {
     console.error('Error during component initialization:', error);
   }
 };
+
+const selectedSamplerDisplay = computed(() => {
+  if (!volunteer_id.value || !availableSamplers.value) return 'Select primary sampler';
+  
+  const selected = availableSamplers.value.find(s => s.id === volunteer_id.value);
+  if (!selected) return 'Select primary sampler';
+  
+  console.log('Selected sampler:', selected); // Add this line for debugging
+  
+  return `${selected.first_name} ${selected.last_name}${selected.id === user.value?.id ? ' (you)' : ''}`;
+});
 
 //Validations:
 const isPHValid = computed(() => {
@@ -789,7 +827,7 @@ const isFormValid = computed(() => {
   formErrors.value = [];
   
   // Check required personal info
-  if (sampler.value === undefined || sampler.value === null) formErrors.value.push('Primary Sampler');
+  if (volunteer_id.value === undefined || volunteer_id.value === null) formErrors.value.push('Primary Sampler');
   if (adults.value === undefined || adults.value === null) formErrors.value.push('Number of Adult Participants');
   if (youths.value === undefined || youths.value === null) formErrors.value.push('Number of Youth Participants');
   if (totalVolunteerMinutes.value === undefined || totalVolunteerMinutes.value === null) formErrors.value.push('Total Volunteer Minutes');
@@ -1049,7 +1087,8 @@ const prepareSampleData = () => {
 
 	// Prepare sample data with range validations
 	const baseData = {
-		status: 'draft',
+		status: 'finalized',
+		volunteer_id: volunteer_id.value,// This should be the selected primary sampler ID
 		participants_adults: adults.value === 0 ? 0 : toNullableInteger(adults.value),
 		participants_youth: youths.value === 0 ? 0 : toNullableInteger(youths.value),
 		total_volunteer_minutes: totalVolunteerMinutes.value === 0 ? 0 : toNullableInteger(totalVolunteerMinutes.value),
@@ -1062,7 +1101,6 @@ const prepareSampleData = () => {
 		negsample: negsample.value || null,
 		field_multimeter_certify: iCertifyCheckbox.value,
 		other_observations_or_measurements: otherObs.value || null,
-		volunteer_id: user.value?.id || null,
 		date: date.value || null,
 		start_time: startTime.value || null,
 		wwky_id: toNullableInteger(wwkyid_pk.value),
@@ -1698,37 +1736,59 @@ const confirmCancel = () => {
 					</div>
 					<div class="flex">
 						<UFormGroup class="p-2 basis-1/3" required>
-							<label class="block mb-1 required-field">
-								{{ isEditMode ? 'Original Sampler' : 'Primary Sampler (you)' }}
-							</label>
-							<UInput 
-								v-model="sampler" 
-								icon="i-ic-baseline-person" 
-								disabled 
-								required 
+							<label class="block mb-1 required-field">Primary Sampler:</label>
+							<USelect
+								v-model="volunteer_id"
+								:options="availableSamplers.map(sampler => ({
+								value: sampler.id,
+								label: `${sampler.first_name} ${sampler.last_name}${sampler.id === user?.id ? ' (you)' : ''}`,
+								searchable: `${sampler.first_name.toLowerCase()} ${sampler.last_name.toLowerCase()} ${sampler.email.toLowerCase()}`
+								}))"
+								:filter="(options, search) => {
+								if (!search) return options
+								return options.filter(option => 
+									option.searchable.includes(search.toLowerCase())
+								)
+								}"
+								searchable
+								placeholder="Select primary sampler"
+								required
 							/>
-							<p v-if="isEditMode && isAdmin" class="text-sm text-gray-500 mt-1">
-								Originally sampled /entered by {{ originalSampler }}
-							</p>
+							<template v-if="isEditMode">
+								<p v-if="originalSampler" class="text-sm text-gray-500 mt-1">
+								Originally entered by {{ originalSampler }}
+								</p>
+							</template>
+							<template v-else>
+								<p class="text-sm text-gray-600 mt-1">
+								Form entered by: {{ user?.first_name }} {{ user?.last_name }}
+								</p>
+							</template>
 						</UFormGroup>
 						<UFormGroup class="p-2 basis-2/3">
 							<label class="block mb-1">Additional Samplers</label>
 							<div class="space-y-2">
-							<USelectMenu
-								v-model="selectedSamplerIds"
-								:options="availableSamplers"
-								multiple
-								searchable
-								placeholder="Search and select additional samplers"
-								value-attribute="id"
-							>
-								<template #option="{ option }">
-								<span>{{ option.first_name }} {{ option.last_name }}</span>
-								</template>
-								<template #selected-option="{ option }">
-								<span>{{ option.first_name }} {{ option.last_name }}</span>
-								</template>
-							</USelectMenu>
+								<USelectMenu
+									v-model="selectedSamplerIds"
+									:options="availableSamplers"
+									multiple
+									searchable
+									placeholder="Search and select additional samplers"
+									value-attribute="id"
+									>
+									<template #option="{ option }">
+										<span>
+										{{ option.first_name }} {{ option.last_name }}
+										{{ option.id === user?.id ? ' (you)' : '' }}
+										</span>
+									</template>
+									<template #selected-option="{ option }">
+										<span>
+										{{ option.first_name }} {{ option.last_name }}
+										{{ option.id === user?.id ? ' (you)' : '' }}
+										</span>
+									</template>
+								</USelectMenu>
 							
 							<!-- Display selected samplers with remove option -->
 							<div class="flex flex-wrap gap-2 mt-2">

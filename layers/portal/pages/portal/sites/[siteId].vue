@@ -12,7 +12,9 @@ const isAdmin = computed(() => {
 
 const canEditSample = (sample) => {
   if (!sample || !user.value) return false;
-  return isAdmin.value || user.value.id === sample.volunteer_id;
+  return isAdmin.value || 
+         user.value.id === sample.volunteer_id?.id || // Primary sampler
+         user.value.id === sample.user_created?.id;   // Created the sample
 };
 
 const showEditForm = ref(false);
@@ -32,11 +34,6 @@ const {
   fetchData,
   initializeMap,
 } = useKYWWMap();
-
-const handleEdit = (sample) => {
-  selectedSample.value = sample;
-  showEditForm.value = true;
-};
 
 const handleEditComplete = async () => {
   showEditForm.value = false;
@@ -112,9 +109,9 @@ const formatDate = (date) => {
   if (!date) return 'Not recorded';
   return new Date(date).toLocaleDateString('en-US', {
     year: 'numeric',
-    month: 'long',
+    month: 'numeric',
     day: 'numeric'
-  });
+  })
 };
 
 const formatMeasurement = (value, unit, precision = 2) => {
@@ -147,7 +144,7 @@ const initializeSiteMap = async () => {
                 <dd>${siteData.value.wwkybasin}</dd>
               </div>
               <div>
-                <dt class="font-medium">Description:</dt>
+                <dt class="font-medium">Sample Location Description:</dt>
                 <dd>${siteData.value.description || 'No description available'}</dd>
               </div>
               <div>
@@ -171,9 +168,50 @@ watch([mapContainer, siteData], async ([newContainer, newSiteData]) => {
   }
 });
 
+const primarySamples = computed(() => {
+  return samples.value.filter(sample => 
+    sample.volunteer_id?.id === user.value?.id || // Primary sampler
+    sample.user_created?.id === user.value?.id // Created the sample
+  ).map(sample => ({
+    ...sample,
+    isEnteredForOther: sample.user_created?.id === user.value?.id && 
+                       sample.volunteer_id?.id !== user.value?.id
+  }));
+});
+
+const additionalSamplerSamples = computed(() => {
+  return samples.value.filter(sample => {
+    // Check if user is an additional sampler
+    const isAdditionalSampler = sample.additional_samplers?.some(
+      entry => entry.directus_users_id?.id === user.value?.id
+    );
+    
+    return isAdditionalSampler && 
+           sample.volunteer_id?.id !== user.value?.id && 
+           sample.user_created?.id !== user.value?.id;
+  });
+});
+
+const otherSamples = computed(() => {
+  if (!user.value) return [];
+  
+  return samples.value.filter(sample => {
+    // Exclude samples where user is primary sampler or creator
+    const isPrimarySample = sample.volunteer_id?.id === user.value.id || 
+                          sample.user_created?.id === user.value.id;
+    
+    // Exclude samples where user is additional sampler
+    const isAdditionalSampler = sample.additional_samplers?.some(
+      entry => entry.directus_users_id?.id === user.value.id
+    );
+    
+    return !isPrimarySample && !isAdditionalSampler;
+  });
+});
+
 // Fetch data
 onMounted(async () => {
-  //fetch sites and hubs:
+  //fetch sites and hubs from useKYWWMap:
   await fetchData();
 
   try {
@@ -201,17 +239,45 @@ onMounted(async () => {
       siteData.value = site;
 
       // Fetch samples
-      const samplesResponse = await useDirectus(
-        readItems('base_samples', {
-          filter: {
-            wwky_id: { _eq: siteId.value }
-          },
-          fields: ['*'],
-          sort: ['-date']
-        })
-      );
+      try {
+        const samplesResponse = await useDirectus(
+          readItems('base_samples', {
+            filter: {
+              wwky_id: { _eq: siteId.value }
+            },
+            fields: [
+              '*',
+              'user_created.id',
+              'user_created.first_name',
+              'user_created.last_name',
+              'volunteer_id.id',
+              'volunteer_id.first_name',
+              'volunteer_id.last_name'
+            ],
+            sort: ['-date']
+          })
+        );
 
-      samples.value = samplesResponse;
+        // For each sample, get its additional samplers
+        const samplesWithSamplers = await Promise.all(
+          samplesResponse.map(async (sample) => {
+            const additionalSamplers = await useDirectus(
+              readItems('base_samples_directus_users', {
+                filter: { base_samples_id: { _eq: sample.id } },
+                fields: ['directus_users_id.*']
+              })
+            );
+            return {
+              ...sample,
+              additional_samplers: additionalSamplers
+            };
+          })
+        );
+
+        samples.value = samplesWithSamplers;
+      } catch (err) {
+        console.error('Error fetching samples:', err);
+      }
     } else {
       error.value = 'Site not found';
     }
@@ -226,25 +292,25 @@ onMounted(async () => {
 
 <template>
   <PageContainer>
+
   <!-- Show edit form when editing -->
   <div v-if="showEditForm" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-      <div class="relative top-5 mx-auto p-5 border w-4/5 shadow-lg rounded-md bg-white">
-        <div class="flex justify-between items-center mb-4">
-          <h2 class="text-xl font-bold">Edit Sample</h2>
-          <UButton
-            icon="i-heroicons-x-mark"
-            variant="ghost"
-            @click="handleEditComplete"
+        <div class="relative top-5 mx-auto p-5 border w-4/5 shadow-lg rounded-md bg-white">
+          <div class="flex justify-between items-center mb-4">
+            <h2 class="text-xl font-bold">Edit Sample</h2>
+            <UButton
+              icon="i-heroicons-x-mark"
+              variant="ghost"
+              @click="handleEditComplete"
+            />
+          </div>
+          
+          <SampleForm
+            :initial-data="selectedSample"
+            @submit-complete="handleEditComplete"
           />
         </div>
-        
-        <SampleForm
-          :initial-data="selectedSample"
-          @submit-complete="handleEditComplete"
-        />
-      </div>
-  </div>
-
+    </div>
 
     <!-- Loading State -->
     <div v-if="loading" class="flex items-center justify-center h-64">
@@ -337,31 +403,94 @@ onMounted(async () => {
       </div>
 
       <!-- Samples Table -->
+      <!-- Primary Samples Table -->
       <UCard class="mt-6">
         <template #header>
           <div class="flex justify-between items-center">
-            <h2 class="text-lg font-semibold">Sample History</h2>
-            <div class="flex space-x-4">
-              <!-- Add date range filters if needed -->
-            </div>
+            <h2 class="text-lg font-semibold">Your Samples (Primary Sampler or Creator)</h2>
           </div>
         </template>
 
-        <div class="overflow-x-auto">
+       <!-- Message if no primary samples -->
+       <div v-if="primarySamples.length === 0" class="text-center py-4 text-gray-500">
+        You haven't created any samples or been a primary sampler for this site yet.
+       </div>
+
+        <div v-else class="overflow-x-auto">
           <table class="min-w-full divide-y divide-gray-200">
             <thead>
               <tr>
+                <th class="px-4 py-2 text-left">ID</th>
                 <th class="px-4 py-2 text-left">Date</th>
-                <th class="px-4 py-2 text-left">Temperature (°C)</th>
+                <th class="px-4 py-2 text-left">Temp (°C)</th>
                 <th class="px-4 py-2 text-left">pH</th>
                 <th class="px-4 py-2 text-left">DO (mg/L)</th>
-                <th class="px-4 py-2 text-left">Conductivity (μS/cm)</th>
-                <th class="px-4 py-2 text-left">Average E. coli (CFU/100mL)</th>
+                <th class="px-4 py-2 text-left">Conduct (μS/cm)</th>
+                <th class="px-4 py-2 text-left">Avg E. coli (CFU/100mL)</th>
                 <th class="px-4 py-2 text-center">Details</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-200">
-              <tr v-for="sample in samples" :key="sample.id" class="hover:bg-gray-50">
+              <tr v-for="sample in primarySamples" :key="sample.id" 
+                  :class="{'hover:bg-gray-50': true, 'bg-yellow-50': sample.user_created?.id === user?.id && sample.volunteer_id !== user?.id}">
+                  <td class="px-4 py-2">{{ sample.id }}</td>
+                  <td class="px-4 py-2">
+                    {{ formatDate(sample.date) }}
+                    <div v-if="sample.isEnteredForOther" 
+                        class="text-xs text-orange-600 font-medium">
+                      You entered this sample for {{ sample.volunteer_id.first_name }} {{ sample.volunteer_id.last_name }}
+                    </div>
+                </td>
+                <td class="px-4 py-2">{{ formatMeasurement(sample.water_temperature, '') }}</td>
+                <td class="px-4 py-2">{{ formatMeasurement(sample.pH, '') }}</td>
+                <td class="px-4 py-2">{{ formatMeasurement(sample.dissolved_oxygen, '') }}</td>
+                <td class="px-4 py-2">{{ formatMeasurement(sample.conductivity, '') }}</td>
+                <td class="px-4 py-2">{{ formatMeasurement(sample.bacteria_avg_ecoli_cfu, '') }}</td>
+                <td class="px-4 py-2 text-center">
+                  <div class="flex justify-center space-x-2">
+                    <UButton size="sm" variant="soft" @click="navigateTo(`/portal/sample/${sample.id}`)" 
+                            icon="i-heroicons-eye">View</UButton>
+                    <UButton size="sm" variant="soft" color="blue" 
+                            @click="navigateTo(`/portal/sample?edit=${sample.id}`)" 
+                            icon="i-heroicons-pencil-square">Edit</UButton>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </UCard>
+
+      <!-- Additional Sampler Samples Table -->
+      <UCard class="mt-6">
+        <template #header>
+          <div class="flex justify-between items-center">
+            <h2 class="text-lg font-semibold">Samples Where You're an Additional Sampler</h2>
+          </div>
+        </template>
+
+       <!-- Message if no additional sampler samples -->
+      <div v-if="additionalSamplerSamples.length === 0" class="text-center py-4 text-gray-500">
+        You haven't been an additional sampler for any samples at this site.
+      </div>
+
+        <div v-else class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead>
+              <tr>
+                <th class="px-4 py-2 text-left">ID</th>
+                <th class="px-4 py-2 text-left">Date</th>
+                <th class="px-4 py-2 text-left">Temp (°C)</th>
+                <th class="px-4 py-2 text-left">pH</th>
+                <th class="px-4 py-2 text-left">DO (mg/L)</th>
+                <th class="px-4 py-2 text-left">Conduct (μS/cm)</th>
+                <th class="px-4 py-2 text-left">Avg E. coli (CFU/100mL)</th>
+                <th class="px-4 py-2 text-center">Details</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200">
+              <tr v-for="sample in additionalSamplerSamples" :key="sample.id" class="hover:bg-gray-50">
+                <td class="px-4 py-2">{{ sample.id }}</td>
                 <td class="px-4 py-2">{{ formatDate(sample.date) }}</td>
                 <td class="px-4 py-2">{{ formatMeasurement(sample.water_temperature, '') }}</td>
                 <td class="px-4 py-2">{{ formatMeasurement(sample.pH, '') }}</td>
@@ -369,43 +498,68 @@ onMounted(async () => {
                 <td class="px-4 py-2">{{ formatMeasurement(sample.conductivity, '') }}</td>
                 <td class="px-4 py-2">{{ formatMeasurement(sample.bacteria_avg_ecoli_cfu, '') }}</td>
                 <td class="px-4 py-2 text-center">
-                    <div class="flex justify-center space-x-2">
-                      <UButton
-                        size="sm"
-                        variant="soft"
-                        @click="navigateTo(`/portal/sample/${sample.id}`)"
-                        icon="i-heroicons-eye"
-                      >
-                        View
-                      </UButton>
-                      <UTooltip v-if="!canEditSample(sample)" text="Only sample owners and administrators can edit samples">
-                        <UButton
-                          size="sm"
-                          variant="soft"
-                          color="gray"
-                          disabled
-                          icon="i-heroicons-pencil-square"
-                        >
-                          Edit
-                        </UButton>
-                      </UTooltip>
-                      <UButton
-                        v-else
-                        size="sm"
-                        variant="soft"
-                        color="blue"
-                        @click="navigateTo(`/portal/sample?edit=${sample.id}`)"
-                        icon="i-heroicons-pencil-square"
-                      >
-                        Edit
-                      </UButton>
-                    </div>
-                  </td>
+                  <div class="flex justify-center space-x-2">
+                    <UButton size="sm" variant="soft" @click="navigateTo(`/portal/sample/${sample.id}`)" 
+                            icon="i-heroicons-eye">View</UButton>
+                  </div>
+                </td>
               </tr>
             </tbody>
           </table>
         </div>
       </UCard>
+
+      <!-- Other Samples Table -->
+      <UCard class="mt-6">
+        <template #header>
+          <div class="flex justify-between items-center">
+            <h2 class="text-lg font-semibold">Other Samples at This Site</h2>
+          </div>
+        </template>
+        
+        <div v-if="otherSamples.length === 0" class="text-center py-4 text-gray-500">
+          There are no other samples recorded for this site.
+        </div>
+
+        <div v-else class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead>
+              <tr>
+                <th class="px-4 py-2 text-left">ID</th>
+                <th class="px-4 py-2 text-left">Date</th>
+                <th class="px-4 py-2 text-left">Primary Sampler</th>
+                <th class="px-4 py-2 text-left">Temp (°C)</th>
+                <th class="px-4 py-2 text-left">pH</th>
+                <th class="px-4 py-2 text-left">DO (mg/L)</th>
+                <th class="px-4 py-2 text-left">Conduct (μS/cm)</th>
+                <th class="px-4 py-2 text-left">Avg E. coli (CFU/100mL)</th>
+                <th class="px-4 py-2 text-center">Details</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200">
+              <tr v-for="sample in otherSamples" :key="sample.id" class="hover:bg-gray-50">
+                <td class="px-4 py-2">{{ sample.id }}</td>
+                <td class="px-4 py-2">{{ formatDate(sample.date) }}</td>
+                <td class="px-4 py-2">
+                  {{ sample.volunteer_id?.first_name }} {{ sample.volunteer_id?.last_name }}
+                </td>
+                <td class="px-4 py-2">{{ formatMeasurement(sample.water_temperature, '') }}</td>
+                <td class="px-4 py-2">{{ formatMeasurement(sample.pH, '') }}</td>
+                <td class="px-4 py-2">{{ formatMeasurement(sample.dissolved_oxygen, '') }}</td>
+                <td class="px-4 py-2">{{ formatMeasurement(sample.conductivity, '') }}</td>
+                <td class="px-4 py-2">{{ formatMeasurement(sample.bacteria_avg_ecoli_cfu, '') }}</td>
+                <td class="px-4 py-2 text-center">
+                  <div class="flex justify-center space-x-2">
+                    <UButton size="sm" variant="soft" @click="navigateTo(`/portal/sample/${sample.id}`)" 
+                            icon="i-heroicons-eye">View</UButton>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </UCard>
+
     </template>
   </PageContainer>
 </template>

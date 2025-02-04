@@ -45,7 +45,7 @@ const newSiteData = ref({
 // Add new ref for hubs data
 const hubsData: Ref<any> = ref(null);
 
-const searchType = ref('siteId'); // Options: 'siteId', 'address', 'coordinates'
+const searchType = ref(''); // Options: 'siteId', 'address', 'coordinates'
 const toast = useToast();
 
 const formErrors = ref({
@@ -201,7 +201,7 @@ const renderSitePopupContent = (properties: any) => {
       <h3>${properties.stream_name || 'unnamed'}</h3>
       <p><strong>Site ID:</strong> ${properties.wwkyid_pk}</p>
       <p><strong>Basin:</strong> ${properties.wwkybasin}</p>
-      <p><strong>Description:</strong> ${properties.description || 'No description available'}</p>
+      <p><strong>Sampling Location Description:</strong> ${properties.description || 'No description available'}</p>
       <button onclick="event.stopPropagation(); window.selectSite(${properties.wwkyid_pk}, '${properties.stream_name || 'unnamed'}', '${properties.wwkybasin}')">Select Site</button>
     </div>
   `;
@@ -822,6 +822,8 @@ const searchSiteById = async (siteId: string) => {
 
 const searchPlaceholder = computed(() => {
   switch (searchType.value) {
+    case '':
+      return 'Select a search type...';
     case 'siteId':
       return 'Enter Site ID (e.g., 3253)';
     case 'address':
@@ -1005,7 +1007,7 @@ onMounted(async () => {
       <h4>Map Legend</h4>
       <div class="legend-item">
         <span class="legend-symbol site-symbol"></span>
-        <span>Monitoring Sites</span>
+        <span>Sampling Sites</span>
       </div>
       <div class="legend-item">
         <span class="legend-symbol hub-symbol"></span>
@@ -1014,6 +1016,7 @@ onMounted(async () => {
     </div>
     <div class="address-bar">
       <select v-model="searchType" class="search-type-select">
+        <option value="">Select Search Type</option>
         <option value="siteId">Site ID</option>
         <option value="address">Address</option>
         <option value="coordinates">Coordinates</option>
@@ -1042,7 +1045,7 @@ onMounted(async () => {
             <span v-if="formErrors.stream_name" class="error-message">Stream name is required</span>
           </div>
           <div class="form-group" :class="{ 'has-error': formErrors.description }">
-            <label for="description">Description: <span class="required">*</span></label>
+            <label for="description">Sampling Location Description: <span class="required">*</span></label>
             <textarea id="description" v-model="newSiteData.description" required></textarea>
             <span v-if="formErrors.description" class="error-message">Description is required</span>
           </div>
