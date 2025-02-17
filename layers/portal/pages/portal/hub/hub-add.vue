@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import PolicyGuard from '../../components/PolicyGuard.vue';
 import { UInput } from '#components';
 
 const { loadGoogleMaps, isLoaded } = useGoogleMaps();
@@ -412,10 +413,11 @@ onMounted(async () => {
   }
 });
 const viewHubList = () => {
-	navigateTo('/portal/hub/hub-list');
+	navigateTo('/portal/hub/');
 };
 </script>
 <template>
+  <PolicyGuard path="/portal/hub/hub-add">
 	<div>
 	  <PortalPageHeader
 		:title="pageTitle"
@@ -775,6 +777,7 @@ const viewHubList = () => {
       </UModal>
     </div>
   </div>
+</PolicyGuard>
 </template>
 
 <style>

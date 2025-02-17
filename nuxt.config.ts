@@ -110,10 +110,20 @@ export default defineNuxtConfig({
 			DIRECTUS_URL: process.env.NODE_ENV === 'development'
 				? 'http://localhost:8057'
 				: (process.env.DIRECTUS_URL || 'https://kyww.uky.edu/backend'),
-			TRAINER_ROLE_ID:process.env.TRAINER_ROLE_ID,
-			BASIN_LEAD_ROLE_ID:process.env.BASIN_LEAD_ROLE_ID,
-			SAMPLER_ROLE_ID:process.env.SAMPLER_ROLE_ID,
-			ADMIN_ROLE_ID:process.env.ADMIN_ROLE_ID,
+			//TRAINER_ROLE_ID:process.env.TRAINER_ROLE_ID,
+			//BASIN_LEAD_ROLE_ID:process.env.BASIN_LEAD_ROLE_ID,
+			//SAMPLER_ROLE_ID:process.env.SAMPLER_ROLE_ID,
+			//ADMIN_ROLE_ID:process.env.ADMIN_ROLE_ID,
+			DEVADMIN_ROLE_ID:process.env.DEVADMIN_ROLE_ID,
+			WWKYADMIN_ROLE_ID:process.env.WWKYADMIN_ROLE_ID,
+			STANDARD_ROLE_ID:process.env.STANDARD_ROLE_ID,
+			FULLADMIN_POLICY_ID:process.env.FULLADMIN_POLICY_ID,
+			WWKYADMIN_POLICY_ID:process.env.WWKYADMIN_POLICY_ID,
+			HUB_POLICY_ID:process.env.HUB_POLICY_ID,
+			TRAINER_POLICY_ID:process.env.TRAINER_POLICY_ID,
+			LEADER_POLICY_ID:process.env.LEADER_POLICY_ID,
+			SAMPLER_POLICY_ID:process.env.SAMPLER_POLICY_ID,
+			PUBLIC_POLICY_ID:process.env.PUBLIC_POLICY_ID,
 			WEB_API_ROLE_ID:process.env.WEB_API_ROLE_ID,
 			GOOGLE_MAPS_API_KEY : process.env.GOOGLE_MAPS_API_KEY,
 			RECAPTCHA_PUBLIC_KEY : process.env.RECAPTCHA_PUBLIC_KEY,
@@ -201,6 +211,11 @@ export default defineNuxtConfig({
 	site: {
 		url: process.env.NUXT_PUBLIC_SITE_URL || 'https://kyww.uky.edu',
 		name: 'KY Watershed Watch',
+	},
+
+	//router used for RBAC - role based access control
+	router: {
+		middleware: ['rbac']
 	},
 
 	postcss: {

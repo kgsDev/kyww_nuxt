@@ -3,7 +3,6 @@ import { createDirectus, rest, readItems } from '@directus/sdk';
 const config = getApiConfig();
 
 export default defineEventHandler(async (event) => {
-  const directus = createDirectus(process.env.DIRECTUS_URL).with(rest());
 
   try {
     // Fetch users with isSampler filter, ensuring we get the UUID

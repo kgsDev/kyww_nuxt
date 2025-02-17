@@ -9,10 +9,25 @@ export interface RuntimeConfig {
     siteUrl: string;
     API_URL: string;
     DIRECTUS_URL: string;
-    TRAINER_ROLE_ID: string;
-    BASIN_LEAD_ROLE_ID: string;
-    SAMPLER_ROLE_ID: string;
-    ADMIN_ROLE_ID: string;
+    
+    //TRAINER_ROLE_ID: string;
+    //BASIN_LEAD_ROLE_ID: string;
+    //SAMPLER_ROLE_ID: string;
+    //ADMIN_ROLE_ID: string;
+
+    DEVADMIN_ROLE_ID:string; //was ADMIN_ROLE_ID
+    WWKYADMIN_ROLE_ID:string; //Was BASIN_LEAD_ROLE_ID
+    STANDARD_ROLE_ID:string; //was SAMPLER_ROLE_ID
+        
+    //Policy IDs: these are the policy IDs for the policies that you want to assign to users when they sign up
+    FULLADMIN_POLICY_ID:string;
+    WWKYADMIN_POLICY_ID:string;
+    HUB_POLICY_ID:string;
+    TRAINER_POLICY_ID:string;
+    LEADER_POLICY_ID:string;
+    SAMPLER_POLICY_ID:string;
+    PUBLIC_POLICY_ID:string;
+
     WEB_API_ROLE_ID: string;
     GOOGLE_MAPS_API_KEY: string;
     RECAPTCHA_PUBLIC_KEY: string;

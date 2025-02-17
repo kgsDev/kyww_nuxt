@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import PolicyGuard from '../../components/PolicyGuard.vue';
 const { user } = useDirectusAuth();
 const { query } = useRoute();
 // Access the query parameters
@@ -138,6 +139,7 @@ const submitData = () => {
 };
 </script>
 <template>
+	<PolicyGuard path="/portal/habitat">
 	<div>
 		<PortalPageHeader
 			title="New Habitat Assessment"
@@ -329,6 +331,7 @@ const submitData = () => {
 			</div>
 		</Form>
 	</div>
+</PolicyGuard>
 </template>
 
 <style scoped>

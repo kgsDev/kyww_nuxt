@@ -1,7 +1,133 @@
+<script setup lang="ts">
+import { ref, computed } from 'vue'
+import PolicyGuard from '../../components/PolicyGuard.vue'
+
+const { user } = useDirectusAuth()
+
+// Refs for form data
+const emails = ref('')
+const training_date = ref('')
+const training_location = ref('')
+const training_field_chemistry = ref(false)
+const training_r_card = ref(false)
+const training_habitat = ref(false)
+const training_biological = ref(false)
+const error = ref('')
+const success = ref('')
+const showModal = ref(false)
+const showSuccessModal = ref(false)
+
+const hasTrainingSelected = computed(() => {
+	return training_field_chemistry.value || 
+			training_r_card.value || 
+			training_habitat.value || 
+			training_biological.value;
+});
+
+const canSubmit = computed(() => {
+	return (
+		// Check that emails are valid and present
+		emails.value?.trim().length > 0 &&
+		validateEmails(emails.value) &&
+		// Check that training date is selected
+		!!training_date.value?.length &&
+		// Check that location is entered
+		training_location.value?.trim().length > 0 &&
+		// Check that at least one training type is selected
+		hasTrainingSelected.value
+	);
+});
+
+function clearMessages() {
+	error.value = '';
+	success.value = '';
+}
+
+function validateEmails(emailString: string): boolean {
+	const emailList = emailString.split(/[ ,;]/).map(email => email.trim()).filter(Boolean);
+	const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+	return emailList.every(email => emailPattern.test(email));
+}
+
+function confirmSubmit() {
+	const emailList = emails.value.split(/[ ,;]/).map(email => email.trim()).filter(Boolean);
+	const emailSet = new Set(emailList);
+
+	if (emailSet.size !== emailList.length) {
+		error.value = 'Duplicate emails entered!';
+		return;
+	}
+
+	if (emailList.length > 15) {
+		error.value = 'You can only submit up to 15 email addresses.';
+		return;
+	}
+
+	showModal.value = true;
+}
+
+async function submitEmails() {
+	showModal.value = false;
+
+	try {
+		const emailList = emails.value.split(/[ ,;]/).map(email => email.trim()).filter(Boolean);
+
+		const response = await fetch('/api/invite-users', {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+		},
+		body: JSON.stringify({
+			emails: emailList,
+			training_date: training_date.value,
+			training_location: training_location.value,
+			training_field_chemistry: training_field_chemistry.value,
+			training_r_card: training_r_card.value,
+			training_habitat: training_habitat.value,
+			training_biological: training_biological.value,
+			trainer_id: user.value.id,
+			trainer_name: `${user.value.first_name} ${user.value.last_name}`
+		}),
+		});
+
+		if (response.ok) {
+		showSuccessModal.value = true;
+		resetForm();
+		} else {
+		const errorData = await response.json();
+		error.value = errorData.message || 'Failed to send invitations!';
+		}
+	} catch (err) {
+		console.error(err);
+		error.value = 'Failed to send invitations!';
+	}
+}
+
+function resetForm() {
+	emails.value = '';
+	training_date.value = '';
+	training_location.value = '';
+	training_field_chemistry.value = false;
+	training_r_card.value = false;
+	training_habitat.value = false;
+	training_biological.value = false;
+}
+
+function closeSuccessModal() {
+	showSuccessModal.value = false;
+}
+
+function viewReport() {
+	showSuccessModal.value = false;
+	navigateTo('/portal/train/report');
+}
+</script>
+
 <template>
+	<PolicyGuard path="/portal/train">
 	<div>
 	  <PageContainer>
-		<div v-if="hasAccess">
+		<div>
 		  <PortalPageHeader
 			title="Invite Samplers"
 			:breadcrumbs="[
@@ -44,30 +170,33 @@
 				This will send an email invitation to each volunteer with a link to sign up for the data portal.
 			</p>
   
-			<label class="block mb-2 font-bold">Trainee Email Addresses (up to 15 emails):</label>
+			<label class="block mb-2 font-bold required">Trainee Email Addresses (up to 15 emails):</label>
 			<textarea
-			  v-model="emails"
-			  @input="clearMessages"
-			  class="w-full p-2 border rounded-lg"
-			  placeholder="Enter emails separated by , ; or space"
+				v-model="emails"
+				@input="clearMessages"
+				class="w-full p-2 border rounded-lg"
+				placeholder="Enter emails separated by , ; or space"
+				required
 			></textarea>
   
-			<label class="block mt-4 mb-2 font-bold">Training Date:</label>
+			<label class="block mt-4 mb-2 font-bold required">Training Date:</label>
 			<input
-			  type="date"
-			  v-model="training_date"
-			  class="w-full p-2 border rounded-lg"
+				type="date"
+				v-model="training_date"
+				class="w-full p-2 border rounded-lg"
+				required
 			/>
   
-			<label class="block mt-4 mb-2 font-bold">Training Location:</label>
+			<label class="block mt-4 mb-2 font-bold required">Training Location:</label>
 			<input
-			  type="text"
-			  v-model="training_location"
-			  class="w-full p-2 border rounded-lg"
-			  placeholder="Enter training location"
+				type="text"
+				v-model="training_location"
+				class="w-full p-2 border rounded-lg"
+				placeholder="Enter training location"
+				required
 			/>
   
-			<label class="block mt-4 mb-2 font-bold">Training Completed:</label>
+			<label class="block mt-4 mb-2 font-bold required">Training Completed (select at least one):</label>
 			
 			<div class="form-group checkbox-group">
 			  <label>Field Chemistry:</label>
@@ -86,8 +215,29 @@
 			  <input type="checkbox" v-model="training_biological" />
 			</div>
 	
-			<UButton :disabled="!canSubmit" variant="solid" type="submit" class="mt-4">
-			  Submit
+			<div v-if="!canSubmit" class="text-sm text-red-500 mt-2">
+				<p v-if="!emails?.trim() || !validateEmails(emails)">
+					Please enter valid email addresses
+				</p>
+				<p v-if="!training_date">
+					Please select a training date
+				</p>
+				<p v-if="!training_location?.trim()">
+					Please enter a training location
+				</p>
+				<p v-if="!hasTrainingSelected">
+					Please select at least one training type
+				</p>
+			</div>
+
+			<UButton 
+				:disabled="!canSubmit" 
+				variant="solid" 
+				type="submit" 
+				class="mt-4"
+				:class="{'opacity-50 cursor-not-allowed': !canSubmit}"
+			>
+				Submit
 			</UButton>
 		  </form>
   
@@ -115,160 +265,10 @@
 		  <p v-if="error" class="text-red-500">{{ error }}</p>
 		  <p v-if="success" class="text-green-500">{{ success }}</p>
 		</div>
-  
-		<div v-else>
-		  <p>Access Denied. You do not have permission to view this page.</p>
-		</div>
 	  </PageContainer>
-	</div>
+		</div>
+	</PolicyGuard>
   </template>
-  
-  <script lang="ts">
-  export default {
-	setup() {
-	  const hasAccess = ref(false);
-  
-	  const configPublic = useRuntimeConfig().public;
-	  const roles = {
-		sampler: configPublic.SAMPLER_ROLE_ID,
-		trainer: configPublic.TRAINER_ROLE_ID,
-		basin_lead: configPublic.BASIN_LEAD_ROLE_ID,
-		admin: configPublic.ADMIN_ROLE_ID,
-	  };
-  
-	  const allowedRoles = [roles.trainer, roles.basin_lead, roles.admin];
-  
-	  const checkUserAccess = async () => {
-		const { user } = useDirectusAuth();
-  
-		if (user && allowedRoles.includes(user?.value.role)) {
-		  hasAccess.value = true;
-		} else {
-		  hasAccess.value = false;
-		  navigateTo('/unauthorized');
-		}
-	  };
-  
-	  onMounted(() => {
-		checkUserAccess();
-	  });
-  
-		return { hasAccess };
-	},
-	data() {
-	  return {
-		emails: '',
-		training_date: '',        // New field for training date
-		training_location: '',     // New field for training location
-		training_field_chemistry: false,
-		training_r_card: false,
-		training_habitat: false,
-		training_biological: false,
-	  	// Error messages for integer validation
-		error: '',
-		success: '',
-		showModal: false,
-		showSuccessModal: false,
-	  };
-	},
-	computed: {
-		canSubmit() {
-			// Ensure all validations pass before allowing submission
-			return (
-				this.emails.trim().length > 0 &&
-				this.validateEmails(this.emails) &&
-				!this.rcardError &&
-				!this.pipetteError
-			);
-		},
-	},
-	methods: {
-	  clearMessages() {
-		this.success = '';
-		this.error = '';
-	  },
-  
-	  validateEmails(emails) {
-		const emailList = emails.split(/[ ,;]/).map(email => email.trim()).filter(Boolean);
-		const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-		return emailList.every(email => emailPattern.test(email));
-	  },
-
-	  confirmSubmit() {
-		const emailList = this.emails.split(/[ ,;]/).map(email => email.trim()).filter(Boolean);
-		const emailSet = new Set(emailList);
-  
-		if (emailSet.size !== emailList.length) {
-		  this.error = 'Duplicate emails entered!';
-		  return;
-		}
-  
-		if (emailList.length > 15) {
-		  this.error = 'You can only submit up to 15 email addresses.';
-		  return;
-		}
-  
-		this.showModal = true;
-	  },
-  
-	  async submitEmails() {
-		this.showModal = false;
-		const { user } = useDirectusAuth();
-
-		try {
-		  const emailList = this.emails.split(/[ ,;]/).map(email => email.trim()).filter(Boolean);
-  
-		  const response = await fetch('/api/invite-users', {
-			method: 'POST',
-			headers: {
-			  'Content-Type': 'application/json',
-			},
-			body: JSON.stringify({
-				// Send email list, training date, and training location and other options
-			  emails: emailList,
-			  training_date: this.training_date,      // Include training date
-			  training_location: this.training_location, // Include training location
-			  training_field_chemistry: this.training_field_chemistry,
-			  training_r_card: this.training_r_card,
-			  training_habitat: this.training_habitat,
-			  training_biological: this.training_biological,
-			  trainer_id: user.value.id,  // Add trainer ID
-        	  trainer_name: `${user.value.first_name} ${user.value.last_name}` // Add trainer name
-			}),
-		  });
-
-			if (response.ok) {
-				this.showSuccessModal = true; // Show success modal
-				this.resetForm(); // Clear form fields
-			} else {
-				const errorData = await response.json();
-				this.error = errorData.message || 'Failed to send invitations!';
-			}
-		} catch (err) {
-			console.error(err);
-			this.error = 'Failed to send invitations!';
-		}
-		},
-		resetForm() {
-			// Clear all form fields, including checkboxes
-			this.emails = '';
-			this.training_date = '';
-			this.training_location = '';
-			this.training_field_chemistry = false;
-			this.training_r_card = false;
-			this.training_habitat = false;
-			this.training_biological = false;
-		},
-		closeSuccessModal() {
-			this.showSuccessModal = false;
-		},
-		viewReport() {
-			this.showSuccessModal = false;
-			navigateTo('/portal/train/report');
-		},
-	}
-	};
-  </script>
   
   <style scoped>
   .flex {
@@ -334,6 +334,37 @@
 
 	.mt-4 {
 		margin-top: 1rem;
+	}
+
+	.required::after {
+		content: '*';
+		color: red;
+		margin-left: 4px;
+	}
+
+	input:invalid,
+	textarea:invalid {
+		border-color: #ef4444;
+	}
+
+	.form-group label {
+		display: inline-flex;
+		align-items: center;
+	}
+
+	/* Add hover states for better UX */
+	input[type="checkbox"] {
+		cursor: pointer;
+	}
+
+	input[type="checkbox"]:hover {
+		outline: 2px solid #e2e8f0;
+	}
+
+	/* Style disabled submit button */
+	button:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
 	}
 </style>
   

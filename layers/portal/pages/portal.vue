@@ -3,12 +3,17 @@ import { Dialog, DialogPanel, TransitionChild, TransitionRoot } from '@headlessu
 
 definePageMeta({
 	layout: 'blank',
-	middleware: ['auth'],
+	middleware: ['auth','rbac'],
 });
 
-const { logout, user } = useDirectusAuth();
-
 const NuxtLink = resolveComponent('NuxtLink');
+const { logout, user } = useDirectusAuth();
+const { getNavigationItems } = useRBAC();
+
+// Declare refs first
+const navigationLoading = ref(true);
+const mobileMenuOpen = ref(false);
+const showCommandPalette = ref(false);
 
 function useCommandPalette() {
 	const showCommandPalette = ref(false);
@@ -27,64 +32,65 @@ function useCommandPalette() {
 	};
 }
 
-const configPublic = useRuntimeConfig().public;
-const roles = {
-	sampler: configPublic.SAMPLER_ROLE_ID,
-	trainer: configPublic.TRAINER_ROLE_ID,
-	basin_lead: configPublic.BASIN_LEAD_ROLE_ID,
-	admin: configPublic.ADMIN_ROLE_ID,
+const allNavigationItems = {
+  top: [
+    {name: 'Dashboard', href: '/portal', icon: 'material-symbols:home-outline-rounded'},
+    {name: 'View All Users', href: '/portal/users', icon: 'mdi:account-group'}, 
+    {name: 'Add Trainees', href: '/portal/train', icon: 'oui:training'},  
+    {name: 'Training Report', href: '/portal/train/report', icon: 'mdi:file-document-outline'},
+    {name: 'Add / Edit Hub', href: '/portal/hub/hub-add', icon: 'material-symbols:hub-outline'},
+    {name: 'Hubs and Sites', href: '/portal/hub/', icon: 'material-symbols:list'},
+    {name: 'Stream Sample', href: '/portal/sample', icon: 'mdi:eyedropper'},
+    {name: 'Biological Assessment', href: '/portal/biological', icon: 'mdi:fish'},
+    {name: 'Habitat Assessment', href: '/portal/habitat', icon: 'mdi:leaf'},
+  ],
+  bottom: [
+    { name: 'Help', href: '/portal/help', icon: 'material-symbols:help-outline-rounded' }
+  ],
 };
 
-const user_role = user.value.role;
-const sidebarNavigation = {
-  top: [
-    { name: 'Dashboard', href: '/portal', icon: 'material-symbols:home-outline-rounded' },
-    ...(user_role == roles.admin || user_role == roles.trainer || user_role == roles.basin_lead 
-      ? [
-          { name: 'Add Trainees', href: '/portal/train', icon: 'oui:training' },
-          { name: 'Training Report', href: '/portal/train/report', icon: 'mdi:file-document-outline' }
-        ] 
-      : []
-    ),
-    ...(user_role == roles.admin || user_role == roles.basin_lead 
-      ? [{ name: 'Add / Edit Hub', href: '/portal/hub/hub-add', icon: 'material-symbols:hub-outline' }] 
-      : []
-    ),
-	...(user_role == roles.admin || user_role == roles.basin_lead || user_role == roles.trainer || user_role == roles.sampler
-      ? [{ name: 'Hubs and Sites', href: '/portal/hub/', icon: 'material-symbols:list' }] 
-      : []
-    ),
-    ...(user_role == roles.admin || user_role == roles.trainer || user_role == roles.basin_lead 
-      ? [{ name: 'Stream Sample', href: '/portal/sample', icon: 'mdi:eyedropper' }] 
-      : []
-    ),
-    ...(user_role == roles.admin 
-      ? [{ name: 'Biological Assessment', href: '/portal/biological', icon: 'mdi:fish' }] 
-      : []
-    ),
-    ...(user_role == roles.admin 
-      ? [{ name: 'Habitat Assessment', href: '/portal/habitat', icon: 'mdi:leaf' }] 
-      : []
-    ),
-  ],
-  bottom: [{ name: 'Help', href: '/portal/help', icon: 'material-symbols:help-outline-rounded' }],
+const sidebarNavigation = reactive({
+  top: [],
+  bottom: allNavigationItems.bottom,
+});
+
+// Function to update navigation items
+const updateNavigationItems = async () => {
+  navigationLoading.value = true;
+  try {
+    const filteredItems = await getNavigationItems(allNavigationItems.top);
+    sidebarNavigation.top = filteredItems;
+  } catch (error) {
+    console.error('Error updating navigation items:', error);
+  } finally {
+    navigationLoading.value = false;
+  }
 };
 
 const userNavigation = [
-	[
-		{
-			label: 'Your Profile',
-			icon: 'i-heroicons-user-circle',
-			click: () => {
-				navigateTo('/portal/account#profile');
-			},
-		},
-		{ label: 'Sign out', icon: 'i-heroicons-arrow-left-on-rectangle', click: () => logout() },
-	],
+  [
+    {
+      label: 'Your Profile',
+      icon: 'i-heroicons-user-circle',
+      click: () => {
+        navigateTo('/portal/account#profile');
+      },
+    },
+    { label: 'Sign out', icon: 'i-heroicons-arrow-left-on-rectangle', click: () => logout() },
+  ],
 ];
 
-const { showCommandPalette } = useCommandPalette();
-const mobileMenuOpen = ref(false);
+// Watch for user changes to update navigation
+watch(() => user.value, async () => {
+  await updateNavigationItems();
+}, { immediate: true });
+
+// Call on component mount
+onMounted(async () => {
+  await updateNavigationItems();
+});
+
+const { showCommandPalette: cmdPalette } = useCommandPalette();
 </script>
 
 <template>
@@ -113,28 +119,35 @@ const mobileMenuOpen = ref(false);
             <nav class="mt-5 flex-1 flex flex-col justify-between">
               <!-- Top navigation items -->
               <div class="px-2 space-y-1">
-                <component
-                  :is="item.href ? NuxtLink : 'button'"
-                  v-for="item in sidebarNavigation.top"
-                  :key="item.name"
-                  :href="item.href ?? undefined"
-                  :class="[
-                    item.current ? 'bg-gray-800 text-white' : 'text-gray-100 hover:bg-gray-800 hover:text-white',
-                    'group flex w-full flex-col items-center text-center rounded-md py-3 px-2 text-xs font-medium'
-                  ]"
-                  :aria-current="item.current ? 'page' : undefined"
-                  @click="item.click ? item.click() : undefined"
-                >
-                  <UIcon
-                    :name="item.icon"
+                <template v-if="!navigationLoading">
+                  <component
+                    :is="item.href ? NuxtLink : 'button'"
+                    v-for="item in sidebarNavigation.top"
+                    :key="item.name"
+                    :href="item.href ?? undefined"
                     :class="[
-                      item.current ? 'text-white' : 'text-gray-300 group-hover:text-white',
-                      'h-6 w-6'
+                      item.current ? 'bg-gray-800 text-white' : 'text-gray-100 hover:bg-gray-800 hover:text-white',
+                      'group flex w-full flex-col items-center text-center rounded-md py-3 px-2 text-xs font-medium'
                     ]"
-                    aria-hidden="true"
-                  />
-                  <span class="mt-2 text-center w-full">{{ item.name }}</span>
-                </component>
+                    :aria-current="item.current ? 'page' : undefined"
+                    @click="item.click ? item.click() : undefined"
+                  >
+                    <UIcon
+                      :name="item.icon"
+                      :class="[
+                        item.current ? 'text-white' : 'text-gray-300 group-hover:text-white',
+                        'h-6 w-6'
+                      ]"
+                      aria-hidden="true"
+                    />
+                    <span class="mt-2 text-center w-full">{{ item.name }}</span>
+                  </component>
+                </template>
+                <template v-else>
+                  <div class="flex justify-center items-center py-4">
+                    <UIcon name="i-heroicons-arrow-path" class="h-5 w-5 text-gray-400 animate-spin" />
+                  </div>
+                </template>
               </div>
 
               <!-- Bottom navigation items -->

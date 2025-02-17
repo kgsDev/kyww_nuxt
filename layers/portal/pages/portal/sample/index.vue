@@ -2,6 +2,7 @@
 import CustomNumberInput from '../../components/CustomNumberInput.vue';
 import MapSelector from '../sites/MapSelector.vue';
 import PhotoUpload from '../../components/PhotoUpload.vue';
+import PolicyGuard from '../../components/PolicyGuard.vue';
 
 const route = useRoute();
 const isEditMode = computed(() => !!route.query.edit);
@@ -1640,6 +1641,7 @@ const confirmCancel = () => {
 
 </script>
 <template>
+  <PolicyGuard path="/portal/sample">
   <div>
     <ClientOnly>
       <!-- Loading state -->
@@ -2397,6 +2399,7 @@ const confirmCancel = () => {
 	</div>
 	</ClientOnly>
 </div>
+</PolicyGuard>
 </template>
 
 <style scoped>

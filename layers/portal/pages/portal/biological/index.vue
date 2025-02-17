@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import PolicyGuard from '../../components/PolicyGuard.vue';
+
 const { path, query } = useRoute();
 const router = useRouter();
 
@@ -93,6 +95,7 @@ const submitData = () => {
 };
 </script>
 <template>
+<PolicyGuard path="/portal/biological">
 	<UModal v-model="isOpen">
 		<div class="p-4">
 			<div class="embed-container">
@@ -394,4 +397,5 @@ const submitData = () => {
 			</div>
 		</Form>
 	</div>
+</PolicyGuard>
 </template>

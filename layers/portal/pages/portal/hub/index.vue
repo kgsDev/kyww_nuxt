@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import PolicyGuard from '../../components/PolicyGuard.vue';
 import { useKYWWMap } from '~/composables/useKYWWMap';
 
 const mapContainer = ref(null);
@@ -38,6 +39,7 @@ onMounted(async () => {
 </script>
 
 <template>
+ <PolicyGuard path="/portal/hub">
   <div>
     <PortalPageHeader
       title="KYWW Hubs and Sites"
@@ -197,6 +199,7 @@ onMounted(async () => {
       </template>
     </div>
   </div>
+  </PolicyGuard>
 </template>
 
 <style scoped>

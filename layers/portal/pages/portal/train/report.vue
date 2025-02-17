@@ -1,4 +1,5 @@
 <template>
+  <PolicyGuard path="/portal/train/report">
   <div>
     <PortalPageHeader
       title="Training Report"
@@ -114,9 +115,11 @@
       </template>
     </div>
   </div>
+  </PolicyGuard>
 </template>
   
 <script setup>
+import PolicyGuard from '../../components/PolicyGuard.vue';
 const loading = ref(true);
 const error = ref(null);
 const inviteSearch = ref('');
