@@ -116,7 +116,7 @@ const { isLoading, isMapOpen, toast, formErrors, isConfirmationModalOpen, showVa
 const configPublic = useRuntimeConfig().public;
 
 const isAdmin = computed(() => {
-  return user.value?.role === configPublic.ADMIN_ROLE_ID;
+  return user.value?.role === configPublic.DEVADMIN_ROLE_ID || user.value?.role === configPublic.WWKYADMIN_ROLE_ID;
 });
 
 const viewSite = () => {
@@ -635,7 +635,6 @@ const confirmSubmission = () => {
 const fetchSamplers = async () => {
   try {
     const response = await $fetch('/api/samplers');
-    console.log('Fetched samplers:', response); // Add this line
     availableSamplers.value = response;
   } catch (error) {
     toast.add({

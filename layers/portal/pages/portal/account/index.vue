@@ -189,22 +189,48 @@ const fetchHubs = async () => {
 
 const config = useRuntimeConfig();
 
-// Check both role ID and boolean flag for each role
-const isAdmin = computed(() => {
-  return userData.value?.role === config.public.ADMIN_ROLE_ID || userData.value?.isAdmin;
+const hasPolicy = (policyId) => {
+  return computed(() => {
+    return userData.value?.policies?.some(p => p.policy === policyId);
+  });
+};
+
+const isFullAdmin = computed(() => {
+  return hasPolicy(config.public.FULLADMIN_POLICY_ID).value;
 });
 
-const isTrainer = computed(() => {
-  return userData.value?.role === config.public.TRAINER_ROLE_ID || userData.value?.isTrainer;
+const isWWKYAdmin = computed(() => {
+  return hasPolicy(config.public.WWKYADMIN_POLICY_ID).value;
 });
 
-const isBasinLead = computed(() => {
-  return userData.value?.role === config.public.BASIN_LEAD_ROLE_ID || userData.value?.isBasinLead;
+const isHubManager = computed(() => {
+  return hasPolicy(config.public.HUB_POLICY_ID).value;
 });
 
-const isSampler = computed(() => {
-  return userData.value?.role === config.public.SAMPLER_ROLE_ID || userData.value?.isSampler;
+const isPolicyTrainer = computed(() => {
+  return hasPolicy(config.public.TRAINER_POLICY_ID).value;
 });
+
+const isPolicyLeader = computed(() => {
+  return hasPolicy(config.public.LEADER_POLICY_ID).value;
+});
+
+const isPolicySampler = computed(() => {
+  return hasPolicy(config.public.SAMPLER_POLICY_ID).value;
+});
+
+// Create an array of policy badges for easier rendering
+const userPolicies = computed(() => {
+  return [
+    { condition: isFullAdmin.value, label: 'Full Admin', color: 'red' },
+    { condition: isWWKYAdmin.value, label: 'WWKY Admin', color: 'red' },
+    { condition: isHubManager.value, label: 'Hub Manager', color: 'orange' },
+    { condition: isPolicyTrainer.value, label: 'Trainer', color: 'purple' },
+    { condition: isPolicyLeader.value, label: 'Basin Leader', color: 'yellow' },
+    { condition: isPolicySampler.value, label: 'Sampler', color: 'blue' }
+  ].filter(policy => policy.condition);
+});
+
 const formatCounty = (county: string | null) => {
   if (!county) return 'Not specified';
   return county.charAt(0).toUpperCase() + county.slice(1).toLowerCase();
@@ -429,7 +455,12 @@ onMounted(async () => {
     // Get the current user's data and hub data first
     await Promise.all([
       (async () => {
-        const user = await useDirectus(readMe());
+        const user = await useDirectus(readMe({
+          fields: [
+            '*.*'
+          ]
+        }))
+
         userData.value = user;
 
         if (user?.id) {
@@ -729,14 +760,13 @@ watch(isEditing, (newValue) => {
                   </UBadge>
                 </p>
               </div>
-			  <div>
-				<label class="text-sm text-gray-500">Roles</label>
-				<div class="flex gap-2 flex-wrap">
-					<UBadge v-if="isAdmin" color="red">Admin</UBadge>
-					<UBadge v-if="isSampler" color="blue">Sampler</UBadge>
-					<UBadge v-if="isTrainer" color="purple">Trainer</UBadge>
-					<UBadge v-if="isBasinLead" color="yellow">Basin Lead</UBadge>
-				</div>
+              <div>
+                <label class="text-sm text-gray-500">Roles & Policies</label>
+                <div class="flex gap-2 flex-wrap">
+                  <template v-for="policy in userPolicies" :key="policy.label">
+                    <UBadge :color="policy.color">{{ policy.label }}</UBadge>
+                  </template>
+                </div>
 			   </div>
             </div>
 

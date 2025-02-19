@@ -5,11 +5,11 @@ const config = getApiConfig();
 export default defineEventHandler(async (event) => {
 
   try {
-    // Fetch users with isSampler filter, ensuring we get the UUID
+    // Fetch users with filter, ensuring we get the UUID
     const usersResponse = await fetch(
       `${config.public.directusUrl}/users?` + 
       `fields[]=id&fields[]=first_name&fields[]=last_name&fields[]=email&` +
-      `filter[isSampler][_eq]=true&` +
+      `filter[policies][policy][name][_eq]=Sampler&` +
       `sort[]=last_name`, 
       {
         headers: getDirectusHeaders(config),

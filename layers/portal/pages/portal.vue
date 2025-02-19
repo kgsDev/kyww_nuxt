@@ -39,6 +39,7 @@ const allNavigationItems = {
     {name: 'Add Trainees', href: '/portal/train', icon: 'oui:training'},  
     {name: 'Training Report', href: '/portal/train/report', icon: 'mdi:file-document-outline'},
     {name: 'Add / Edit Hub', href: '/portal/hub/hub-add', icon: 'material-symbols:hub-outline'},
+    {name: 'Hub Users', href: '/portal/hub/hub-samplers', icon: 'material-symbols:person-celebrate'},
     {name: 'Hubs and Sites', href: '/portal/hub/', icon: 'material-symbols:list'},
     {name: 'Stream Sample', href: '/portal/sample', icon: 'mdi:eyedropper'},
     {name: 'Biological Assessment', href: '/portal/biological', icon: 'mdi:fish'},

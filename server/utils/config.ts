@@ -9,11 +9,6 @@ export interface RuntimeConfig {
     siteUrl: string;
     API_URL: string;
     DIRECTUS_URL: string;
-    
-    //TRAINER_ROLE_ID: string;
-    //BASIN_LEAD_ROLE_ID: string;
-    //SAMPLER_ROLE_ID: string;
-    //ADMIN_ROLE_ID: string;
 
     DEVADMIN_ROLE_ID:string; //was ADMIN_ROLE_ID
     WWKYADMIN_ROLE_ID:string; //Was BASIN_LEAD_ROLE_ID

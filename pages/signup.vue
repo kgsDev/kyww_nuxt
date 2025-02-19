@@ -299,6 +299,7 @@
   </div>
 </template>
 <script setup>
+//This is the signup page for new users to create an account. It is a form that takes in user information and sends it to the backend for processing.
   import { useRoute, useFetch } from '#app';
   import LoadingOverlay from '/components/LoadingOverlay.vue'
 
@@ -719,7 +720,7 @@ const validatePasswordMatch = () => {
             document.getElementById('error-message')?.scrollIntoView({ behavior: 'smooth' });
           });
         } else if (data.value?.message) {
-          showForm.value = false;
+          //showForm.value = false;
           message.value = data.value.message;
           setTimeout(() => {
             window.location.href = '/auth/signin'; // Change to signin page

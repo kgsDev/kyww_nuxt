@@ -1,3 +1,4 @@
+//This is the signup API for the KYWW portal. It is used to create a new user account in Directus and send a welcome email to the new user.
 import sendgrid from '@sendgrid/mail';
 import { getApiConfig, getDirectusHeaders } from '../utils/config';
 import { readBody } from 'h3';
@@ -163,11 +164,15 @@ export default eventHandler(async (event) => {
         city: address?.city || null,
         state: address?.state || null,
         zip: address?.zip || null,
-        hub_id: desiredHub,
         trainer_id: trainer_id || inviteData.data[0].trainer_id,
         trainer_name: trainer_name || inviteData.data[0].trainer_name,
-        role: config.public.SAMPLER_ROLE_ID,
-        isSampler: true,
+        role: config.public.STANDARD_ROLE_ID,
+        policies: [
+          {
+            policy: config.public.SAMPLER_POLICY_ID
+          }
+        ],
+        status: 'active',
       };
 
       const samplerDataBody = {
@@ -208,8 +213,7 @@ export default eventHandler(async (event) => {
       if (PH_expire && PH_expire.trim() !== '' && PH_expire !== 'undefined' && PH_expire !== 'N/A') {
         samplerDataBody.PH_expire = PH_expire;
       }
-
-      
+    
       // Create user
       const userResponse = await fetch(`${config.public.directusUrl}/users`, {
         method: 'POST',
@@ -218,6 +222,7 @@ export default eventHandler(async (event) => {
       });
 
       if (!userResponse.ok) {
+        // After the request
         const errorText = await userResponse.text();
         console.error('User creation error response:', errorText);
         throw new Error('Failed to create user: ' + errorText);
@@ -228,8 +233,6 @@ export default eventHandler(async (event) => {
 
       // Update sampler data body with user ID
       samplerDataBody.user_id = userId;
-      
-      //console.log('Creating sampler data with:', samplerDataBody);
 
       // Create sampler data
       const samplerDataResponse = await fetch(`${config.public.directusUrl}/items/sampler_data`, {

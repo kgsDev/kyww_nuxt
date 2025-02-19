@@ -50,7 +50,7 @@ export function useRBAC() {
       const userData = await $directus.request(readMe({
         fields: ['*', 'role.id', 'role.name', 'policies.*']
       }))
-      
+
       // Set role of user (one per user)
       if (userData?.role?.id) {
         userRoleRef.value = userData.role.id
@@ -74,7 +74,7 @@ export function useRBAC() {
     }
   }  
 
-  // Access configuration
+  // Access configuration - add new routes here - update the portal.vue for navigation
   const accessConfig: AccessControl[] = [
     {
       path: '/portal/users',
@@ -94,7 +94,12 @@ export function useRBAC() {
     {
       path: '/portal/hub/hub-add',
       roles: [roles.devAdmin, roles.wwkyAdmin],
-      policies: [policies.fullAdmin, policies.hub],
+      policies: [policies.fullAdmin, policies.hub, policies.leader],
+    },
+    {
+      path: '/portal/hub/hub-samplers',
+      roles: [roles.devAdmin, roles.wwkyAdmin],
+      policies: [policies.fullAdmin, policies.hub, policies.leader],
     },
     {
       path: '/portal/hub',
@@ -156,7 +161,6 @@ export function useRBAC() {
     )
   
     const allowed = (hasRole || hasPolicy)
- 
     return allowed
   }
   

@@ -11,7 +11,7 @@ const isUserSampleOwner = computed(() => {
 // Add a computed to check if user is admin
 const isAdmin = computed(() => {
   const configPublic = useRuntimeConfig().public;
-  return user.value?.role === configPublic.ADMIN_ROLE_ID;
+  return user.value?.role === configPublic.DEVADMIN_ROLE_ID || user.value?.role === configPublic.WWKYADMIN_ROLE_ID;
 });
 
 // Add a computed to check if user can edit the sample

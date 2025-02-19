@@ -7,7 +7,7 @@ const configPublic = useRuntimeConfig().public;
 
 // Add these computed properties for permission checking
 const isAdmin = computed(() => {
-  return user.value?.role === configPublic.ADMIN_ROLE_ID;
+  return user.value?.role === configPublic.DEVADMIN_ROLE_ID || user.value?.role === configPublic.WWKYADMIN_ROLE_ID;
 });
 
 const canEditSample = (sample) => {
