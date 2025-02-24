@@ -49,8 +49,12 @@ const formRefs = {
 	dissolvedOxygen: ref(),
 	conductivity: ref(),
 	iCertifyCheckbox: ref(),
-	timeINIncubator: ref<string | null>(null),
-	timeOUTIncubator: ref<string | null>(null),
+	//timeINIncubator: ref<string | null>(null),
+	//timeOUTIncubator: ref<string | null>(null),
+	timeINIncDate: ref<string | null>(null),
+	timeINIncTime: ref<string | null>(null),
+	timeOUTIncDate: ref<string | null>(null),
+	timeOUTIncTime: ref<string | null>(null),
 	bacteriaRCardInitials: ref(),
 	bacterialSourceHuman: ref(),
 	bacterialSourceDuckGoose: ref(),
@@ -105,7 +109,7 @@ const stateRefs = {
 const { volunteer_id, wwkyid_pk, stream_name, wwkybasin, adults, youths, date, startTime, totalVolunteerMinutes, milesDriven, currentWeather, rainfall, 
 	waterColor, odorNone, odorRottenEggs, odorChlorine, odorRancidSour, odorGasPetro, odorMusty, odorSweetFruity, odorSharpPungent, 
 	waterSurfaceNone, waterSurfaceOilSheen, waterSurfaceAlgae, waterSurfaceSoapSuds, waterSurfaceSewage, waterSurfaceErosion, streamFlowVisual, 
-	negsample, streamFlowMeasured, waterTemperature, pH, dissolvedOxygen, conductivity, iCertifyCheckbox, timeINIncubator, timeOUTIncubator, 
+	negsample, streamFlowMeasured, waterTemperature, pH, dissolvedOxygen, conductivity, iCertifyCheckbox, timeINIncDate, timeINIncTime, timeOUTIncDate, timeOUTIncTime,
 	bacteriaRCardInitials, bacterialSourceHuman, bacterialSourceDuckGoose, bacterialSourceLivestock, bacterialSourcePetWaste, bacterialSourceWildlife, 
 	ecoliA_count, sampleVolA, ecoliB_count, sampleVolB, ecoliC_count, sampleVolC, conductivityMeterCalibrationDate, otherMeterCalibrationDate, field_multimeter_model,
 	field_multimeter_manuf, streamMeter, bacterialSourceOther, trash, turbidity, useTurbidMeter, useTransparencyTube, transparencyTubeMeasured, turbidMeterMeasured, 
@@ -466,8 +470,8 @@ const fetchSampleData = async (id: string) => {
     // Bacteria-related fields with more detailed handling
 	if (sampleData.bacteria_timedate_in || sampleData.bacteria_timedate_out) {
 		useRCard.value = true;
-		timeINIncubator.value = sampleData.bacteria_timedate_in;
-		timeOUTIncubator.value = sampleData.bacteria_timedate_out;
+		fullTimeIN.value = sampleData.bacteria_timedate_in;
+		fullTimeOUT.value = sampleData.bacteria_timedate_out;
 		bacteriaRCardInitials.value = sampleData.bacteria_rcard_initials;
 		
 		// Sample A - Fix count vs calculated value mix-up
@@ -695,17 +699,6 @@ const initializeComponent = async () => {
   }
 };
 
-const selectedSamplerDisplay = computed(() => {
-  if (!volunteer_id.value || !availableSamplers.value) return 'Select primary sampler';
-  
-  const selected = availableSamplers.value.find(s => s.id === volunteer_id.value);
-  if (!selected) return 'Select primary sampler';
-  
-  console.log('Selected sampler:', selected); // Add this line for debugging
-  
-  return `${selected.first_name} ${selected.last_name}${selected.id === user.value?.id ? ' (you)' : ''}`;
-});
-
 //Validations:
 const isPHValid = computed(() => {
   const value = parseFloat(pH.value);
@@ -734,11 +727,58 @@ const isConductivityHigh = computed(() => {
   return value > 2000;
 });
 
+
+const fullTimeIN = computed({
+  get() {
+    if (!timeINIncDate.value || !timeINIncTime.value) return null;
+    return `${timeINIncDate.value}T${timeINIncTime.value}:00Z`;
+  },
+  set(value) {
+    if (!value) {
+      timeINIncDate.value = '';
+      timeINIncTime.value = '';
+      return;
+    }
+    try {
+      const date = new Date(value);
+      if (!isNaN(date.getTime())) {
+        timeINIncDate.value = date.toISOString().split('T')[0];
+        timeINIncTime.value = date.toISOString().split('T')[1].substring(0, 5);
+      }
+    } catch (e) {
+      console.error('Error parsing time in:', e);
+    }
+  }
+});
+
+const fullTimeOUT = computed({
+  get() {
+    if (!timeOUTIncDate.value || !timeOUTIncTime.value) return null;
+    return `${timeOUTIncDate.value}T${timeOUTIncTime.value}:00Z`;
+  },
+  set(value) {
+    if (!value) {
+      timeOUTIncDate.value = '';
+      timeOUTIncTime.value = '';
+      return;
+    }
+    try {
+      const date = new Date(value);
+      if (!isNaN(date.getTime())) {
+        timeOUTIncDate.value = date.toISOString().split('T')[0];
+        timeOUTIncTime.value = date.toISOString().split('T')[1].substring(0, 5);
+      }
+    } catch (e) {
+      console.error('Error parsing time out:', e);
+    }
+  }
+});
+
 const incubationTime = computed(() => {
-  if (!timeINIncubator.value || !timeOUTIncubator.value) return null;
+  if (!fullTimeIN.value || !fullTimeOUT.value) return null;
   
-  const timeIn = new Date(timeINIncubator.value);
-  const timeOut = new Date(timeOUTIncubator.value);
+  const timeIn = new Date(fullTimeIN.value);
+  const timeOut = new Date(fullTimeOUT.value);
   
   // Check if times are exactly the same
   if (timeIn.getTime() === timeOut.getTime()) {
@@ -780,15 +820,25 @@ const displayIncubationTime = computed(() => {
 
 //calculate the ecoli amount in the samples
 const ecoliA = computed(() => {
-	return ecoliA_count.value && sampleVolA.value ? (ecoliA_count.value / sampleVolA.value) * 100 : 0;
+    // Check if count is explicitly entered (including zero) and volume exists
+    const countExists = ecoliA_count.value === 0 || Boolean(ecoliA_count.value);
+    return countExists && sampleVolA.value 
+        ? (ecoliA_count.value / sampleVolA.value) * 100 
+        : 0;
 });
 
 const ecoliB = computed(() => {
-	return ecoliB_count.value && sampleVolB.value ? (ecoliB_count.value / sampleVolB.value) * 100 : 0;
+    const countExists = ecoliB_count.value === 0 || Boolean(ecoliB_count.value);
+    return countExists && sampleVolB.value 
+        ? (ecoliB_count.value / sampleVolB.value) * 100 
+        : 0;
 });
 
 const ecoliC = computed(() => {
-	return ecoliC_count.value && sampleVolC.value ? (ecoliC_count.value / sampleVolC.value) * 100 : 0;
+    const countExists = ecoliC_count.value === 0 || Boolean(ecoliC_count.value);
+    return countExists && sampleVolC.value 
+        ? (ecoliC_count.value / sampleVolC.value) * 100 
+        : 0;
 });
 
 //calculate the ecoli variation
@@ -806,11 +856,20 @@ const isEcoliVariationHigh = computed(() => {
 
 //calculate the average ecoli count
 const averageEcoli = computed(() => {
-	let a = ecoliA.value && sampleVolA.value ? (ecoliA.value) : -1;
-	let b = ecoliB.value && sampleVolB.value ? (ecoliB.value) : -1;
-	let c = ecoliC.value && sampleVolC.value ? (ecoliC.value) : -1;
-	if (a === -1 || b === -1 || c === -1) return 'Please enter all measurements.';
-	return Math.round((a + b + c) / 3);
+    // Helper to check if a value has been explicitly entered (including zero)
+    const isValueSet = (val) => val === 0 || Boolean(val);
+    
+    // Check if all required values are present
+    const hasA = isValueSet(ecoliA_count.value) && isValueSet(sampleVolA.value);
+    const hasB = isValueSet(ecoliB_count.value) && isValueSet(sampleVolB.value);
+    const hasC = isValueSet(ecoliC_count.value) && isValueSet(sampleVolC.value);
+    
+    if (!hasA || !hasB || !hasC) {
+        return 'Please enter all measurements.';
+    }
+    
+    // All values are present, calculate the average
+    return Math.round((ecoliA.value + ecoliB.value + ecoliC.value) / 3);
 });
 
 const isSubmitting = ref(false);
@@ -857,19 +916,27 @@ const isFormValid = computed(() => {
 
   // Validate R-Card method if selected
   if (useRCard.value) {
-	if (!bacteriaRCardInitials.value) formErrors.value.push('Initials are required for R-Card method');
-    if (!timeINIncubator.value) formErrors.value.push('Incubator Time In is required for R-Card method');
-    if (!timeOUTIncubator.value) formErrors.value.push('Incubator Time Out is required for R-Card method');
-    if (incubationTime.value !== null && !isIncubationTimeValid.value) {
-      formErrors.value.push('Incubation time should be between 20 and 24 hours');
-    }
-    if (!ecoliA_count.value || !ecoliB_count.value || !ecoliC_count.value) {
-      formErrors.value.push('All three E. coli counts are required for R-Card method');
-    }
-    if (!sampleVolA.value || !sampleVolB.value || !sampleVolC.value) {
-      formErrors.value.push('All three sample volumes are required for R-Card method');
-    }
-  }
+		if (!bacteriaRCardInitials.value) formErrors.value.push('Initials are required for R-Card method');
+		if (!timeINIncDate.value || !timeINIncTime.value) formErrors.value.push('Incubator Time In is required for R-Card method');
+		if (!timeOUTIncDate.value || !timeOUTIncTime.value) formErrors.value.push('Incubator Time Out is required for R-Card method');
+
+		if (incubationTime.value !== null && !isIncubationTimeValid.value) {
+			formErrors.value.push('Incubation time should be between 20 and 24 hours');
+		}
+
+		// Helper function to check if a value has been explicitly set (including zero)
+		const isValueSet = (val) => val === 0 || Boolean(val);
+		
+		// Check if all three E. coli counts have been set (including zeros)
+		if (!isValueSet(ecoliA_count.value) || !isValueSet(ecoliB_count.value) || !isValueSet(ecoliC_count.value)) {
+			formErrors.value.push('All three E. coli counts are required for R-Card method');
+		}
+		
+		// Check if all sample volumes are set
+		if (!isValueSet(sampleVolA.value) || !isValueSet(sampleVolB.value) || !isValueSet(sampleVolC.value)) {
+			formErrors.value.push('All three sample volumes are required for R-Card method');
+		}
+	}
 
   return formErrors.value.length === 0;
 });
@@ -1060,7 +1127,7 @@ const updateJoinTable = async (tableName, sampleId, relatedIds) => {
 const prepareSampleData = () => {
 	// Helper functions with range validation
 	const toNullableNumber = (value, min = -Infinity, max = Infinity) => {
-		// Check if value is explicitly 0
+		// Explicitly check for 0
 		if (value === 0 || value === '0') return 0;
 		
 		const num = parseFloat(value);
@@ -1120,8 +1187,8 @@ const prepareSampleData = () => {
 	// Only include bacteria-related fields if R-Card method is selected
 	if (useRCard.value) {
 		Object.assign(baseData, {
-		bacteria_timedate_in: timeINIncubator.value || null,
-		bacteria_timedate_out: timeOUTIncubator.value || null,
+		bacteria_timedate_in: fullTimeIN.value,
+		bacteria_timedate_out: fullTimeOUT.value,
 		bacteria_rcard_initials: bacteriaRCardInitials.value || null,
 		bacteria_sample_a_ecoli_count: toNullableInteger(ecoliA_count.value),
 		bacteria_sample_a_ecoli: toNullableNumber(ecoliA.value),
@@ -1221,19 +1288,59 @@ const validateDateTime = (value) => {
 // Add these computed properties
 const timeInModel = computed({
   get() {
-    return timeINIncubator.value;
+    if (!timeINIncubator.value) return '';
+    try {
+      const date = new Date(timeINIncubator.value);
+      if (isNaN(date.getTime())) return '';
+      // Format to YYYY-MM-DDThh:mm format expected by datetime-local input
+      return date.toISOString().substring(0, 16);
+    } catch (e) {
+      console.error('Error formatting time in:', e);
+      return '';
+    }
   },
   set(value) {
-    timeINIncubator.value = validateDateTime(value);
+    if (!value) {
+      timeINIncubator.value = null;
+      return;
+    }
+    try {
+      // Store as ISO string to maintain consistency
+      const date = new Date(value);
+      if (!isNaN(date.getTime())) {
+        timeINIncubator.value = date.toISOString();
+      }
+    } catch (e) {
+      console.error('Error setting time in:', e);
+    }
   }
 });
 
 const timeOutModel = computed({
   get() {
-    return timeOUTIncubator.value;
+    if (!timeOUTIncubator.value) return '';
+    try {
+      const date = new Date(timeOUTIncubator.value);
+      if (isNaN(date.getTime())) return '';
+      return date.toISOString().substring(0, 16);
+    } catch (e) {
+      console.error('Error formatting time out:', e);
+      return '';
+    }
   },
   set(value) {
-    timeOUTIncubator.value = validateDateTime(value);
+    if (!value) {
+      timeOUTIncubator.value = null;
+      return;
+    }
+    try {
+      const date = new Date(value);
+      if (!isNaN(date.getTime())) {
+        timeOUTIncubator.value = date.toISOString();
+      }
+    } catch (e) {
+      console.error('Error setting time out:', e);
+    }
   }
 });
 
@@ -1452,9 +1559,11 @@ const resetForm = () => {
   
   // Reset R-Card specific fields
   useRCard.value = false;
-  timeINIncubator.value = null;
-  timeOUTIncubator.value = null;
-  
+  timeINIncDate.value = null;
+  timeINIncTime.value = null;
+  timeOUTIncDate.value = null;
+  timeOUTIncTime.value = null;
+    
   // Force a re-render of file upload component
   nextTick(() => {
     allFilesSelected.value = false;
@@ -1491,8 +1600,6 @@ const fillFormWithTestData = () => {
   streamFlowMeasured.value = 2.5;
   bacteriaRCardInitials.value = 'DCC';
   iCertifyCheckbox.value = true;
-  timeINIncubator.value = '09:00';
-  timeOUTIncubator.value = '09:00';
   ecoliA_count.value = 12;
   sampleVolA.value = 10;
   ecoliB_count.value = 10;
@@ -1554,7 +1661,7 @@ onMounted(async () => {
 });
 
 // Add a watch effect for incubator times to show warnings
-watch([timeINIncubator, timeOUTIncubator], ([newIn, newOut]) => {
+watch([fullTimeIN, fullTimeOUT], ([newIn, newOut]) => {
   if (!newIn || !newOut) return;
   
   const timeIn = new Date(newIn);
@@ -2099,32 +2206,49 @@ const confirmCancel = () => {
 						<div class="grid grid-cols-[1fr_2fr] gap-6">
 							<!-- Left Column - Time inputs -->
 							<div class="space-y-4">
-								<UFormGroup>
-									<label class="text-sm required-field">Time In Incubator</label>
-									<UInput 
-										v-model="timeInModel"
-										type="datetime-local"
-										icon="mdi:clock-outline"
-										min="1900-01-01T00:00"
-										max="2100-12-31T23:59"
-									/>
+								<div class="grid grid-cols-2 gap-4">
+									<UFormGroup>
+										<label class="text-sm required-field">Date In</label>
+										<UInput 
+										v-model="timeINIncDate"
+										type="date"
+										icon="solar:calendar-bold"
+										/>
 									</UFormGroup>
 									<UFormGroup>
-									<label class="text-sm required-field">Time Out Incubator</label>
-									<UInput 
-										v-model="timeOutModel"
-										type="datetime-local"
+										<label class="text-sm required-field">Time In</label>
+										<UInput 
+										v-model="timeINIncTime"
+										type="time"
 										icon="mdi:clock-outline"
-										min="1900-01-01T00:00"
-										max="2100-12-31T23:59"
-									/>
-								</UFormGroup>
-								<div v-if="timeINIncubator && timeOUTIncubator && !isIncubationTimeValid" 
+										/>
+									</UFormGroup>
+									</div>
+
+									<div class="grid grid-cols-2 gap-4">
+									<UFormGroup>
+										<label class="text-sm required-field">Date Out</label>
+										<UInput 
+										v-model="timeOUTIncDate"
+										type="date"
+										icon="solar:calendar-bold"
+										/>
+									</UFormGroup>
+									<UFormGroup>
+										<label class="text-sm required-field">Time Out</label>
+										<UInput 
+										v-model="timeOUTIncTime"
+										type="time"
+										icon="mdi:clock-outline"
+										/>
+									</UFormGroup>
+								</div>
+								<div v-if="fullTimeIN && fullTimeOUT && !isIncubationTimeValid" 
 									class="mt-2 p-2 bg-yellow-100 text-yellow-800 rounded">
 									Warning: Incubation time should be between 20 and 24 hours. 
 									{{ displayIncubationTime }}
 								</div>
-								<div v-if="timeINIncubator && timeOUTIncubator && isIncubationTimeValid" 
+								<div v-if="fullTimeIN && fullTimeOUT && isIncubationTimeValid" 
 									class="mt-2 p-2 rounded">
 									<b>{{ displayIncubationTime }}</b>
 								</div>

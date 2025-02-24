@@ -77,6 +77,11 @@ export function useRBAC() {
   // Access configuration - add new routes here - update the portal.vue for navigation
   const accessConfig: AccessControl[] = [
     {
+      path: '/portal/leader/hub-manager-invite',
+      roles: [roles.devAdmin, roles.wwkyAdmin],
+      policies: [policies.fullAdmin, policies.wwkyAdmin, policies.leader],
+    },
+    {
       path: '/portal/users',
       roles: [roles.devAdmin, roles.wwkyAdmin],
       policies: [policies.fullAdmin, policies.wwkyAdmin, policies.leader],
