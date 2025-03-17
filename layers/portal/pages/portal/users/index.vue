@@ -1,12 +1,15 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import PolicyGuard from '../../components/PolicyGuard.vue'
+import SamplingIntentSummary from '~/components/SamplingIntentSummary.vue'
+import UserSamplingIntent from '~/components/UserSamplingIntent.vue'
 
 const config = useRuntimeConfig()
 const loading = ref(true)
 const error = ref(null)
 const users = ref([])
 const showHubInfo = ref({})
+const currentYear = ref(new Date().getFullYear())
 
 // Search and filter states
 const searchQuery = ref('')
@@ -72,6 +75,11 @@ const filteredAndSortedUsers = computed(() => {
   })
 })
 
+// Get user IDs for sampling intent summary
+const filteredUserIds = computed(() => {
+  return filteredAndSortedUsers.value.map(user => user.id);
+});
+
 // Export to CSV function
 const exportToCSV = () => {
   const headers = [
@@ -91,7 +99,13 @@ const exportToCSV = () => {
     'Training Biological',
     'Original Training Date',
     'Latest Training Date'
-  ]
+  ];
+
+  // Add sampling intent columns for each month
+  ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].forEach(month => {
+    headers.push(`${month} Sites`);
+    headers.push(`${month} E.coli Cards`);
+  });
 
   const csvData = filteredAndSortedUsers.value.map(user => [
     user.first_name,
@@ -110,20 +124,20 @@ const exportToCSV = () => {
     user.sampler_data?.training_biological ? 'Yes' : 'No',
     formatDate(user.sampler_data?.original_training_date),
     formatDate(user.sampler_data?.training_date_latest)
-  ])
+  ]);
 
   const csvContent = [headers, ...csvData]
     .map(row => row.map(cell => `"${cell || ''}"`).join(','))
-    .join('\n')
+    .join('\n');
 
-  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-  const link = document.createElement('a')
-  link.href = URL.createObjectURL(blob)
-  link.setAttribute('download', `users_export_${new Date().toISOString().split('T')[0]}.csv`)
-  document.body.appendChild(link)
-  link.click()
-  document.body.removeChild(link)
-}
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.setAttribute('download', `users_export_${new Date().toISOString().split('T')[0]}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+};
 
 // Group definitions with icons and descriptions
 const userGroups = {
@@ -139,7 +153,7 @@ const userGroups = {
     description: 'Manage basin-specific activities and users',
     policyId: config.public.LEADER_POLICY_ID
   },
-  hubmanager:{
+  hubmanager: {
     title: 'Hub Managers',
     icon: 'material-symbols:hub-outline',
     description: 'Manage hub-specific activities and users',
@@ -157,20 +171,24 @@ const userGroups = {
     description: 'Collect and submit water samples',
     policyId: config.public.SAMPLER_POLICY_ID
   }
-}
+};
 
 const visibleGroups = ref(Object.keys(userGroups).reduce((acc, key) => {
-  acc[key] = true // All groups visible by default
-  return acc
-}, {}))
+  acc[key] = true; // All groups visible by default
+  return acc;
+}, {}));
 
+// Year selection buttons
+const changeYear = (newYear) => {
+  currentYear.value = newYear;
+};
 
 const fetchUsers = async () => {
-  loading.value = true
-  error.value = null
+  loading.value = true;
+  error.value = null;
   
   try {
-    const nuxtApp = useNuxtApp()
+    const nuxtApp = useNuxtApp();
     const response = await nuxtApp.$directus.request(readItems('sampler_data', {
       fields: [
         '*',
@@ -178,7 +196,7 @@ const fetchUsers = async () => {
         'hub_id.*.*',
         'user_id.policies.*.*'
       ]
-    }))
+    }));
 
     // Transform the response to handle user_id structure
     const transformedUsers = response
@@ -209,16 +227,16 @@ const fetchUsers = async () => {
           DO_expire: item.DO_expire,
           PH_expire: item.PH_expire
         }
-      }))
+      }));
     
-    users.value = transformedUsers
+    users.value = transformedUsers;
   } catch (err) {
-    console.error('Error fetching users:', err)
-    error.value = 'Failed to load users'
+    console.error('Error fetching users:', err);
+    error.value = 'Failed to load users';
   } finally {
-    loading.value = false
+    loading.value = false;
   }
-}
+};
 
 // Update the getUsersByPolicy computed function:
 const getUsersByPolicy = (policyId) => {
@@ -226,43 +244,52 @@ const getUsersByPolicy = (policyId) => {
     return filteredAndSortedUsers.value.filter(user => 
       user.policies?.some(p => p.policy?.id === policyId)
     ).sort((a, b) => {
-      const lastNameA = a.last_name?.toLowerCase() || ''
-      const lastNameB = b.last_name?.toLowerCase() || ''
-      return lastNameA.localeCompare(lastNameB)
-    })
-  })
-}
+      const lastNameA = a.last_name?.toLowerCase() || '';
+      const lastNameB = b.last_name?.toLowerCase() || '';
+      return lastNameA.localeCompare(lastNameB);
+    });
+  });
+};
 
 const toggleGroupVisibility = (groupKey) => {
-  visibleGroups.value[groupKey] = !visibleGroups.value[groupKey]
-}
+  visibleGroups.value[groupKey] = !visibleGroups.value[groupKey];
+};
 
 // Format functions
 const formatDate = (date) => {
-  if (!date) return 'Never'
-  return new Date(date).toLocaleDateString()
-}
+  if (!date) return 'Never';
+  return new Date(date).toLocaleDateString();
+};
 
 const formatName = (user) => {
-  return `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Unnamed User'
-}
+  return `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Unnamed User';
+};
 
 const formatPhoneNumber = (phone: string | null) => {
   if (!phone) return 'Not specified';
-    // Remove all non-numeric characters
+  // Remove all non-numeric characters
   const cleaned = phone.replace(/\D/g, '');
-    // Check if we have the right number of digits
+  // Check if we have the right number of digits
   if (cleaned.length !== 10) {
     return phone; // Return original if not valid
   }
-    // Format as (XXX) XXX-XXXX
+  // Format as (XXX) XXX-XXXX
   return `(${cleaned.slice(0,3)}) ${cleaned.slice(3,6)}-${cleaned.slice(6)}`;
+};
+
+// Get user IDs for a specific policy
+const getUserIdsByPolicy = (policyId) => {
+  return computed(() => {
+    return users.value
+      .filter(user => user.policies?.some(p => p.policy?.id === policyId))
+      .map(user => user.id);
+  });
 };
 
 // Load users on mount
 onMounted(() => {
-  fetchUsers()
-})
+  fetchUsers();
+});
 </script>
 
 <template>
@@ -290,6 +317,36 @@ onMounted(() => {
           <!-- Filter Controls -->
           <UCard>
             <div class="space-y-4">
+              <div class="flex justify-between items-center mb-2">
+                <h3 class="text-lg font-semibold">Filters</h3>
+                
+                <!-- Year selection -->
+                <div class="flex items-center gap-2">
+                  <span class="text-sm text-gray-600">Current Year:</span>
+                  <UButtonGroup size="sm">
+                    <UButton
+                      :color="currentYear === currentYear - 1 ? 'primary' : 'gray'"
+                      @click="changeYear(currentYear - 1)"
+                    >
+                      {{ currentYear - 1 }}
+                    </UButton>
+                    <UButton
+                      :color="currentYear === currentYear ? 'primary' : 'gray'"
+                      @click="changeYear(currentYear)"
+                    >
+                      {{ currentYear }}
+                    </UButton>
+                    <UButton
+                      :color="currentYear === currentYear + 1 ? 'primary' : 'gray'"
+                      :disabled="currentYear + 1 > new Date().getFullYear() + 1"
+                      @click="changeYear(currentYear + 1)"
+                    >
+                      {{ currentYear + 1 }}
+                    </UButton>
+                  </UButtonGroup>
+                </div>
+              </div>
+
               <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <!-- Search -->
                 <UInput
@@ -357,6 +414,26 @@ onMounted(() => {
             </div>
           </UCard>
 
+          <!-- NEW: Sampling Intent Summary -->
+          <UCard>
+            <template #header>
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <UIcon name="i-heroicons-chart-bar" class="w-5 h-5" />
+                  <h2 class="text-xl font-semibold">{{ currentYear }} Sampling Plans Summary</h2>
+                </div>
+              </div>
+              <p class="text-sm text-gray-600 mt-1">
+                Overview of planned sampling sites and E. coli card usage for {{ filteredAndSortedUsers.length }} users
+              </p>
+            </template>
+            
+            <SamplingIntentSummary
+              :user-ids="filteredUserIds"
+              :year="currentYear"
+            />
+          </UCard>
+
           <!-- Stats Overview -->
           <UCard>
             <template #header>
@@ -369,7 +446,7 @@ onMounted(() => {
                 </div>
             </template>
             
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
               <div 
                 v-for="(group, key) in userGroups" 
                 :key="key" 
@@ -387,6 +464,17 @@ onMounted(() => {
                   {{ getUsersByPolicy(group.policyId).value.length }}
                 </div>
                 <div class="text-sm text-gray-600">{{ group.title }}</div>
+              </div>
+              
+              <!-- NEW: Sampling plan summary card -->
+              <div class="p-4 bg-gray-50 rounded-lg">
+                <div class="mb-2">
+                  <UIcon name="i-heroicons-document-chart-bar" class="w-8 h-8 text-blue-500" />
+                </div>
+                <div class="text-2xl font-bold text-blue-600">
+                  {{ getUserIdsByPolicy(config.public.SAMPLER_POLICY_ID).value.length }}
+                </div>
+                <div class="text-sm text-gray-600">Samplers with Plans</div>
               </div>
             </div>
           </UCard>
@@ -418,154 +506,164 @@ onMounted(() => {
               </template>
 
               <div class="grid gap-4">
-                <div v-for="user in filteredAndSortedUsers.filter(u => 
-                  u.policies?.some(p => p.policy?.id === group.policyId)
-                )"
+                <div v-for="user in getUsersByPolicy(group.policyId).value"
                   :key="user.id"
                   class="p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
                   <div class="space-y-4">
                         <!-- Basic Info -->
                         <div class="flex justify-between items-start">
-                        <div>
+                          <div>
                             <h3 class="font-medium text-lg">{{ formatName(user) }}</h3>
                             <p class="text-sm text-gray-600">{{ user.email }}</p>
                             <p class="text-sm text-gray-600">{{ formatPhoneNumber(user.phone) }}</p>
-                        </div>
-                        <UBadge :color="user.status === 'active' ? 'green' : 'yellow'">
+                          </div>
+                          <UBadge :color="user.status === 'active' ? 'green' : 'yellow'">
                             {{ user.status }}
-                        </UBadge>
+                          </UBadge>
                         </div>
 
                         <!-- Address -->
                         <div class="text-sm">
-                        <p class="text-gray-900 font-medium">Address:</p>
-                        <p class="text-gray-600">{{ user.street }}</p>
-                        <p class="text-gray-600">{{ user.city }}, {{ user.state }} {{ user.zip }}</p>
+                          <p class="text-gray-900 font-medium">Address:</p>
+                          <p class="text-gray-600">{{ user.street }}</p>
+                          <p class="text-gray-600">{{ user.city }}, {{ user.state }} {{ user.zip }}</p>
                         </div>
 
                         <!-- Role and Hub -->
                         <div class="text-sm">
+                          <p class="text-gray-900 font-medium">
+                            User Type: {{ user?.role?.name }}
+                          </p>
+                          <p class="text-gray-900 font-medium">
+                            Role(s): {{ user?.policies?.map(p => p.policy?.name).filter(Boolean).join(', ') || 'No Role' }}
+                          </p>
+                          <div class="mt-1 flex items-center gap-2">
                             <p class="text-gray-900 font-medium">
-                                User Type: {{ user?.role.name }}
+                              Preferred Hub: {{ user.sampler_data?.hub_id?.Description || 'None' }}
                             </p>
-                            <p class="text-gray-900 font-medium">
-                                Role(s): {{ user?.policies?.map(p => p.policy?.name).filter(Boolean).join(', ') || 'No Role' }}
-                            </p>
-                            <div class="mt-1 flex items-center gap-2">
-                                <p class="text-gray-900 font-medium">
-                                Preferred Hub: {{ user.sampler_data?.hub_id?.Description || 'None' }}
-                                </p>
-                                <!-- Show info button only if there's a hub -->
-                                <UButton
-                                v-if="user.sampler_data?.hub_id?.Description"
-                                icon="i-heroicons-information-circle"
-                                color="gray"
-                                variant="ghost"
-                                size="xs"
-                                @click="showHubInfo[user.id] = true"
-                                />
-                            </div>
+                            <!-- Show info button only if there's a hub -->
+                            <UButton
+                              v-if="user.sampler_data?.hub_id?.Description"
+                              icon="i-heroicons-information-circle"
+                              color="gray"
+                              variant="ghost"
+                              size="xs"
+                              @click="showHubInfo[user.id] = true"
+                            />
+                          </div>
                         </div>
 
                         <!-- Hub Info Modal -->
-                       <UModal
-                        v-if="user.sampler_data?.hub_id?.Description"
-                        v-model="showHubInfo[user.id]"
-                        :ui="{
+                        <UModal
+                          v-if="user.sampler_data?.hub_id?.Description"
+                          v-model="showHubInfo[user.id]"
+                          :ui="{
                             overlay: {
-                            background: 'bg-gray-300/50',  // This makes it 50% transparent
-                            transition: {
+                              background: 'bg-gray-300/50',  // This makes it 50% transparent
+                              transition: {
                                 enter: 'ease-out duration-300',
                                 enterFrom: 'opacity-0',
                                 enterTo: 'opacity-100',
                                 leave: 'ease-in duration-200',
                                 leaveFrom: 'opacity-100',
                                 leaveTo: 'opacity-0'
-                            }
+                              }
                             },
                             width: 'sm:max-w-lg'  // Controls modal width
-                        }"
+                          }"
                         >
-                        <UCard>
+                          <UCard>
                             <template #header>
-                            <div class="flex justify-between items-center">
+                              <div class="flex justify-between items-center">
                                 <h3 class="text-lg font-medium">Hub Information</h3>
                                 <UButton
-                                icon="i-heroicons-x-mark"
-                                color="gray"
-                                variant="ghost"
-                                @click="showHubInfo[user.id] = false"
+                                  icon="i-heroicons-x-mark"
+                                  color="gray"
+                                  variant="ghost"
+                                  @click="showHubInfo[user.id] = false"
                                 />
-                            </div>
+                              </div>
                             </template>
 
                             <div class="space-y-4">
-                            <div>
+                              <div>
                                 <h4 class="font-medium text-lg">{{ user.sampler_data.hub_id.Description }}</h4>
                                 <p class="text-sm text-gray-600">{{ user.sampler_data.hub_id.Full_Address }}</p>
-                            </div>
+                              </div>
 
-                            <div class="text-sm space-y-2">
+                              <div class="text-sm space-y-2">
                                 <p><span class="font-medium">Contact:</span> {{ user.sampler_data.hub_id.Contact_Person }}</p>
                                 <p><span class="font-medium">Phone:</span> {{ user.sampler_data.hub_id.Phone }}</p>
                                 <p><span class="font-medium">Email:</span> {{ user.sampler_data.hub_id.Email }}</p>
-                            </div>
+                              </div>
 
-                            <div v-if="user.sampler_data.hub_id.Availability" class="text-sm">
+                              <div v-if="user.sampler_data.hub_id.Availability" class="text-sm">
                                 <p class="font-medium">Availability:</p>
                                 <p>{{ user.sampler_data.hub_id.Availability }}</p>
+                              </div>
                             </div>
-                            </div>
-                        </UCard>
+                          </UCard>
                         </UModal>
+                        
                         <!-- Sampler Information -->
                         <div v-if="user.sampler_data" class="text-sm border-t pt-3 mt-3">
-                        <p class="font-medium mb-2">Sampler Information:</p>
-                        
-                        <!-- Training -->
-                        <div class="mb-2">
+                          <p class="font-medium mb-2">Sampler Information:</p>
+                          
+                          <!-- Training -->
+                          <div class="mb-2">
                             <p class="text-gray-900">Training Completed:</p>
                             <ul class="list-disc list-inside text-gray-600 ml-2">
-                            <li v-if="user.sampler_data.training_field_chemistry">Field Chemistry</li>
-                            <li v-if="user.sampler_data.training_r_card">R-Card</li>
-                            <li v-if="user.sampler_data.training_habitat">Habitat</li>
-                            <li v-if="user.sampler_data.training_biological">Biological</li>
+                              <li v-if="user.sampler_data.training_field_chemistry">Field Chemistry</li>
+                              <li v-if="user.sampler_data.training_r_card">R-Card</li>
+                              <li v-if="user.sampler_data.training_habitat">Habitat</li>
+                              <li v-if="user.sampler_data.training_biological">Biological</li>
                             </ul>
                             <p class="text-gray-600 mt-1">
-                            Original Training: {{ formatDate(user.sampler_data.original_training_date) }}
+                              Original Training: {{ formatDate(user.sampler_data.original_training_date) }}
                             </p>
                             <p class="text-gray-600">
-                            Latest Training: {{ formatDate(user.sampler_data.training_date_latest) }}
+                              Latest Training: {{ formatDate(user.sampler_data.training_date_latest) }}
                             </p>
-                        </div>
+                          </div>
 
-                        <!-- Equipment -->
-                        <div class="mb-2">
+                          <!-- Equipment -->
+                          <div class="mb-2">
                             <p class="text-gray-900">Equipment:</p>
                             <ul class="list-disc list-inside text-gray-600 ml-2">
-                            <li v-if="user.sampler_data.equip_ph">pH Meter</li>
-                            <li v-if="user.sampler_data.equip_do">DO Meter</li>
-                            <li v-if="user.sampler_data.equip_cond">Conductivity Meter</li>
-                            <li v-if="user.sampler_data.equip_thermo">Thermometer</li>
-                            <li v-if="user.sampler_data.equip_waste">Waste Container</li>
-                            <li v-if="user.sampler_data.equip_pan">Pan</li>
-                            <li v-if="user.sampler_data.equip_flip">Flip</li>
-                            <li v-if="user.sampler_data.equip_incubator">Incubator</li>
+                              <li v-if="user.sampler_data.equip_ph">pH Meter</li>
+                              <li v-if="user.sampler_data.equip_do">DO Meter</li>
+                              <li v-if="user.sampler_data.equip_cond">Conductivity Meter</li>
+                              <li v-if="user.sampler_data.equip_thermo">Thermometer</li>
+                              <li v-if="user.sampler_data.equip_waste">Waste Container</li>
+                              <li v-if="user.sampler_data.equip_pan">Pan</li>
+                              <li v-if="user.sampler_data.equip_flip">Flip</li>
+                              <li v-if="user.sampler_data.equip_incubator">Incubator</li>
                             </ul>
-                        </div>
+                          </div>
 
-                        <!-- Kit Information -->
-                        <div>
+                          <!-- Kit Information -->
+                          <div class="mb-2">
                             <p class="text-gray-900">Kit Option: {{ user.sampler_data.kitOption || 'None' }}</p>
                             <p v-if="user.sampler_data.DO_expire" class="text-gray-600">
-                            DO Expiration: {{ formatDate(user.sampler_data.DO_expire) }}
+                              DO Expiration: {{ formatDate(user.sampler_data.DO_expire) }}
                             </p>
                             <p v-if="user.sampler_data.PH_expire" class="text-gray-600">
-                            pH Expiration: {{ formatDate(user.sampler_data.PH_expire) }}
+                              pH Expiration: {{ formatDate(user.sampler_data.PH_expire) }}
                             </p>
+                          </div>
+                          
+                          <!-- NEW: Sampling Plans -->
+                          <div>
+                            <p class="text-gray-900">Sampling Plans:</p>
+                            <div class="mt-1 border-l-4 border-blue-200 pl-3 py-1">
+                              <UserSamplingIntent 
+                                :user-id="user.id"
+                                :year="currentYear"
+                              />
+                            </div>
+                          </div>
                         </div>
-                        </div>
-                    </div>
+                  </div>
                 </div>
               </div>
             </UCard>

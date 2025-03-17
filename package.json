@@ -60,6 +60,7 @@
 		"@turf/bbox": "^7.1.0",
 		"@turf/boolean-point-in-polygon": "^7.1.0",
 		"bcrypt": "^5.1.1",
+		"chart.js": "^4.4.8",
 		"formidable": "^3.5.1",
 		"fs-extra": "^11.2.0",
 		"joi": "^17.13.1",
