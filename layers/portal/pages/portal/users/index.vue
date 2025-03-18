@@ -107,8 +107,25 @@ const fetchSamplersWithPlansCount = async () => {
   }
 };
 
-// Export to CSV function
-const exportToCSV = () => {
+// Export to CSV function with sampling intent data
+const exportToCSV = async () => {
+  // Define months for consistency
+  const months = [
+    { name: 'January', abbr: 'Jan', key: 'jan' },
+    { name: 'February', abbr: 'Feb', key: 'feb' },
+    { name: 'March', abbr: 'Mar', key: 'mar' },
+    { name: 'April', abbr: 'Apr', key: 'apr' },
+    { name: 'May', abbr: 'May', key: 'may' },
+    { name: 'June', abbr: 'Jun', key: 'jun' },
+    { name: 'July', abbr: 'Jul', key: 'jul' },
+    { name: 'August', abbr: 'Aug', key: 'aug' },
+    { name: 'September', abbr: 'Sep', key: 'sep' },
+    { name: 'October', abbr: 'Oct', key: 'oct' },
+    { name: 'November', abbr: 'Nov', key: 'nov' },
+    { name: 'December', abbr: 'Dec', key: 'dec' }
+  ];
+  
+  // Set up headers
   const headers = [
     'First Name',
     'Last Name',
@@ -129,38 +146,78 @@ const exportToCSV = () => {
   ];
 
   // Add sampling intent columns for each month
-  ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].forEach(month => {
-    headers.push(`${month} Sites`);
-    headers.push(`${month} E.coli Cards`);
+  months.forEach(month => {
+    headers.push(`${month.abbr} Sites`);
+    headers.push(`${month.abbr} E.coli Cards`);
   });
 
-  const csvData = filteredAndSortedUsers.value.map(user => [
-    user.first_name,
-    user.last_name,
-    user.email,
-    formatPhoneNumber(user.phone),
-    user.status,
-    user.sampler_data?.hub_id?.Description,
-    user.street,
-    user.city,
-    user.state,
-    user.zip,
-    user.sampler_data?.training_field_chemistry ? 'Yes' : 'No',
-    user.sampler_data?.training_r_card ? 'Yes' : 'No',
-    user.sampler_data?.training_habitat ? 'Yes' : 'No',
-    user.sampler_data?.training_biological ? 'Yes' : 'No',
-    formatDate(user.sampler_data?.original_training_date),
-    formatDate(user.sampler_data?.training_date_latest)
-  ]);
+  // First, fetch all sampling intent data for the current year in one query
+  let samplingIntentData = [];
+  try {
+    const response = await useDirectus(readItems('sampling_intent', {
+      filter: {
+        year: { _eq: currentYear.value }
+      },
+      fields: ['*'],
+      limit: -1
+    }));
+    samplingIntentData = response;
+  } catch (err) {
+    console.error('Error fetching sampling intent data for CSV:', err);
+    // Continue with what we have
+  }
 
+  // Create a lookup map for quicker access
+  const intentByUserId = {};
+  samplingIntentData.forEach(intent => {
+    intentByUserId[intent.user_id] = intent;
+  });
+
+  // Process user data and combine with sampling intent
+  const csvData = filteredAndSortedUsers.value.map(user => {
+    // Basic user data
+    const userData = [
+      user.first_name,
+      user.last_name,
+      user.email,
+      formatPhoneNumber(user.phone),
+      user.status,
+      user.sampler_data?.hub_id?.Description,
+      user.street,
+      user.city,
+      user.state,
+      user.zip,
+      user.sampler_data?.training_field_chemistry ? 'Yes' : 'No',
+      user.sampler_data?.training_r_card ? 'Yes' : 'No',
+      user.sampler_data?.training_habitat ? 'Yes' : 'No',
+      user.sampler_data?.training_biological ? 'Yes' : 'No',
+      formatDate(user.sampler_data?.original_training_date),
+      formatDate(user.sampler_data?.training_date_latest)
+    ];
+
+    // Get sampling intent data for this user
+    const userIntent = intentByUserId[user.id] || null;
+    
+    // Add sampling intent data for each month
+    months.forEach(month => {
+      const key = month.key;
+      userData.push(userIntent ? (userIntent[`${key}_sites`] || 0) : 0);
+      userData.push(userIntent ? (userIntent[`${key}_ecoli`] || 0) : 0);
+    });
+
+    return userData;
+  });
+
+  // Create CSV content
   const csvContent = [headers, ...csvData]
-    .map(row => row.map(cell => `"${cell || ''}"`).join(','))
+    .map(row => row.map(cell => `"${(cell !== undefined && cell !== null) ? cell : ''}"`).join(','))
     .join('\n');
 
+  // Create and trigger download
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
   const link = document.createElement('a');
   link.href = URL.createObjectURL(blob);
-  link.setAttribute('download', `users_export_${new Date().toISOString().split('T')[0]}.csv`);
+  link.setAttribute('download', `users_export_${currentYear.value}_${new Date().toISOString().split('T')[0]}.csv`);
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);

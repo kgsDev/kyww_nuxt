@@ -1,7 +1,7 @@
 {
 	"private": true,
 	"scripts": {
-		"build": "NODE_OPTIONS='--max-old-space-size=16384' nuxt build",
+		"build": "NODE_OPTIONS='--max-old-space-size=6144' nuxt build",
 		"dev": "NODE_OPTIONS='--max-old-space-size=4096' nuxt dev",
 		"start": "nuxt start",
 		"generate": "nuxt generate",
