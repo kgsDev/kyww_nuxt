@@ -10,6 +10,7 @@ const error = ref(null)
 const users = ref([])
 const showHubInfo = ref({})
 const currentYear = ref(new Date().getFullYear())
+const samplersWithPlans = ref(0) // Track samplers with plans
 
 // Search and filter states
 const searchQuery = ref('')
@@ -79,6 +80,32 @@ const filteredAndSortedUsers = computed(() => {
 const filteredUserIds = computed(() => {
   return filteredAndSortedUsers.value.map(user => user.id);
 });
+
+// Handle count update from the SamplingIntentSummary component
+const updateSamplersCount = (count) => {
+  samplersWithPlans.value = count;
+};
+
+// Function to fetch samplers with plans count
+const fetchSamplersWithPlansCount = async () => {
+  try {
+    // Query the sampling_intent table to count unique users with plans for the current year
+    const response = await useDirectus(readItems('sampling_intent', {
+      filter: {
+        year: { _eq: currentYear.value }
+      },
+      fields: ['user_id'],
+      limit: -1
+    }));
+    
+    // Count unique user IDs
+    const uniqueUserIds = new Set(response.map(plan => plan.user_id));
+    samplersWithPlans.value = uniqueUserIds.size;
+  } catch (err) {
+    console.error('Error fetching samplers with plans count:', err);
+    samplersWithPlans.value = 0;
+  }
+};
 
 // Export to CSV function
 const exportToCSV = () => {
@@ -181,6 +208,7 @@ const visibleGroups = ref(Object.keys(userGroups).reduce((acc, key) => {
 // Year selection buttons
 const changeYear = (newYear) => {
   currentYear.value = newYear;
+  fetchSamplersWithPlansCount();
 };
 
 const fetchUsers = async () => {
@@ -277,18 +305,17 @@ const formatPhoneNumber = (phone: string | null) => {
   return `(${cleaned.slice(0,3)}) ${cleaned.slice(3,6)}-${cleaned.slice(6)}`;
 };
 
-// Get user IDs for a specific policy
-const getUserIdsByPolicy = (policyId) => {
-  return computed(() => {
-    return users.value
-      .filter(user => user.policies?.some(p => p.policy?.id === policyId))
-      .map(user => user.id);
-  });
-};
+// Get count of samplers (users with the sampler policy)
+const samplerCount = computed(() => {
+  return users.value.filter(user => 
+    user.policies?.some(p => p.policy?.id === config.public.SAMPLER_POLICY_ID)
+  ).length;
+});
 
-// Load users on mount
+// Load data on mount
 onMounted(() => {
   fetchUsers();
+  fetchSamplersWithPlansCount();
 });
 </script>
 
@@ -414,7 +441,7 @@ onMounted(() => {
             </div>
           </UCard>
 
-          <!-- NEW: Sampling Intent Summary -->
+          <!-- Sampling Intent Summary -->
           <UCard>
             <template #header>
               <div class="flex items-center justify-between">
@@ -431,6 +458,7 @@ onMounted(() => {
             <SamplingIntentSummary
               :user-ids="filteredUserIds"
               :year="currentYear"
+              @update:count="updateSamplersCount"
             />
           </UCard>
 
@@ -442,8 +470,8 @@ onMounted(() => {
                 <h2 class="text-xl font-semibold">User Statistics</h2>
               </div>
               <div>
-                  <p class="text-sm text-gray-600 mt-1">Users may belong to more than one group</p>
-                </div>
+                <p class="text-sm text-gray-600 mt-1">Users may belong to more than one group</p>
+              </div>
             </template>
             
             <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
@@ -466,15 +494,18 @@ onMounted(() => {
                 <div class="text-sm text-gray-600">{{ group.title }}</div>
               </div>
               
-              <!-- NEW: Sampling plan summary card -->
+              <!-- Sampling plan summary card -->
               <div class="p-4 bg-gray-50 rounded-lg">
                 <div class="mb-2">
                   <UIcon name="i-heroicons-document-chart-bar" class="w-8 h-8 text-blue-500" />
                 </div>
                 <div class="text-2xl font-bold text-blue-600">
-                  {{ getUserIdsByPolicy(config.public.SAMPLER_POLICY_ID).value.length }}
+                  {{ samplersWithPlans }}
                 </div>
                 <div class="text-sm text-gray-600">Samplers with Plans</div>
+                <div class="text-xs text-gray-500 mt-1" v-if="samplersWithPlans > 0">
+                  For {{ currentYear }}
+                </div>
               </div>
             </div>
           </UCard>
@@ -510,159 +541,159 @@ onMounted(() => {
                   :key="user.id"
                   class="p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
                   <div class="space-y-4">
-                        <!-- Basic Info -->
-                        <div class="flex justify-between items-start">
-                          <div>
-                            <h3 class="font-medium text-lg">{{ formatName(user) }}</h3>
-                            <p class="text-sm text-gray-600">{{ user.email }}</p>
-                            <p class="text-sm text-gray-600">{{ formatPhoneNumber(user.phone) }}</p>
-                          </div>
-                          <UBadge :color="user.status === 'active' ? 'green' : 'yellow'">
-                            {{ user.status }}
-                          </UBadge>
-                        </div>
+                    <!-- Basic Info -->
+                    <div class="flex justify-between items-start">
+                      <div>
+                        <h3 class="font-medium text-lg">{{ formatName(user) }}</h3>
+                        <p class="text-sm text-gray-600">{{ user.email }}</p>
+                        <p class="text-sm text-gray-600">{{ formatPhoneNumber(user.phone) }}</p>
+                      </div>
+                      <UBadge :color="user.status === 'active' ? 'green' : 'yellow'">
+                        {{ user.status }}
+                      </UBadge>
+                    </div>
 
-                        <!-- Address -->
-                        <div class="text-sm">
-                          <p class="text-gray-900 font-medium">Address:</p>
-                          <p class="text-gray-600">{{ user.street }}</p>
-                          <p class="text-gray-600">{{ user.city }}, {{ user.state }} {{ user.zip }}</p>
-                        </div>
+                    <!-- Address -->
+                    <div class="text-sm">
+                      <p class="text-gray-900 font-medium">Address:</p>
+                      <p class="text-gray-600">{{ user.street }}</p>
+                      <p class="text-gray-600">{{ user.city }}, {{ user.state }} {{ user.zip }}</p>
+                    </div>
 
-                        <!-- Role and Hub -->
-                        <div class="text-sm">
-                          <p class="text-gray-900 font-medium">
-                            User Type: {{ user?.role?.name }}
-                          </p>
-                          <p class="text-gray-900 font-medium">
-                            Role(s): {{ user?.policies?.map(p => p.policy?.name).filter(Boolean).join(', ') || 'No Role' }}
-                          </p>
-                          <div class="mt-1 flex items-center gap-2">
-                            <p class="text-gray-900 font-medium">
-                              Preferred Hub: {{ user.sampler_data?.hub_id?.Description || 'None' }}
-                            </p>
-                            <!-- Show info button only if there's a hub -->
+                    <!-- Role and Hub -->
+                    <div class="text-sm">
+                      <p class="text-gray-900 font-medium">
+                        User Type: {{ user?.role?.name }}
+                      </p>
+                      <p class="text-gray-900 font-medium">
+                        Role(s): {{ user?.policies?.map(p => p.policy?.name).filter(Boolean).join(', ') || 'No Role' }}
+                      </p>
+                      <div class="mt-1 flex items-center gap-2">
+                        <p class="text-gray-900 font-medium">
+                          Preferred Hub: {{ user.sampler_data?.hub_id?.Description || 'None' }}
+                        </p>
+                        <!-- Show info button only if there's a hub -->
+                        <UButton
+                          v-if="user.sampler_data?.hub_id?.Description"
+                          icon="i-heroicons-information-circle"
+                          color="gray"
+                          variant="ghost"
+                          size="xs"
+                          @click="showHubInfo[user.id] = true"
+                        />
+                      </div>
+                    </div>
+
+                    <!-- Hub Info Modal -->
+                    <UModal
+                      v-if="user.sampler_data?.hub_id?.Description"
+                      v-model="showHubInfo[user.id]"
+                      :ui="{
+                        overlay: {
+                          background: 'bg-gray-300/50',  // This makes it 50% transparent
+                          transition: {
+                            enter: 'ease-out duration-300',
+                            enterFrom: 'opacity-0',
+                            enterTo: 'opacity-100',
+                            leave: 'ease-in duration-200',
+                            leaveFrom: 'opacity-100',
+                            leaveTo: 'opacity-0'
+                          }
+                        },
+                        width: 'sm:max-w-lg'  // Controls modal width
+                      }"
+                    >
+                      <UCard>
+                        <template #header>
+                          <div class="flex justify-between items-center">
+                            <h3 class="text-lg font-medium">Hub Information</h3>
                             <UButton
-                              v-if="user.sampler_data?.hub_id?.Description"
-                              icon="i-heroicons-information-circle"
+                              icon="i-heroicons-x-mark"
                               color="gray"
                               variant="ghost"
-                              size="xs"
-                              @click="showHubInfo[user.id] = true"
+                              @click="showHubInfo[user.id] = false"
                             />
                           </div>
-                        </div>
+                        </template>
 
-                        <!-- Hub Info Modal -->
-                        <UModal
-                          v-if="user.sampler_data?.hub_id?.Description"
-                          v-model="showHubInfo[user.id]"
-                          :ui="{
-                            overlay: {
-                              background: 'bg-gray-300/50',  // This makes it 50% transparent
-                              transition: {
-                                enter: 'ease-out duration-300',
-                                enterFrom: 'opacity-0',
-                                enterTo: 'opacity-100',
-                                leave: 'ease-in duration-200',
-                                leaveFrom: 'opacity-100',
-                                leaveTo: 'opacity-0'
-                              }
-                            },
-                            width: 'sm:max-w-lg'  // Controls modal width
-                          }"
-                        >
-                          <UCard>
-                            <template #header>
-                              <div class="flex justify-between items-center">
-                                <h3 class="text-lg font-medium">Hub Information</h3>
-                                <UButton
-                                  icon="i-heroicons-x-mark"
-                                  color="gray"
-                                  variant="ghost"
-                                  @click="showHubInfo[user.id] = false"
-                                />
-                              </div>
-                            </template>
-
-                            <div class="space-y-4">
-                              <div>
-                                <h4 class="font-medium text-lg">{{ user.sampler_data.hub_id.Description }}</h4>
-                                <p class="text-sm text-gray-600">{{ user.sampler_data.hub_id.Full_Address }}</p>
-                              </div>
-
-                              <div class="text-sm space-y-2">
-                                <p><span class="font-medium">Contact:</span> {{ user.sampler_data.hub_id.Contact_Person }}</p>
-                                <p><span class="font-medium">Phone:</span> {{ user.sampler_data.hub_id.Phone }}</p>
-                                <p><span class="font-medium">Email:</span> {{ user.sampler_data.hub_id.Email }}</p>
-                              </div>
-
-                              <div v-if="user.sampler_data.hub_id.Availability" class="text-sm">
-                                <p class="font-medium">Availability:</p>
-                                <p>{{ user.sampler_data.hub_id.Availability }}</p>
-                              </div>
-                            </div>
-                          </UCard>
-                        </UModal>
-                        
-                        <!-- Sampler Information -->
-                        <div v-if="user.sampler_data" class="text-sm border-t pt-3 mt-3">
-                          <p class="font-medium mb-2">Sampler Information:</p>
-                          
-                          <!-- Training -->
-                          <div class="mb-2">
-                            <p class="text-gray-900">Training Completed:</p>
-                            <ul class="list-disc list-inside text-gray-600 ml-2">
-                              <li v-if="user.sampler_data.training_field_chemistry">Field Chemistry</li>
-                              <li v-if="user.sampler_data.training_r_card">R-Card</li>
-                              <li v-if="user.sampler_data.training_habitat">Habitat</li>
-                              <li v-if="user.sampler_data.training_biological">Biological</li>
-                            </ul>
-                            <p class="text-gray-600 mt-1">
-                              Original Training: {{ formatDate(user.sampler_data.original_training_date) }}
-                            </p>
-                            <p class="text-gray-600">
-                              Latest Training: {{ formatDate(user.sampler_data.training_date_latest) }}
-                            </p>
-                          </div>
-
-                          <!-- Equipment -->
-                          <div class="mb-2">
-                            <p class="text-gray-900">Equipment:</p>
-                            <ul class="list-disc list-inside text-gray-600 ml-2">
-                              <li v-if="user.sampler_data.equip_ph">pH Meter</li>
-                              <li v-if="user.sampler_data.equip_do">DO Meter</li>
-                              <li v-if="user.sampler_data.equip_cond">Conductivity Meter</li>
-                              <li v-if="user.sampler_data.equip_thermo">Thermometer</li>
-                              <li v-if="user.sampler_data.equip_waste">Waste Container</li>
-                              <li v-if="user.sampler_data.equip_pan">Pan</li>
-                              <li v-if="user.sampler_data.equip_flip">Flip</li>
-                              <li v-if="user.sampler_data.equip_incubator">Incubator</li>
-                            </ul>
-                          </div>
-
-                          <!-- Kit Information -->
-                          <div class="mb-2">
-                            <p class="text-gray-900">Kit Option: {{ user.sampler_data.kitOption || 'None' }}</p>
-                            <p v-if="user.sampler_data.DO_expire" class="text-gray-600">
-                              DO Expiration: {{ formatDate(user.sampler_data.DO_expire) }}
-                            </p>
-                            <p v-if="user.sampler_data.PH_expire" class="text-gray-600">
-                              pH Expiration: {{ formatDate(user.sampler_data.PH_expire) }}
-                            </p>
-                          </div>
-                          
-                          <!-- NEW: Sampling Plans -->
+                        <div class="space-y-4">
                           <div>
-                            <p class="text-gray-900">Sampling Plans:</p>
-                            <div class="mt-1 border-l-4 border-blue-200 pl-3 py-1">
-                              <UserSamplingIntent 
-                                :user-id="user.id"
-                                :year="currentYear"
-                              />
-                            </div>
+                            <h4 class="font-medium text-lg">{{ user.sampler_data.hub_id.Description }}</h4>
+                            <p class="text-sm text-gray-600">{{ user.sampler_data.hub_id.Full_Address }}</p>
+                          </div>
+
+                          <div class="text-sm space-y-2">
+                            <p><span class="font-medium">Contact:</span> {{ user.sampler_data.hub_id.Contact_Person }}</p>
+                            <p><span class="font-medium">Phone:</span> {{ user.sampler_data.hub_id.Phone }}</p>
+                            <p><span class="font-medium">Email:</span> {{ user.sampler_data.hub_id.Email }}</p>
+                          </div>
+
+                          <div v-if="user.sampler_data.hub_id.Availability" class="text-sm">
+                            <p class="font-medium">Availability:</p>
+                            <p>{{ user.sampler_data.hub_id.Availability }}</p>
                           </div>
                         </div>
+                      </UCard>
+                    </UModal>
+                    
+                    <!-- Sampler Information -->
+                    <div v-if="user.sampler_data" class="text-sm border-t pt-3 mt-3">
+                      <p class="font-medium mb-2">Sampler Information:</p>
+                      
+                      <!-- Training -->
+                      <div class="mb-2">
+                        <p class="text-gray-900">Training Completed:</p>
+                        <ul class="list-disc list-inside text-gray-600 ml-2">
+                          <li v-if="user.sampler_data.training_field_chemistry">Field Chemistry</li>
+                          <li v-if="user.sampler_data.training_r_card">R-Card</li>
+                          <li v-if="user.sampler_data.training_habitat">Habitat</li>
+                          <li v-if="user.sampler_data.training_biological">Biological</li>
+                        </ul>
+                        <p class="text-gray-600 mt-1">
+                          Original Training: {{ formatDate(user.sampler_data.original_training_date) }}
+                        </p>
+                        <p class="text-gray-600">
+                          Latest Training: {{ formatDate(user.sampler_data.training_date_latest) }}
+                        </p>
+                      </div>
+
+                      <!-- Equipment -->
+                      <div class="mb-2">
+                        <p class="text-gray-900">Equipment:</p>
+                        <ul class="list-disc list-inside text-gray-600 ml-2">
+                          <li v-if="user.sampler_data.equip_ph">pH Meter</li>
+                          <li v-if="user.sampler_data.equip_do">DO Meter</li>
+                          <li v-if="user.sampler_data.equip_cond">Conductivity Meter</li>
+                          <li v-if="user.sampler_data.equip_thermo">Thermometer</li>
+                          <li v-if="user.sampler_data.equip_waste">Waste Container</li>
+                          <li v-if="user.sampler_data.equip_pan">Pan</li>
+                          <li v-if="user.sampler_data.equip_flip">Flip</li>
+                          <li v-if="user.sampler_data.equip_incubator">Incubator</li>
+                        </ul>
+                      </div>
+
+                      <!-- Kit Information -->
+                      <div class="mb-2">
+                        <p class="text-gray-900">Kit Option: {{ user.sampler_data.kitOption || 'None' }}</p>
+                        <p v-if="user.sampler_data.DO_expire" class="text-gray-600">
+                          DO Expiration: {{ formatDate(user.sampler_data.DO_expire) }}
+                        </p>
+                        <p v-if="user.sampler_data.PH_expire" class="text-gray-600">
+                          pH Expiration: {{ formatDate(user.sampler_data.PH_expire) }}
+                        </p>
+                      </div>
+                      
+                      <!-- Sampling Plans -->
+                      <div>
+                        <p class="text-gray-900">Sampling Plans:</p>
+                        <div class="mt-1 border-l-4 border-blue-200 pl-3 py-1">
+                          <UserSamplingIntent 
+                            :user-id="user.id"
+                            :year="currentYear"
+                          />
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>

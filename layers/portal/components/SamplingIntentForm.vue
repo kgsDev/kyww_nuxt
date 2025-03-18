@@ -196,7 +196,7 @@ onMounted(() => {
         </div>
       </div>
       <p class="text-sm text-gray-500 mt-1">
-        Please indicate how many sites you plan to sample and how many E. coli cards you'll need each month.
+        Please indicate how many sites you plan to sample and how many E.coli cards you'll need each month (3 cards/site).
         <span class="font-medium">Major sampling months (May, July, September) are highlighted in blue.</span>
       </p>
     </template>
@@ -263,7 +263,7 @@ onMounted(() => {
           
           <!-- E. coli cards row -->
           <tr>
-            <td class="p-2 border font-medium bg-gray-50">E. coli Cards Needed</td>
+            <td nowrap class="p-2 border font-medium bg-gray-50">E.coli Cards Needed<br><span class="text-sm">(3 cards/site)</span></td>
             <template v-for="month in months" :key="`ecoli-${month.key}`">
               <td class="p-1 border" :class="getMonthClass(month)">
                 <UInput

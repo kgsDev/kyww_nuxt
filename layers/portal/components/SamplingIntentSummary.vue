@@ -12,10 +12,18 @@ const props = defineProps({
   }
 });
 
+const emit = defineEmits(['update:count']);
+
 const loading = ref(true);
 const error = ref(null);
 const samplingData = ref([]);
 const currentYear = ref(props.year);
+
+// NEW: Keep track of unique users with plans
+const uniqueUsersWithPlans = computed(() => {
+  const uniqueUserIds = new Set(samplingData.value.map(data => data.user_id.id));
+  return uniqueUserIds.size;
+});
 
 // Create array of months
 const months = [
@@ -88,6 +96,9 @@ const fetchSamplingData = async () => {
   if (!props.userIds.length) {
     samplingData.value = [];
     loading.value = false;
+    
+    // Emit the count update
+    emit('update:count', 0);
     return;
   }
 
@@ -118,9 +129,15 @@ const fetchSamplingData = async () => {
     }));
     
     samplingData.value = response;
+    
+    // Emit the count update after data is fetched
+    emit('update:count', uniqueUsersWithPlans.value);
   } catch (err) {
     console.error('Error fetching sampling intent data:', err);
     error.value = 'Failed to load sampling data';
+    
+    // Emit zero count on error
+    emit('update:count', 0);
   } finally {
     loading.value = false;
   }
@@ -136,6 +153,11 @@ watch([() => props.userIds, () => props.year], () => {
   currentYear.value = props.year;
   fetchSamplingData();
 }, { deep: true });
+
+// Watch for changes in uniqueUsersWithPlans
+watch(uniqueUsersWithPlans, (newCount) => {
+  emit('update:count', newCount);
+});
 </script>
 
 <template>
@@ -162,14 +184,18 @@ watch([() => props.userIds, () => props.year], () => {
     <!-- Data visualization -->
     <div v-else>
       <!-- Summary totals banner -->
-      <div class="bg-gray-50 p-4 rounded-md mb-4 grid grid-cols-2 gap-4">
+      <div class="bg-gray-50 p-4 rounded-md mb-4 grid grid-cols-3 gap-4">
         <div class="text-center">
           <div class="text-2xl font-bold text-blue-600">{{ grandTotals.sites }}</div>
-          <div class="text-sm text-gray-600">Total Sampling Sites</div>
+          <div class="text-sm text-gray-600">Total Sites</div>
         </div>
         <div class="text-center">
           <div class="text-2xl font-bold text-green-600">{{ grandTotals.ecoli }}</div>
           <div class="text-sm text-gray-600">Total E. coli Cards</div>
+        </div>
+        <div class="text-center">
+          <div class="text-2xl font-bold text-purple-600">{{ uniqueUsersWithPlans }}</div>
+          <div class="text-sm text-gray-600">Samplers with Plans</div>
         </div>
       </div>
       
@@ -209,7 +235,7 @@ watch([() => props.userIds, () => props.year], () => {
             
             <!-- E. coli cards row -->
             <tr>
-              <td class="p-2 border font-medium bg-gray-50">E. coli Cards</td>
+              <td nowrap class="p-2 border font-medium bg-gray-50">E. coli Cards</td>
               <template v-for="month in months" :key="`ecoli-${month.key}`">
                 <td 
                   class="p-2 border text-center" 
@@ -228,7 +254,7 @@ watch([() => props.userIds, () => props.year], () => {
 
       <!-- User submission stats -->
       <div class="text-sm text-gray-600 text-center mt-2">
-        {{ samplingData.length }} users have submitted sampling plans for {{ currentYear }}
+        {{ uniqueUsersWithPlans }} samplers have submitted plans for {{ currentYear }}
       </div>
     </div>
   </div>
