@@ -101,6 +101,12 @@ export default defineNuxtConfig({
 		SENDGRID_API_KEY: process.env.EMAIL_SENDGRID_API_KEY, //mail client - under dccurl2@g.uky.edu account
 		RECAPTCHA_SECRET_KEY : process.env.RECAPTCHA_SECRET_KEY, //captcha - under dccurl2@g.uky.edu
 		DIRECTUS_SERVER_TOKEN: process.env.DIRECTUS_SERVER_TOKEN,
+		DB_CLIENT : process.env.DB_CLIENT,
+		DB_HOST:process.env.DB_HOST,
+		DB_PORT : process.env.DB_PORT,
+		DB_USER : process.env.DB_USER,
+		DB_PASSWORD	: process.env.DB_PASSWORD,
+		DB_DATABASE	: process.env.DB_DATABASE,
 		public: {
 			directusPublicUrl: process.env.NODE_ENV === 'development'
 				? 'http://localhost:8057'
@@ -127,7 +133,7 @@ export default defineNuxtConfig({
 			WEB_API_ROLE_ID:process.env.WEB_API_ROLE_ID,
 			GOOGLE_MAPS_API_KEY : process.env.GOOGLE_MAPS_API_KEY,
 			RECAPTCHA_PUBLIC_KEY : process.env.RECAPTCHA_PUBLIC_KEY,
-			MAPBOX_ACCESS_TOKEN : process.env.MAPBOX_ACCESS_TOKEN, //mapbox - under doug@uky.edu
+			MAPBOX_ACCESS_TOKEN : process.env.MAPBOX_ACCESS_TOKEN //mapbox - under doug@uky.edu
 		},
 	},
 
