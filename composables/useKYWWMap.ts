@@ -1,12 +1,16 @@
 // Basic type definitions
 interface Site {
-    wwkyid_pk: number;
-    latitude: number;
-    longitude: number;
-    stream_name: string;
-    wwkybasin: string;
-    description: string;
-  }
+  wwkyid_pk: number;
+  latitude: number;
+  longitude: number;
+  stream_name: string;
+  wwkybasin: string;
+  description: string;
+  sample_count?: number;
+  has_samples?: boolean;
+  latest_sample_date?: string | null;
+  ecoli_count?: number;
+}
   
   interface Hub {
     hub_id: number;
@@ -55,59 +59,162 @@ interface Site {
 const KENTUCKY_CENTER = [-85.8, 37.8];
 const KENTUCKY_ZOOM = 7;
 
-  export function useKYWWMap() {
-    // State
-    const hubs = ref<Hub[]>([]);
-    const sites = ref<Site[]>([]);
-    const loading = ref(true);
-    const error = ref<string | null>(null);
-    const mapView = ref<any>(null);
-    let view: any = null;
-    let graphicsLayer: any = null;
+const API_SAMPLED_SITES = 'https://kyww.uky.edu/api/wwky-data?mode=flat';
+
+export function useKYWWMap() {
+  // State
+  const hubs = ref<Hub[]>([]);
+  const sites = ref<Site[]>([]);
+  const userSites = ref<any[]>([]);
+  const loading = ref(true);
+  const error = ref<string | null>(null);
+  const mapView = ref<any>(null);
+
+  // Layer visibility controls
+  const hubsVisible = ref(true);
+  const sitesVisible = ref(true);
+  const userSitesVisible = ref(false);
   
-    // Load ArcGIS modules
-    async function loadArcGISModules() {
-      const [Map, MapView, GraphicsLayer, Graphic, Point, PopupTemplate] = await Promise.all([
-        import('@arcgis/core/Map').then(m => m.default),
-        import('@arcgis/core/views/MapView').then(m => m.default),
-        import('@arcgis/core/layers/GraphicsLayer').then(m => m.default),
-        import('@arcgis/core/Graphic').then(m => m.default),
-        import('@arcgis/core/geometry/Point').then(m => m.default),
-        import('@arcgis/core/PopupTemplate').then(m => m.default),
+  // Search state
+  const siteSearchQuery = ref('');
+  const searchResults = ref<Site[]>([]);
+  const isSearching = ref(false);
+
+  //Map references
+  let view: any = null;
+  let hubsLayer: any = null;
+  let sitesLayer: any = null;
+  let userSitesLayer: any = null;
+  let graphicsLayer: any = null;
+
+  // Load ArcGIS modules
+  async function loadArcGISModules() {
+    const [Map, MapView, GraphicsLayer, Graphic, Point, PopupTemplate] = await Promise.all([
+      import('@arcgis/core/Map').then(m => m.default),
+      import('@arcgis/core/views/MapView').then(m => m.default),
+      import('@arcgis/core/layers/GraphicsLayer').then(m => m.default),
+      import('@arcgis/core/Graphic').then(m => m.default),
+      import('@arcgis/core/geometry/Point').then(m => m.default),
+      import('@arcgis/core/PopupTemplate').then(m => m.default),
+    ]);
+
+    return { Map, MapView, GraphicsLayer, Graphic, Point, PopupTemplate };
+  }
+  
+  // Fetch data
+  async function fetchData() {
+    try {
+      loading.value = true;
+
+      // Fetch sampled sites and hubs
+      const [sitesData, hubsData] = await Promise.all([
+        fetch(API_SAMPLED_SITES).then(res => res.json()),
+        useDirectus(readItems('wwky_hubs', {
+          sort: ['Description'],
+          fields: ['*']
+        }))
       ]);
-  
-      return { Map, MapView, GraphicsLayer, Graphic, Point, PopupTemplate };
+
+      // Process sampled sites directly
+      const processedSampledSites: Site[] = [];
+      const siteMap = new Map<number, Site>();
+      
+      // Check if features array exists and has items
+      if (!sitesData.features || sitesData.features.length === 0) {
+        console.warn('No sampled sites found in API response');
+      } else {
+        sitesData.features.forEach(feature => {
+          const siteId = feature.properties.siteId;
+          
+          // If we haven't seen this site yet, create a new site object
+          if (!siteMap.has(siteId)) {
+            const site: Site = {
+              wwkyid_pk: siteId,
+              stream_name: feature.properties.siteName || '',
+              wwkybasin: feature.properties.basin?.trim() || '',
+              description: feature.properties.description || '',
+              longitude: feature.geometry.coordinates[0],
+              latitude: feature.geometry.coordinates[1],
+              sample_count: 1,
+              has_samples: true,
+              latest_sample_date: feature.properties.sampleDate,
+              ecoli_count: feature.properties.eColiAvg ? 1 : 0
+            };
+            
+            siteMap.set(siteId, site);
+            processedSampledSites.push(site);
+          } else {
+            // Update existing site information
+            const existingSite = siteMap.get(siteId)!;
+            existingSite.sample_count!++;
+            
+            // Update latest sample date if this sample is newer
+            if (feature.properties.sampleDate) {
+              const currentDate = existingSite.latest_sample_date 
+                ? new Date(existingSite.latest_sample_date) 
+                : new Date(0);
+              const newDate = new Date(feature.properties.sampleDate);
+              
+              if (newDate > currentDate) {
+                existingSite.latest_sample_date = feature.properties.sampleDate;
+              }
+            }
+            
+            // Count E. coli samples
+            if (feature.properties.eColiAvg != null) {
+              existingSite.ecoli_count!++;
+            }
+          }
+        });
+      }
+      
+      // Store processed data
+      sites.value = processedSampledSites;
+      hubs.value = hubsData;
+
+    } catch (err) {
+      console.error('Error fetching map data:', err);
+      error.value = 'Failed to load map data';
+    } finally {
+      loading.value = false;
     }
+  }
   
-    
-    // Fetch data
-    async function fetchData() {
-      try {
-        loading.value = true;
-        const [hubsData, sitesData] = await Promise.all([
-          useDirectus(readItems('wwky_hubs', {
-            sort: ['Description'],
-            fields: ['*']
-          })),
-          useDirectus(readItems('wwky_sites', {
-            fields: ['wwkyid_pk', 'latitude', 'longitude', 'stream_name', 'wwkybasin', 'description'],
-            limit: 8000
-          }))
-        ]);
-  
-        hubs.value = hubsData;
-        sites.value = sitesData;
-      } catch (err) {
-        console.error('Error fetching map data:', err);
-        error.value = 'Failed to load map data';
-      } finally {
-        loading.value = false;
+    // Toggle layer visibility
+    function toggleLayerVisibility(layerType: 'hubs' | 'sites' | 'userSites') {
+      switch (layerType) {
+        case 'hubs':
+          hubsVisible.value = !hubsVisible.value;
+          if (hubsLayer) hubsLayer.visible = hubsVisible.value;
+          break;
+        case 'sites':
+          sitesVisible.value = !sitesVisible.value;
+          if (sitesLayer) sitesLayer.visible = sitesVisible.value;
+          break;
+        case 'userSites':
+          userSitesVisible.value = !userSitesVisible.value;
+          if (userSitesLayer) userSitesLayer.visible = userSitesVisible.value;
+          break;
       }
     }
-  
-  // Add refs for layer visibility control
-  const userSitesVisible = ref(false);
-  let userSitesLayer: any = null;  // Store reference to user sites layer
+
+    // Search for sites by ID
+    function searchSiteById(query: string) {
+      if (!query) {
+        searchResults.value = [];
+        isSearching.value = false;
+        return;
+      }
+      
+      isSearching.value = true;
+      const results = sites.value.filter(site => 
+        site.wwkyid_pk.toString().includes(query) ||
+        (site.stream_name && site.stream_name.toLowerCase().includes(query.toLowerCase()))
+      );
+      
+      searchResults.value = results.slice(0, 20); // Limit to 20 results
+      isSearching.value = false;
+    }
 
   // Update initialize map to use correct Kentucky coordinates
   async function initializeMap(container: HTMLElement, options: MapOptions = {
@@ -168,15 +275,21 @@ const KENTUCKY_ZOOM = 7;
       view = viewInstance;
       mapView.value = viewInstance;
   
-      // Create separate layers for better control
+      // Add graphics layers
       graphicsLayer = new GraphicsLayer({ id: 'mainLayer' });
+      sitesLayer = new GraphicsLayer({ 
+        id: 'sites',
+        visible: sitesVisible.value 
+      });
+      hubsLayer = new GraphicsLayer({
+        id: 'hubs',
+        visible: hubsVisible.value
+      });
       userSitesLayer = new GraphicsLayer({ 
         id: 'userSites',
         visible: userSitesVisible.value 
       });
-  
-      mapInstance.addMany([graphicsLayer, userSitesLayer]);
-
+      
     // Add sites if enabled
     if (options.showSites) {
         sites.value.forEach(site => {
@@ -261,7 +374,7 @@ const KENTUCKY_ZOOM = 7;
               }
             });
 
-            graphicsLayer.add(pointGraphic);
+            sitesLayer.add(pointGraphic);
         }
         });
     }
@@ -277,7 +390,7 @@ const KENTUCKY_ZOOM = 7;
 
             const markerSymbol = {
             type: "simple-marker",
-            size: 20,
+            size: 16,
             color: [46, 204, 113, 0.7],
             outline: {
                 color: [0, 0, 0],
@@ -297,7 +410,7 @@ const KENTUCKY_ZOOM = 7;
               attributes: hub
             });
 
-            graphicsLayer.add(pointGraphic);
+            hubsLayer.add(pointGraphic);
         }
         });
       }
@@ -398,6 +511,8 @@ const KENTUCKY_ZOOM = 7;
           zoom: KENTUCKY_ZOOM
         });
       }
+      // Add layers to the map  
+      mapInstance.addMany([graphicsLayer, hubsLayer, sitesLayer, userSitesLayer ]);
 
       return viewInstance;
     } catch (err) {
@@ -442,7 +557,7 @@ const KENTUCKY_ZOOM = 7;
   
     async function highlightUserSites(userSites: any[]) {
         if (!view || !userSitesLayer) return;
-      
+
         // Clear existing user sites
         userSitesLayer.removeAll();
       
@@ -636,15 +751,20 @@ const KENTUCKY_ZOOM = 7;
     return {
         hubs,
         sites,
+        userSites,
         loading,
         error,
         mapView,
         userSitesVisible,  // Export the visibility state
+        hubsVisible,
+        sitesVisible,
         fetchData,
         initializeMap,
         highlightUserSites,
         toggleUserSites,   // Export the toggle function
         zoomTo,
+        toggleLayerVisibility,
+        searchSiteById,
         KENTUCKY_CENTER,
         KENTUCKY_ZOOM
       };

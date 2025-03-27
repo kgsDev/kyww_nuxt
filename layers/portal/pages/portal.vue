@@ -115,7 +115,7 @@ const { showCommandPalette: cmdPalette } = useCommandPalette();
         <div class="flex flex-col flex-1 min-h-0 bg-gray-900">
           <div class="flex-1 flex flex-col pt-5 pb-4 overflow-y-auto">
             <div class="flex items-center flex-shrink-0 px-4">
-              <Logo class="w-20 text-white" alt="Your Company" />
+              <Logo class="w-20 text-white" alt="KY Watershed Watch" />
             </div>
             
             <nav class="mt-5 flex-1 flex flex-col justify-between">

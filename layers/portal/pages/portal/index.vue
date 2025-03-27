@@ -49,10 +49,19 @@ const legendVisible = ref(true);
 const {
   loading,
   error,
+  userSites,
+  sites,
+  hubs,
+  userSitesVisible,
+  sitesVisible,
+  hubsVisible,
   fetchData,
   initializeMap,
   highlightUserSites,
-  sites,
+  zoomTo,
+  toggleLayerVisibility, // Function to toggle layer visibility
+  searchSiteById, // Function to search sites by ID
+  siteSearchQuery: mapSearchQuery, // For map search
 } = useKYWWMap();
 
 //fetch data immediately
@@ -174,7 +183,7 @@ onMounted(async () => {
 
         // Get unique sites
         const uniqueSiteIds = [...new Set(samples.map(sample => sample.wwky_id))];
-        
+
         // Fetch detailed site information
         const sites = await useDirectus(readItems('wwky_sites', {
           filter: {
@@ -254,9 +263,13 @@ onMounted(async () => {
         <div 
           v-for="message in timedMessages" 
           :key="message.id"
-          class="text-lg text-gray-600 border-l-4 border-blue-500 pl-4"
+          class="text-md font-medium text-gray-800 border-l-4 border-yellow-500 pl-4 pr-6 py-3 bg-yellow-50 rounded-r shadow-sm hover:bg-yellow-100 transition-all"
         >
-          {{ message.message }}
+          <div class="flex items-start">
+            <span class="mr-2 mt-1">📣</span>
+            <div v-if="message.hasHtml" v-html="message.message" class="message-content"></div>
+            <div v-else class="message-content whitespace-pre-line">{{ message.message }}</div>
+          </div>
         </div>
       </div>
     </div>
@@ -369,29 +382,53 @@ onMounted(async () => {
             <ULoadingIcon />
             <span class="ml-2">Loading map...</span>
           </div>
-          
-          <!-- Custom Legend -->
+
+          <!-- Interactive Legend -->
           <div 
             v-if="legendVisible && containerReady"
             class="absolute top-4 right-4 bg-white p-4 rounded-lg shadow-lg z-10 min-w-[200px]"
           >
             <h3 class="font-semibold mb-2">Map Legend</h3>
             <div class="space-y-2">
+              <!-- Interactive legend items with checkboxes -->
               <div class="flex items-center">
-                <div class="w-4 h-4 rounded-full bg-[#FFA500] opacity-70 mr-2"></div>
-                <span>Sampling Sites</span>
-              </div>
-              <div class="flex items-center">
+                <input 
+                type="checkbox" 
+                  :checked="userSitesVisible" 
+                  @change="toggleLayerVisibility('userSites')"
+                  class="mr-2 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
                 <div class="w-4 h-4 rounded-full bg-blue-500 opacity-70 mr-2"></div>
-                <span>Your Sampling Sites</span>
+                <span>Your Sampling Sites ({{ samplingStats.uniqueSites.length || 0 }})</span>
               </div>
               <div class="flex items-center">
-                <div class="w-4 h-4 rounded-full bg-[#2ECC71] opacity-70 mr-2"></div>
-                <span>Support Hubs</span>
+                <input 
+                  type="checkbox" 
+                  :checked="sitesVisible" 
+                  @change="toggleLayerVisibility('sites')"
+                  class="mr-2 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                <div class="w-4 h-4 rounded-full bg-[#fca205] opacity-70 mr-2"></div>
+                <span>All Sampled Sites ({{ sites.length || 0 }})</span>
               </div>
+              <div class="flex items-center">
+                <input 
+                  type="checkbox" 
+                  :checked="hubsVisible" 
+                  @change="toggleLayerVisibility('hubs')"
+                  class="mr-2 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                <div class="w-3 h-3 rounded-full bg-[#2ECC71] opacity-70 mr-2"></div>
+                <span>Support Hubs ({{ hubs?.length || 0 }})</span>
+              </div>
+              <div class="mt-4 text-xs text-gray-500">
+                Total Sites: {{ sites?.length || 0 }}
+              </div>
+
             </div>
             <div class="mt-4 text-xs text-gray-500">
-              Total Sites: {{ sites?.length || 0 }}
+              <p>Click the checkboxes to show/hide each layer</p>
+              <p>Sampling data in this portal started in 2024.</p>
             </div>
           </div>
         </div>
@@ -469,5 +506,13 @@ onMounted(async () => {
 [ref="mapContainer"] {
   min-height: 400px;
   min-width: 100%;
+}
+
+.message-content :deep(p) {
+  margin-bottom: 0.5rem;
+}
+.message-content :deep(ul, ol) {
+  margin-left: 1.5rem;
+  margin-bottom: 0.5rem;
 }
 </style>

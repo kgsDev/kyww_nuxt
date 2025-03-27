@@ -11,9 +11,12 @@ const {
   error,
   hubs,
   sites,
+  sitesVisible,
+  hubsVisible,
   fetchData,
   initializeMap,
-  zoomTo
+  zoomTo,
+  toggleLayerVisibility, // Function to toggle layer visibility
 } = useKYWWMap();
 
 // Handle zooming to hub
@@ -105,27 +108,37 @@ onMounted(async () => {
               </div>
             </div>
 
-            <!-- Legend -->
+            <!-- Interactive Legend -->
             <div 
               v-if="legendVisible && containerReady"
               class="absolute top-4 right-4 bg-white p-4 rounded-lg shadow-lg z-10 min-w-[200px]"
             >
               <h3 class="font-semibold mb-2">Map Legend</h3>
               <div class="space-y-2">
+                <!-- Interactive legend items with checkboxes -->
                 <div class="flex items-center">
-                  <div class="w-4 h-4 rounded-full bg-[#FFA500] opacity-70 mr-2"></div>
-                  <span>Sampling Sites</span>
+                  <input 
+                    type="checkbox" 
+                    :checked="sitesVisible" 
+                    @change="toggleLayerVisibility('sites')"
+                    class="mr-2 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <div class="w-4 h-4 rounded-full bg-[#fca205] opacity-70 mr-2"></div>
+                  <span>All Sampled Sites ({{ sites.length || 0 }})</span>
                 </div>
                 <div class="flex items-center">
-                  <div class="w-4 h-4 rounded-full bg-[#2ECC71] opacity-70 mr-2"></div>
-                  <span>Support Hubs</span>
+                  <input 
+                    type="checkbox" 
+                    :checked="hubsVisible" 
+                    @change="toggleLayerVisibility('hubs')"
+                    class="mr-2 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <div class="w-3 h-3 rounded-full bg-[#2ECC71] opacity-70 mr-2"></div>
+                  <span>Support Hubs ({{ hubs?.length || 0 }})</span>
                 </div>
-              </div>
-              <div class="mt-4 text-xs text-gray-500">
-                <div>Sites: {{ sites?.length || 0 }}</div>
-                <div>Hubs: {{ hubs?.length || 0 }}</div>
               </div>
             </div>
+
           </div>
         </UCard>
 

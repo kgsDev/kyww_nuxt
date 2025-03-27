@@ -2,7 +2,7 @@
 definePageMeta({
   layout: 'info'
 });
-import { useKYWWMap } from '~/composables/useKYWWMap';
+import { usePublicKYWWMap } from '~/composables/usePublicKYWWMap';
 
 const route = useRoute();
 const siteId = computed(() => route.params.siteId);
@@ -17,7 +17,7 @@ const containerReady = ref(false);
 const {
   fetchData,
   initializeMap,
-} = useKYWWMap();
+} = usePublicKYWWMap();
 
 // Helper functions
 const calculateAverage = (field) => {
@@ -134,7 +134,7 @@ watch([mapContainer, siteData], async ([newContainer, newSiteData]) => {
 
 // Fetch data
 onMounted(async () => {
-  // Fetch sites and hubs from useKYWWMap
+  // Fetch sites and hubs from usePublicKYWWMap
   await fetchData();
 
   try {

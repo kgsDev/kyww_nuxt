@@ -157,7 +157,7 @@ const saveSamplingIntent = async () => {
 // Monthly column styling - highlight certain months
 const getMonthClass = (month) => {
   return {
-    'bg-blue-50': month.highlight,
+    'bg-orange-100': month.highlight,
     'font-semibold': month.highlight
   };
 };
@@ -197,7 +197,7 @@ onMounted(() => {
       </div>
       <p class="text-sm text-gray-500 mt-1">
         Please indicate how many sites you plan to sample and how many E.coli cards you'll need each month (3 cards/site).
-        <span class="font-medium">Major sampling months (May, July, September) are highlighted in blue.</span>
+        <span class="font-medium">Major sampling months (May, July, September) are highlighted in orange.</span>
       </p>
     </template>
     

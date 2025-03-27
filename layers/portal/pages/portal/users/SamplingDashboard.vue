@@ -139,7 +139,7 @@ const grandTotals = computed(() => {
 // Monthly column styling - highlight certain months
 const getMonthClass = (month) => {
   return {
-    'bg-blue-50': month.highlight,
+    'bg-orange-100': month.highlight,
     'font-semibold': month.highlight
   };
 };
