@@ -10,7 +10,7 @@ const isConfirmationModalOpen = ref(false);
 const showSuccessModal = ref(false);
 
 const counties = ["Adair", "Allen", "Anderson", "Ballard", "Barren", "Bath", "Bell", "Boone", "Bourbon", "Boyd", "Boyle", "Bracken", "Breathitt", "Breckinridge", "Bullitt", "Butler", "Caldwell", "Calloway", "Campbell", "Carlisle", "Carroll", "Carter", "Casey", "Christian", "Clark", "Clay", "Clinton", "Crittenden", "Cumberland", "Daviess", "Edmonson", "Elliott", "Estill", "Fayette", "Fleming", "Floyd", "Franklin", "Fulton", "Gallatin", "Garrard", "Grant", "Graves", "Grayson", "Green", "Greenup", "Hancock", "Hardin", "Harlan", "Harrison", "Hart", "Henderson", "Henry", "Hickman", "Hopkins", "Jackson", "Jefferson", "Jessamine", "Johnson", "Kenton", "Knott", "Knox", "Larue", "Laurel", "Lawrence", "Lee", "Leslie", "Letcher", "Lewis", "Lincoln", "Livingston", "Logan", "Lyon", "McCracken", "McCreary", "McLean", "Madison", "Magoffin", "Marion", "Marshall", "Martin", "Mason", "Meade", "Menifee", "Mercer", "Metcalfe", "Monroe", "Montgomery", "Morgan", "Muhlenberg", "Nelson", "Nicholas", "Ohio", "Oldham", "Owen", "Owsley", "Pendleton", "Perry", "Pike", "Powell", "Pulaski", "Robertson", "Rockcastle", "Rowan", "Russell", "Scott", "Shelby", "Simpson", "Spencer", "Taylor", "Todd", "Trigg", "Trimble", "Union", "Warren", "Washington", "Wayne", "Webster", "Whitley", "Wolfe", "Woodford"];
-const basins = ["North Fork Kentucky River", "South Fork Kentucky River", "Kentucky River", "Licking River", "Salt River", "Green River", "Barren River", "Cumberland River", "Tennessee River", "Ohio River", "Mississippi River"];
+const basins = ["Big Sandy River", "Four Rivers", "Kentucky River", "Licking River", "Salt River", "Tradewater and Lower Green River", "Upper Cumberland", "Upper Green River"];
 
 const addressInput = ref(null);
 
@@ -55,6 +55,7 @@ const formErrors = reactive({
 const isEditMode = ref(false);
 const selectedHubId = ref(null);
 const existingHubs = ref([]);
+const showManualCoords = ref(false);
 
 // Modify page title based on mode
 const pageTitle = computed(() => isEditMode.value ? 'Edit Hub' : 'New Hub');
@@ -188,6 +189,15 @@ function validateForm() {
     isValid = false;
   }
 
+  if (!formData.latitude || !formData.longitude) {
+    error.value = 'Please enter valid coordinates for this location';
+    showManualCoords.value = true;
+    isValid = false;
+  } else if (!validateCoordinates()) {
+    error.value = 'Please enter valid latitude (-90 to 90) and longitude (-180 to 180) values';
+    isValid = false;
+  }
+  
   return isValid;
 }
 
@@ -244,6 +254,12 @@ watch(() => formData.phone, (newPhone) => {
   }
 });
 
+watch([() => formData.latitude, () => formData.longitude], ([newLat, newLong]) => {
+  if (!newLat || !newLong) {
+    showManualCoords.value = true;
+  }
+});
+
 // Compute if form is valid for submit button
 const isFormValid = computed(() => {
   return formData.description &&
@@ -265,7 +281,6 @@ function handleSubmitAttempt() {
 }
 
 // Initialize Google Places Autocomplete
-// Modified initialization function
 function initializeAutocomplete() {
   nextTick(() => {
     if (!addressInput.value) {
@@ -300,6 +315,13 @@ function initializeAutocomplete() {
           if (place.geometry && place.geometry.location) {
             formData.latitude = place.geometry.location.lat();
             formData.longitude = place.geometry.location.lng();
+            console.log('Coordinates captured:', formData.latitude, formData.longitude);
+          } else {
+            // No coordinates found
+            formData.latitude = null;
+            formData.longitude = null;
+            console.warn('No coordinates found for this address');
+            showManualCoords.value = true;
           }
         }
       });
@@ -308,6 +330,19 @@ function initializeAutocomplete() {
     }
   });
 }
+
+function validateCoordinates() {
+  if (!formData.latitude || !formData.longitude) {
+    return false;
+  }
+  
+  // Basic validation for lat/long ranges
+  const validLat = parseFloat(formData.latitude) >= -90 && parseFloat(formData.latitude) <= 90;
+  const validLong = parseFloat(formData.longitude) >= -180 && parseFloat(formData.longitude) <= 180;
+  
+  return validLat && validLong;
+}
+
 
 const copyAddress = ref(false);
 
@@ -536,6 +571,73 @@ const viewHubList = () => {
 					/>
 				  </div>
 				</div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+          <UFormGroup
+            label="Coordinates"
+            class="space-y-1"
+          >
+            <div class="text-sm text-gray-700">
+              <span v-if="formData.latitude && formData.longitude">
+                Current coordinates: {{ formData.latitude }}, {{ formData.longitude }}
+              </span>
+              <span v-else class="text-amber-600">
+                No coordinates detected from address
+              </span>
+            </div>
+            <div class="flex space-x-2">
+              <UButton
+                v-if="formData.latitude && formData.longitude"
+                size="sm"
+                color="gray"
+                variant="soft"
+                @click="showManualCoords = !showManualCoords"
+              >
+                {{ showManualCoords ? 'Hide Manual Entry' : 'Edit Coordinates' }}
+              </UButton>
+              <UButton
+                v-else
+                size="sm"
+                color="amber"
+                variant="soft"
+                @click="showManualCoords = true"
+              >
+                Add Coordinates Manually
+              </UButton>
+            </div>
+          </UFormGroup>
+        </div>
+
+        <div v-if="showManualCoords" class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+          <UFormGroup
+            label="Latitude"
+            class="space-y-1"
+          >
+            <UInput
+              v-model="formData.latitude"
+              type="number"
+              step="0.000001"
+              placeholder="e.g. 37.839333"
+            />
+            <span class="text-xs text-gray-500">
+              Enter the latitude (decimal degrees)
+            </span>
+          </UFormGroup>
+
+          <UFormGroup
+            label="Longitude"
+            class="space-y-1"
+          >
+            <UInput
+              v-model="formData.longitude"
+              type="number"
+              step="0.000001"
+              placeholder="e.g. -84.270018"
+            />
+            <span class="text-xs text-gray-500">
+              Enter the longitude (decimal degrees)
+            </span>
+          </UFormGroup>
+        </div>
 			</div>
 			<div class="flex">
 				<UFormGroup 

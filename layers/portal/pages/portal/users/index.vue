@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import PolicyGuard from '../../components/PolicyGuard.vue'
 import SamplingIntentSummary from '~/components/SamplingIntentSummary.vue'
 import UserSamplingIntent from '~/components/UserSamplingIntent.vue'
+import ConnectionsDashboard from '~/components/ConnectionsDashboard.vue'
 
 const config = useRuntimeConfig()
 const loading = ref(true)
@@ -565,6 +566,22 @@ onMounted(() => {
                 </div>
               </div>
             </div>
+          </UCard>
+
+          <!-- Connections Dashboard -->
+          <UCard>
+            <template #header>
+              <div class="flex items-center gap-2">
+                <UIcon name="i-heroicons-chat-bubble-left-right" class="w-5 h-5" />
+                <h2 class="text-xl font-semibold">Sampler Connections Analytics</h2>
+              </div>
+              <p class="text-sm text-gray-600 mt-1">Visualizing collaboration between samplers for {{ currentYear }}</p>
+            </template>
+            
+            <ConnectionsDashboard 
+              :user-ids="filteredUserIds" 
+              :year="currentYear"
+            />
           </UCard>
 
           <!-- User Lists by Type -->

@@ -1,8 +1,19 @@
+//this pulls a list of users with the sampler policy - for use in the sampler form
+//must be a sammpler to see this
 import { createDirectus, rest, readItems } from '@directus/sdk';
 
 const config = getApiConfig();
 
 export default defineEventHandler(async (event) => {
+  const { samplerId } = getQuery(event);
+  
+  if (!samplerId) {
+    throw createError({
+      statusCode: 400,
+      message: 'Must be authorizeed to see this'
+    });
+  }
+
 
   try {
     // Fetch users with filter, ensuring we get the UUID

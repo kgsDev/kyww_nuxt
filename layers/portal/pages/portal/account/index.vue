@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import SamplingIntentForm from '~/components/SamplingIntentForm.vue';
+import UserConnectionsPanel from '~/components/UserConnectionsPanel.vue'; // Add this import
+
 const { loadGoogleMaps, isLoaded } = useGoogleMaps();
 const loading = ref(true);
 const error = ref(null);
@@ -794,6 +796,11 @@ watch(isEditing, (newValue) => {
         <!-- Annual Sampling Plan - Only show if user is a sampler -->
         <div v-if="isPolicySampler">
           <SamplingIntentForm :userId="userData?.id" />
+        </div>
+
+        
+        <div v-if="userData?.id">
+          <UserConnectionsPanel :userId="userData.id" />
         </div>
 
         <!-- Training Card - Only show if samplerData exists -->

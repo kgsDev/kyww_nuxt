@@ -638,7 +638,11 @@ const confirmSubmission = () => {
 //bunch of helper functions:
 const fetchSamplers = async () => {
   try {
-    const response = await $fetch('/api/samplers');
+	const response = await $fetch('/api/samplers', {
+      query: {
+        samplerId: user.value.id
+      }
+    });
     availableSamplers.value = response;
   } catch (error) {
     toast.add({

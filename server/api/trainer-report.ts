@@ -7,7 +7,7 @@ export default defineEventHandler(async (event) => {
     if (!trainerId) {
       throw createError({
         statusCode: 400,
-        message: 'Trainer ID is required'
+        message: 'Must be authorized to see this'
       });
     }
   

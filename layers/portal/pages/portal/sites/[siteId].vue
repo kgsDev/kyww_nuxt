@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useKYWWMap } from '~/composables/useKYWWMap';
 import SampleForm from '../sample/index.vue'; // Import form
+import ContactSamplerForm from '~/components/ContactSamplerForm.vue'; // Import contact form
 
 const { user } = useDirectusAuth();
 const configPublic = useRuntimeConfig().public;
@@ -19,6 +20,11 @@ const canEditSample = (sample) => {
 
 const showEditForm = ref(false);
 const selectedSample = ref(null);
+const showContactForm = ref(false);
+const selectedSampler = ref(null);
+
+const showSuccessToast = ref(false);
+const successMessage = ref('');
 
 const route = useRoute();
 const siteId = computed(() => route.params.siteId);
@@ -54,6 +60,37 @@ const handleEditComplete = async () => {
   } catch (err) {
     console.error('Error refreshing samples:', err);
   }
+};
+
+// Function to handle opening the contact form
+const openContactForm = (sample) => {
+  if (!sample || !sample.volunteer_id) return;
+  
+  // Don't show contact form for the current user
+  if (sample.volunteer_id.id === user.value?.id) return;
+  
+  selectedSampler.value = {
+    id: sample.volunteer_id.id,
+    name: `${sample.volunteer_id.first_name} ${sample.volunteer_id.last_name}`
+  };
+  showContactForm.value = true;
+};
+
+const closeContactForm = (success = false) => {
+  showContactForm.value = false;
+  
+  if (success) {
+    // Show success toast notification
+    successMessage.value = `Your message has been sent to ${selectedSampler.value.name}. They'll respond via email if interested in connecting.`;
+    showSuccessToast.value = true;
+    
+    // Auto-hide the toast after 6 seconds
+    setTimeout(() => {
+      showSuccessToast.value = false;
+    }, 6000);
+  }
+  
+  selectedSampler.value = null;
 };
 
 //helper functions
@@ -293,23 +330,70 @@ onMounted(async () => {
 <template>
   <PageContainer>
 
-  <!-- Show edit form when editing -->
-  <div v-if="showEditForm" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-        <div class="relative top-5 mx-auto p-5 border w-4/5 shadow-lg rounded-md bg-white">
-          <div class="flex justify-between items-center mb-4">
-            <h2 class="text-xl font-bold">Edit Sample</h2>
-            <UButton
-              icon="i-heroicons-x-mark"
-              variant="ghost"
-              @click="handleEditComplete"
-            />
-          </div>
-          
-          <SampleForm
-            :initial-data="selectedSample"
-            @submit-complete="handleEditComplete"
+    <!-- Edit Sample Modal -->
+    <div v-if="showEditForm" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+      <div class="relative top-5 mx-auto p-5 border w-4/5 shadow-lg rounded-md bg-white">
+        <div class="flex justify-between items-center mb-4">
+          <h2 class="text-xl font-bold">Edit Sample</h2>
+          <UButton
+            icon="i-heroicons-x-mark"
+            variant="ghost"
+            @click="handleEditComplete"
           />
         </div>
+        
+        <SampleForm
+          :initial-data="selectedSample"
+          @submit-complete="handleEditComplete"
+        />
+      </div>
+    </div>
+
+    <!-- Contact Sampler Modal -->
+    <div v-if="showContactForm" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+      <div class="relative top-20 mx-auto p-5 border w-full max-w-xl shadow-lg rounded-md bg-white">
+        <div class="flex justify-between items-center mb-4">
+          <h2 class="text-xl font-bold">Contact Sampler</h2>
+          <UButton
+            icon="i-heroicons-x-mark"
+            variant="ghost"
+            @click="closeContactForm"
+          />
+        </div>
+        
+        <ContactSamplerForm 
+          v-if="selectedSampler"
+          :sampler-name="selectedSampler.name"
+          :sampler-id="selectedSampler.id"
+          :site-id="siteData?.wwkyid_pk"
+          :site-name="siteData?.stream_name || `Site ${siteData?.wwkyid_pk}`"
+          @message-sent="closeContactForm(true)"
+        />
+      </div>
+    </div>
+
+    <!-- Success Modal -->
+    <div v-if="showSuccessToast" class="fixed inset-20 z-50 max-w-md animate-fade-in">
+      <UAlert
+        variant="solid"
+        color="green"
+        :title="successMessage"
+        icon="i-heroicons-check-circle"
+        class="shadow-lg"
+      >
+        <template #description>
+          <p class="mt-1 text-sm">Check your email for confirmation.</p>
+        </template>
+        <template #actions>
+          <UButton
+            color="white"
+            variant="ghost"
+            icon="i-heroicons-x-mark"
+            class="p-1"
+            @click="showSuccessToast = false"
+          />
+        </template>
+      </UAlert>
     </div>
 
     <!-- Loading State -->
@@ -350,23 +434,23 @@ onMounted(async () => {
       <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
         <!-- Map -->
         <UCard class="md:col-span-1">
-            <template #header>
+          <template #header>
             <h2 class="text-lg font-semibold">Site Location</h2>
-            </template>
-            <div class="relative w-full h-[300px]">
+          </template>
+          <div class="relative w-full h-[300px]">
             <div 
-                ref="mapContainer" 
-                class="absolute inset-0 w-full h-full"
+              ref="mapContainer" 
+              class="absolute inset-0 w-full h-full"
             ></div>
             
             <div 
-                v-if="!containerReady" 
-                class="absolute inset-0 flex items-center justify-center bg-gray-100 bg-opacity-75"
+              v-if="!containerReady" 
+              class="absolute inset-0 flex items-center justify-center bg-gray-100 bg-opacity-75"
             >
-                <ULoadingIcon />
-                <span class="ml-2">Loading map...</span>
+              <ULoadingIcon />
+              <span class="ml-2">Loading map...</span>
             </div>
-            </div>
+          </div>
         </UCard>
 
         <!-- Site Statistics -->
@@ -411,10 +495,10 @@ onMounted(async () => {
           </div>
         </template>
 
-       <!-- Message if no primary samples -->
-       <div v-if="primarySamples.length === 0" class="text-center py-4 text-gray-500">
-        You haven't created any samples or been a primary sampler for this site yet.
-       </div>
+        <!-- Message if no primary samples -->
+        <div v-if="primarySamples.length === 0" class="text-center py-4 text-gray-500">
+          You haven't created any samples or been a primary sampler for this site yet.
+        </div>
 
         <div v-else class="overflow-x-auto">
           <table class="min-w-full divide-y divide-gray-200">
@@ -433,13 +517,13 @@ onMounted(async () => {
             <tbody class="divide-y divide-gray-200">
               <tr v-for="sample in primarySamples" :key="sample.id" 
                   :class="{'hover:bg-gray-50': true, 'bg-yellow-50': sample.user_created?.id === user?.id && sample.volunteer_id !== user?.id}">
-                  <td class="px-4 py-2">{{ sample.id }}</td>
-                  <td class="px-4 py-2">
-                    {{ formatDate(sample.date) }}
-                    <div v-if="sample.isEnteredForOther" 
-                        class="text-xs text-orange-600 font-medium">
-                      You entered this sample for {{ sample.volunteer_id.first_name }} {{ sample.volunteer_id.last_name }}
-                    </div>
+                <td class="px-4 py-2">{{ sample.id }}</td>
+                <td class="px-4 py-2">
+                  {{ formatDate(sample.date) }}
+                  <div v-if="sample.isEnteredForOther" 
+                      class="text-xs text-orange-600 font-medium">
+                    You entered this sample for {{ sample.volunteer_id.first_name }} {{ sample.volunteer_id.last_name }}
+                  </div>
                 </td>
                 <td class="px-4 py-2">{{ formatMeasurement(sample.water_temperature, '') }}</td>
                 <td class="px-4 py-2">{{ formatMeasurement(sample.pH, '') }}</td>
@@ -469,10 +553,10 @@ onMounted(async () => {
           </div>
         </template>
 
-       <!-- Message if no additional sampler samples -->
-      <div v-if="additionalSamplerSamples.length === 0" class="text-center py-4 text-gray-500">
-        You haven't been an additional sampler for any samples at this site.
-      </div>
+        <!-- Message if no additional sampler samples -->
+        <div v-if="additionalSamplerSamples.length === 0" class="text-center py-4 text-gray-500">
+          You haven't been an additional sampler for any samples at this site.
+        </div>
 
         <div v-else class="overflow-x-auto">
           <table class="min-w-full divide-y divide-gray-200">
@@ -541,7 +625,22 @@ onMounted(async () => {
                 <td class="px-4 py-2">{{ sample.id }}</td>
                 <td class="px-4 py-2">{{ formatDate(sample.date) }}</td>
                 <td class="px-4 py-2">
-                  {{ sample.volunteer_id?.first_name }} {{ sample.volunteer_id?.last_name }}
+                  <div class="flex flex-col space-y-2">
+                    <span>{{ sample.volunteer_id?.first_name }} {{ sample.volunteer_id?.last_name }}</span>
+                    <UButton 
+                      v-if="sample.volunteer_id && sample.volunteer_id.id !== user?.id"
+                      size="sm" 
+                      variant="soft" 
+                      color="blue"
+                      @click="openContactForm(sample)"
+                      title="Connect with this sampler"
+                    >
+                      <div class="flex items-center space-x-1.5 px-0.5">
+                        <span class="i-heroicons-sparkles text-red-500 h-4 w-4"></span>
+                        <span class="font-medium">Connect</span>
+                      </div>
+                    </UButton>
+                  </div>
                 </td>
                 <td class="px-4 py-2">{{ formatMeasurement(sample.water_temperature, '') }}</td>
                 <td class="px-4 py-2">{{ formatMeasurement(sample.pH, '') }}</td>
@@ -565,21 +664,38 @@ onMounted(async () => {
 </template>
 
 <style scoped>
-@import "https://js.arcgis.com/4.28/@arcgis/core/assets/esri/themes/light/main.css";
+  @import "https://js.arcgis.com/4.28/@arcgis/core/assets/esri/themes/light/main.css";
 
-/* Add specific styles for map container */
-.relative {
-  position: relative;
-}
+  /* Add specific styles for map container */
+  .relative {
+    position: relative;
+  }
 
-.absolute {
-  position: absolute;
-}
+  .absolute {
+    position: absolute;
+  }
 
-.inset-0 {
-  top: 0;
-  right: 0;
-  bottom: 0;
-  left: 0;
-}
+  .inset-0 {
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+  }
+
+  .inset-20 {
+    top: 20;
+    right: 20;
+    bottom: 20;
+    left: 20;
+  }
+
+  /* Animation for toast notification */
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .animate-fade-in {
+    animation: fadeIn 0.3s ease-out forwards;
+  }
 </style>
