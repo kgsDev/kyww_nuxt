@@ -38,7 +38,8 @@ const editForm = ref({
   equip_rcard: false,
   equip_pipette: false,
   PH_expire: '',
-  DO_expire: ''
+  DO_expire: '',
+  allow_connections: false
 });
 
   // Counties data array
@@ -355,6 +356,7 @@ const startEditing = () => {
     equip_pipette: samplerData.value?.equip_pipette || false,
     PH_expire: samplerData.value?.PH_expire || '',
     DO_expire: samplerData.value?.DO_expire || '',
+    allow_connections: samplerData.value?.allow_connections || false,
     ...address.value
   };
   isEditing.value = true;
@@ -403,7 +405,8 @@ const saveChanges = async () => {
         equip_rcard: editForm.value.equip_rcard ? 1 : 0,
         equip_pipette: editForm.value.equip_pipette ? 1 : 0,
         PH_expire: editForm.value.PH_expire || null,
-        DO_expire: editForm.value.DO_expire || null
+        DO_expire: editForm.value.DO_expire || null,
+        allow_connections: editForm.value.allow_connections ? 1 : 0
       };
 
       await useDirectus(updateItem('sampler_data', samplerData.value.id, hubUpdateData));
@@ -450,6 +453,13 @@ const saveChanges = async () => {
   }
 };
 
+const editAndScrollToForm = () => {
+  startEditing();
+
+  setTimeout(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, 100);
+};
 
 // Fetch user data on mount
 onMounted(async () => {
@@ -736,6 +746,33 @@ watch(isEditing, (newValue) => {
                   </div>
                 </div>
 
+                <div class="border-t pt-4 mt-4">
+                  <h3 class="font-medium text-lg mb-3">Connection Preferences</h3>
+                  
+                  <UFormGroup label="Sampler Connections">
+                    <div class="flex items-start">
+                      <UCheckbox
+                        v-model="editForm.allow_connections"
+                        label="Allow other samplers to contact me"
+                      />
+                      <UTooltip text="When enabled, other samplers can send you connection requests">
+                        <UButton
+                          icon="i-heroicons-information-circle"
+                          color="gray"
+                          variant="ghost"
+                          size="xs"
+                          class="ml-1"
+                        />
+                      </UTooltip>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-1">
+                      Other samplers will be able to send you messages through the system to collaborate on sampling.
+                      Your email address will only be shared if you respond to their request.
+                    </p>
+                  </UFormGroup>
+                </div>
+
+
                 <div class="flex justify-end space-x-2 pt-4">
                   <UButton
                     color="gray"
@@ -793,15 +830,62 @@ watch(isEditing, (newValue) => {
           </div>
         </UCard>
 
-        <!-- Annual Sampling Plan - Only show if user is a sampler -->
+         <!-- Annual Sampling Plan - Only show if user is a sampler -->
         <div v-if="isPolicySampler">
           <SamplingIntentForm :userId="userData?.id" />
         </div>
 
-        
         <div v-if="userData?.id">
           <UserConnectionsPanel :userId="userData.id" />
         </div>
+
+        <UCard v-if="samplerData" class="mt-6">
+          <template #header>
+            <div class="flex justify-between items-center">
+              <h2 class="text-lg font-semibold">Connection Status</h2>
+              <UButton
+                v-if="!isEditing"
+                size="sm"
+                icon="i-heroicons-pencil"
+                @click="editAndScrollToForm"
+              >
+                Edit Preferences
+              </UButton>
+            </div>
+          </template>
+          
+          <div class="space-y-4">
+            <div class="flex items-center justify-center">
+              <div class="text-center">
+                <div class="mb-3">
+                  <UIcon
+                    :name="samplerData.allow_connections ? 'i-heroicons-user-group' : 'i-heroicons-user-minus'"
+                    :class="samplerData.allow_connections ? 'text-green-500' : 'text-gray-400'"
+                    size="48"
+                  />
+                </div>
+                <div class="text-lg font-medium">
+                  {{ samplerData.allow_connections ? 'You are accepting connection requests' : 'You are not accepting connection requests' }}
+                </div>
+                <div class="text-sm text-gray-600 mt-1">
+                  {{ samplerData.allow_connections 
+                    ? 'Other samplers can contact you through the system about sites you\'ve sampled' 
+                    : 'Other samplers cannot contact you through the system' }}
+                </div>
+              </div>
+            </div>
+            
+            <div class="border-t pt-4 text-sm text-gray-600">
+              <p class="flex items-center">
+                <UIcon name="i-heroicons-information-circle" class="mr-2 text-blue-500" />
+                You can change this setting by editing your profile preferences.
+              </p>
+              <p class="mt-2" v-if="samplerData.allow_connections">
+                Your email address is only shared if you reply to a connection request.
+              </p>
+            </div>
+          </div>
+        </UCard>
 
         <!-- Training Card - Only show if samplerData exists -->
         <UCard v-if="samplerData">

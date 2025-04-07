@@ -50,6 +50,7 @@ export default eventHandler(async (event) => {
       event.node.res.end(JSON.stringify(data));
     };
 
+
     // Get authentication info from cookies
     const cookies = parseCookies(event);
     
@@ -132,7 +133,7 @@ export default eventHandler(async (event) => {
         401
       ));
     }
-    
+
     if (!user || !user.id || !user.email) {
         // Try to get user from request body or header
         const userIdFromRequest = userId || event.node.req.headers['x-user-id'];
@@ -194,7 +195,7 @@ export default eventHandler(async (event) => {
       // Check if the samplerId is a valid UUID     
       // Get all samplers and filter client-side
       const samplerUrl = `${config.public.directusUrl}/items/sampler_data?fields=*,user_id.*`;
-      
+
       const samplerResponse = await fetch(samplerUrl, {
         headers: getDirectusHeaders(config),
       });
@@ -228,6 +229,14 @@ export default eventHandler(async (event) => {
         ));
       }
       
+      if (!samplerData.allow_connections) {
+        return respondWithJSON(createErrorResponse(
+          'This sampler is not accepting connection requests.',
+          'CONNECTION_DISABLED',
+          403
+        ));
+      }
+
       if (!samplerData.user_id) {
         console.error('[CONTACT API] Sampler found but has no user_id:', samplerData);
         return respondWithJSON(createErrorResponse(
@@ -341,29 +350,36 @@ export default eventHandler(async (event) => {
       `
     });
 
-    // 7. Log the contact request in the system (optional)
     try {
-        // Create a record of this connection
-        await fetch(`${config.public.directusUrl}/items/sampler_connections`, {
-          method: 'POST',
-          headers: {
-            ...getDirectusHeaders(config),
-            // Override the Authorization header to use the user's token if available
-            ...(authToken ? { 'Authorization': `Bearer ${authToken}` } : {})
-          },
-          body: JSON.stringify({
-            requesting_user_id: user.id,
-            samplerid: samplerId,
-            site_id: siteId,
-            message: message,
-            status: 'sent',
-            date_created: new Date().toISOString()
-          }),
-        });
-      } catch (error) {
-        console.error('Failed to log connection request:', error);
-        // Non-critical, continue with the response
+
+      // Make the API call using server credentials only
+      const response = await fetch(`${config.public.directusUrl}/items/sampler_connections`, {
+        method: 'POST',
+        headers: getDirectusHeaders(config), // Use ONLY server credentials
+        body: JSON.stringify({
+          requesting_user_id: user.id,
+          samplerid: samplerId,
+          wwkyid: siteId,
+          message: message,
+          status: 'sent',
+          date_created: new Date().toISOString()
+        }),
+      });
+      
+      // Check if the response was successful
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`API error (${response.status}):`, errorText);
+        // Don't throw error, as this is non-critical
+        console.warn('Failed to log connection, but emails were sent successfully');
+      } else {
+        // Log the successful response data
+        const responseData = await response.json();
       }
+    } catch (error) {
+      console.error('Failed to log connection request:', error);
+      // Non-critical, continue with the response
+    }
 
     // 8. Send success response
     return respondWithJSON({

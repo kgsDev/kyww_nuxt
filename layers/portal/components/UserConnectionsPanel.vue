@@ -33,8 +33,6 @@ const fetchUserConnections = async () => {
         sort: ['-date_created']
       })
     );
-
-    console.log('Outgoing connections:', outgoingResponse);
     
     // Fetch incoming connections (where others contacted this user)
     const incomingResponse = await useDirectus(

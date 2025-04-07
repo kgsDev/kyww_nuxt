@@ -62,6 +62,77 @@ const handleEditComplete = async () => {
   }
 };
 
+const fetchSamplerConnectSettings = async () => {
+  // Get unique volunteer IDs from samples
+  const volunteerIds = [...new Set(samples.value
+    .filter(sample => sample.volunteer_id)
+    .map(sample => sample.volunteer_id.id))];
+  
+  if (volunteerIds.length === 0) return; // No need to fetch if there are no volunteers
+  
+  try {
+    // Fetch sampler_data for all volunteers in one request
+    const samplerDataResponse = await useDirectus(
+      readItems('sampler_data', {
+        filter: {
+          user_id: { _in: volunteerIds }
+        },
+        fields: ['user_id', 'allow_connections']
+      })
+    );
+    
+    // Create a map for quick lookup - FIX: use user_id instead of directus_user_id
+    const samplerDataMap = samplerDataResponse.reduce((map, data) => {
+      map[data.user_id] = data; // This is the key fix - use user_id to match the API response
+      return map;
+    }, {});
+    
+   
+    // Update samples with the connection settings
+    samples.value = samples.value.map(sample => {
+      if (sample.volunteer_id && samplerDataMap[sample.volunteer_id.id]) {
+        // Create a new sample object with sampler_data attached to volunteer_id
+        return {
+          ...sample,
+          volunteer_id: {
+            ...sample.volunteer_id,
+            sampler_data: samplerDataMap[sample.volunteer_id.id]
+          }
+        };
+      }
+      
+      // If no sampler data found, add a default sampler_data object
+      if (sample.volunteer_id) {
+        return {
+          ...sample,
+          volunteer_id: {
+            ...sample.volunteer_id,
+            sampler_data: { allow_connections: false } // Default to not allowing connections
+          }
+        };
+      }
+      
+      return sample;
+    });
+    
+  } catch (err) {
+    console.error('Error fetching sampler connection settings:', err);
+    // Set default connection settings if fetch fails
+    samples.value = samples.value.map(sample => {
+      if (sample.volunteer_id) {
+        return {
+          ...sample,
+          volunteer_id: {
+            ...sample.volunteer_id,
+            sampler_data: { allow_connections: false }
+          }
+        };
+      }
+      return sample;
+    });
+  }
+};
+
 // Function to handle opening the contact form
 const openContactForm = (sample) => {
   if (!sample || !sample.volunteer_id) return;
@@ -198,6 +269,7 @@ const initializeSiteMap = async () => {
   containerReady.value = true;
 };
 
+
 // Watch for container and data readiness
 watch([mapContainer, siteData], async ([newContainer, newSiteData]) => {
   if (newContainer && newSiteData) {
@@ -289,7 +361,8 @@ onMounted(async () => {
               'user_created.last_name',
               'volunteer_id.id',
               'volunteer_id.first_name',
-              'volunteer_id.last_name'
+              'volunteer_id.last_name',
+              'volunteer_id.sampler_data.allow_connections'
             ],
             sort: ['-date']
           })
@@ -312,6 +385,8 @@ onMounted(async () => {
         );
 
         samples.value = samplesWithSamplers;
+        await fetchSamplerConnectSettings();
+
       } catch (err) {
         console.error('Error fetching samples:', err);
       }
@@ -624,22 +699,43 @@ onMounted(async () => {
               <tr v-for="sample in otherSamples" :key="sample.id" class="hover:bg-gray-50">
                 <td class="px-4 py-2">{{ sample.id }}</td>
                 <td class="px-4 py-2">{{ formatDate(sample.date) }}</td>
-                <td class="px-4 py-2">
+                <td class="px-4 py-2 whitespace-nowrap">
                   <div class="flex flex-col space-y-2">
-                    <span>{{ sample.volunteer_id?.first_name }} {{ sample.volunteer_id?.last_name }}</span>
-                    <UButton 
-                      v-if="sample.volunteer_id && sample.volunteer_id.id !== user?.id"
-                      size="sm" 
-                      variant="soft" 
-                      color="blue"
-                      @click="openContactForm(sample)"
-                      title="Connect with this sampler"
-                    >
-                      <div class="flex items-center space-x-1.5 px-0.5">
-                        <span class="i-heroicons-sparkles text-red-500 h-4 w-4"></span>
-                        <span class="font-medium">Connect</span>
-                      </div>
-                    </UButton>
+                    <!-- User name with optional lock icon -->
+                    <div class="flex items-center">
+                      <span>{{ sample.volunteer_id?.first_name }} {{ sample.volunteer_id?.last_name }}</span>
+                      
+                      <!-- Lock icon (if not accepting connections) - show next to name -->
+                      <template v-if="sample.volunteer_id && sample.volunteer_id.id !== user?.id">
+                        <UTooltip 
+                          v-if="!(sample.volunteer_id.sampler_data && sample.volunteer_id.sampler_data.allow_connections === true)" 
+                          text="This sampler is not accepting connection requests"
+                        >
+                          <UIcon 
+                            name="i-heroicons-lock-closed" 
+                            class="ml-2 text-gray-400 h-4 w-4" 
+                          />
+                        </UTooltip>
+                      </template>
+                    </div>
+                    
+                    <!-- Connect button (if accepting connections) - show below name -->
+                    <div v-if="sample.volunteer_id && sample.volunteer_id.id !== user?.id">
+                      <UButton 
+                        v-if="sample.volunteer_id.sampler_data && sample.volunteer_id.sampler_data.allow_connections === true"
+                        size="sm" 
+                        variant="soft" 
+                        color="blue"
+                        @click="openContactForm(sample)"
+                        title="Connect with this sampler"
+                        class="mt-1"
+                      >
+                        <div class="flex items-center space-x-1.5 px-0.5">
+                          <span class="i-heroicons-sparkles text-red-500 h-3 w-3"></span>
+                          <span class="font-medium">Connect</span>
+                        </div>
+                      </UButton>
+                    </div>
                   </div>
                 </td>
                 <td class="px-4 py-2">{{ formatMeasurement(sample.water_temperature, '') }}</td>
