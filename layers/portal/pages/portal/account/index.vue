@@ -42,7 +42,9 @@ const editForm = ref({
   allow_connections: false
 });
 
-  // Counties data array
+const showConnectionsPanel = ref(true);
+
+// Counties data array
   const counties = [
     { id: '', name: 'Select a county' }, // Default option
     { id: 'adair', name: 'Adair' },
@@ -834,8 +836,22 @@ watch(isEditing, (newValue) => {
         <div v-if="isPolicySampler">
           <SamplingIntentForm :userId="userData?.id" />
         </div>
+        
 
-        <div v-if="userData?.id">
+        <div class="flex justify-between items-center mt-6 mb-2">
+          <h2 class="text-lg font-semibold">Sampler Connections</h2>
+          <UButton
+            size="sm"
+            :icon="showConnectionsPanel ? 'i-heroicons-eye-slash' : 'i-heroicons-eye'"
+            color="gray"
+            @click="showConnectionsPanel = !showConnectionsPanel"
+          >
+            {{ showConnectionsPanel ? 'Hide Connections' : 'Show Connections' }}
+          </UButton>
+        </div>
+
+        <!-- Only show the panel if showConnectionsPanel is true -->
+        <div v-if="showConnectionsPanel && userData?.id">
           <UserConnectionsPanel :userId="userData.id" />
         </div>
 

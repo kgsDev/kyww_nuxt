@@ -83,6 +83,7 @@ const formRefs = {
 	otherObs: ref(''),
 	allFilesSelected: ref(false),
 	selectedSamplerIds: ref([]),
+	otherSamplers: ref([]),
 };
 
 //initialize component refs
@@ -113,7 +114,7 @@ const { volunteer_id, wwkyid_pk, stream_name, wwkybasin, adults, youths, date, s
 	bacteriaRCardInitials, bacterialSourceHuman, bacterialSourceDuckGoose, bacterialSourceLivestock, bacterialSourcePetWaste, bacterialSourceWildlife, 
 	ecoliA_count, sampleVolA, ecoliB_count, sampleVolB, ecoliC_count, sampleVolC, conductivityMeterCalibrationDate, otherMeterCalibrationDate, field_multimeter_model,
 	field_multimeter_manuf, streamMeter, bacterialSourceOther, trash, turbidity, useTurbidMeter, useTransparencyTube, transparencyTubeMeasured, turbidMeterMeasured, 
-	availableSamplers, otherObs, allFilesSelected, selectedSamplerIds } = formRefs;
+	availableSamplers, otherObs, allFilesSelected, selectedSamplerIds, otherSamplers } = formRefs;
 const { photoUpload, mapModalRef, existingPhotos } = componentRefs;
 const { isLoading, isMapOpen, toast, formErrors, isConfirmationModalOpen, showValidationErrors, directSiteId, isSiteIdValid, isCheckingSiteId } = stateRefs;
 
@@ -461,6 +462,11 @@ const fetchSampleData = async (id: string) => {
 	// Observations with safe assignment
     if (otherObs && typeof otherObs.value !== 'undefined') {
 		otherObs.value = sampleData.other_observations_or_measurements || '';
+    }
+
+	// Other sampleers with safe assignment
+    if (otherSamplers && typeof otherSamplers.value !== 'undefined') {
+		otherSamplers.value = sampleData.other_samplers || '';
     }
 
     // Trash and turbidity
@@ -1155,6 +1161,8 @@ const prepareSampleData = () => {
 	} else if (typeof averageEcoli.value === 'string' && !averageEcoli.value.includes('Please enter')) {
 		avgEcoli = toNullableNumber(averageEcoli.value, 0, 2147483647);
 	}
+ 
+console.log('other sampler', otherSamplers.value);
 
 	// Prepare sample data with range validations
 	const baseData = {
@@ -1172,6 +1180,7 @@ const prepareSampleData = () => {
 		negsample: negsample.value || null,
 		field_multimeter_certify: iCertifyCheckbox.value,
 		other_observations_or_measurements: otherObs.value || null,
+		other_samplers: otherSamplers.value || null,
 		date: date.value || null,
 		start_time: startTime.value || null,
 		wwky_id: toNullableInteger(wwkyid_pk.value),
@@ -1936,6 +1945,17 @@ const confirmCancel = () => {
 								icon="healthicons:child-program"
 								required
 							/>
+						</UFormGroup>
+					</div>
+					<div class="flex">
+						<UFormGroup class="p-2">
+							<label class="block mb-1">Other non-KYWW Samplers:</label>
+								<UTextarea 
+								v-model="otherSamplers" 
+								rows="2"
+								class="w-full min-h-[60px] resize-y"
+								placeholder="List any non-KYWW samplers here"
+								/>
 						</UFormGroup>
 					</div>
 					<div class="flex">

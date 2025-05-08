@@ -21,7 +21,7 @@ export default defineEventHandler(async (event) => {
       `${config.public.directusUrl}/users?` + 
       `fields[]=id&fields[]=first_name&fields[]=last_name&fields[]=email&` +
       `filter[policies][policy][name][_eq]=Sampler&` +
-      `sort[]=last_name`, 
+      `sort[]=last_name&limit=-1`, 
       {
         headers: getDirectusHeaders(config),
         method: 'GET'

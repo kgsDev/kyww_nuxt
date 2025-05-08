@@ -268,7 +268,7 @@ const fetchSites = async () => {
     const response = await useDirectus(
       readItems('wwky_sites', {
         fields: ['wwkyid_pk','latitude', 'longitude', 'stream_name', 'wwkybasin','description'],
-        limit: 8000
+        limit: -1
       })
     );
     sites.value = response;

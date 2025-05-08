@@ -123,7 +123,7 @@ onMounted(async () => {
                     @change="toggleLayerVisibility('sites')"
                     class="mr-2 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                   />
-                  <div class="w-4 h-4 rounded-full bg-[#fca205] opacity-70 mr-2"></div>
+                  <div class="w-4 h-4 rounded-full bg-[#a83271] opacity-70 mr-2"></div>
                   <span>All Sampled Sites ({{ sites.length || 0 }})</span>
                 </div>
                 <div class="flex items-center">

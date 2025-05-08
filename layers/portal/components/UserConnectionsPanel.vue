@@ -10,6 +10,7 @@ const connections = ref([]);
 const isLoading = ref(true);
 const error = ref(null);
 const toast = useToast();
+const showConnectionsPanel = ref(true);
 
 // Fetch user's connections
 const fetchUserConnections = async () => {

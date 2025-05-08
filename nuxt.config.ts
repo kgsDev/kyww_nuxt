@@ -68,7 +68,7 @@ export default defineNuxtConfig({
 		'@/assets/css/font-awesome.css'
 	],
 
-	modules: [// https://devtools.nuxtjs.org/
+	modules: [
 		//'@nuxt/devtools', 
 		'@nuxt/image', 
 		'@nuxt/ui', 
@@ -79,7 +79,16 @@ export default defineNuxtConfig({
 		'nuxt-icon', 
 		'nuxt-schema-org',
 		'nuxt-file-storage',
+		'nuxt-gtag'
 	],
+
+	gtag: {
+		id: process.env.GTM_ID, // Your GA4 measurement ID
+		config: {
+		  page_title: 'Kentucky Watershed Watch',
+		  debug_mode: false // Set to false in production
+		},
+	},
 
 	fileStorage: {
 		storages: {

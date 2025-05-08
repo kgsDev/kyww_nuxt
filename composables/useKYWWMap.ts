@@ -301,7 +301,8 @@ export function useKYWWMap() {
 
             const markerSymbol = {
             type: "simple-marker",
-            color: [255, 165, 0, 0.7],
+            //color: [255, 165, 0, 0.7], // Orange color - all sites - not used here
+            color: [168,50,113, 0.7], //purple - sampled site
             outline: {
                 color: [0, 0, 0],
                 width: 1

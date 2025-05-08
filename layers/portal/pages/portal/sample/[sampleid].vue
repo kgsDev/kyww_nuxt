@@ -107,6 +107,7 @@ const bacterialSourceTypes = {
 const photos = ref([]);
 const loadingPhotos = ref(true);
 const additionalSamplers = ref([]);
+const otherSamplers = ref([]);
 
 // Function to fetch photos
 const fetchSamplePhotos = async () => {
@@ -192,6 +193,8 @@ const fetchSampleData = async () => {
       additionalSamplers.value = samplers.map(s => ({
         name: `${s.directus_users_id.first_name} ${s.directus_users_id.last_name}`
       }));
+
+      otherSamplers.value = sampleData.value.other_samplers || '';
 
       // Add related data to sample data
       sampleData.value = {
@@ -330,7 +333,7 @@ onMounted(async () => {
               <div>
                 <p class="font-medium">Total Volunteer Minutes</p>
                 <p>{{ sampleData.total_volunteer_minutes }}</p>
-              </div>
+              </div>  
               <div>
                 <p class="font-medium">Miles Driven</p>
                 <p>{{ sampleData.miles_driven }}</p>
@@ -345,6 +348,10 @@ onMounted(async () => {
                   {{ sampler.name }}
                 </li>
               </ul>
+            </div>
+            <div v-if="otherSamplers.length > 0">
+                <p class="font-medium">Non-KYWW Samplers</p>
+                <p>{{ sampleData.other_samplers }}</p>
             </div>
           </div>
         </UCard>

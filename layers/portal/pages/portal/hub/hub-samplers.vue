@@ -159,7 +159,8 @@ const fetchUsers = async () => {
         'user_id.*.*',
         'hub_id.*.*',
         'user_id.policies.*.*'
-      ]
+      ],
+      limit: -1
     }))
 
     // Transform the response to handle user_id structure

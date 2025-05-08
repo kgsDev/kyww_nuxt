@@ -82,7 +82,8 @@ const fetchSamplingData = async () => {
         filter: {
           hub_id: { _eq: selectedHub.value }
         },
-        fields: ['user_id']
+        fields: ['user_id'],
+        limit: -1
       }));
       
       // Create a set of user IDs from the selected hub

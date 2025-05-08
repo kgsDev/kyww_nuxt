@@ -77,7 +77,8 @@ const fetchSamplerConnectSettings = async () => {
         filter: {
           user_id: { _in: volunteerIds }
         },
-        fields: ['user_id', 'allow_connections']
+        fields: ['user_id', 'allow_connections'],
+        limit: -1
       })
     );
     
@@ -432,7 +433,7 @@ onMounted(async () => {
           <UButton
             icon="i-heroicons-x-mark"
             variant="ghost"
-            @click="closeContactForm"
+            @click="closeContactForm(false)"
           />
         </div>
         
@@ -443,6 +444,7 @@ onMounted(async () => {
           :site-id="siteData?.wwkyid_pk"
           :site-name="siteData?.stream_name || `Site ${siteData?.wwkyid_pk}`"
           @message-sent="closeContactForm(true)"
+          @dismiss="closeContactForm(false)"
         />
       </div>
     </div>
