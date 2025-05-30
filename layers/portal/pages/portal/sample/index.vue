@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import CustomNumberInput from '../../components/CustomNumberInput.vue';
 import MapSelector from '../sites/MapSelector.vue';
 import PhotoUpload from '../../components/PhotoUpload.vue';
 import PolicyGuard from '../../components/PolicyGuard.vue';
@@ -1932,30 +1931,36 @@ const confirmCancel = () => {
 
 						<UFormGroup class="p-2 basis-1/3" required>
 							<label class="block mb-1 required-field"># Adult Participants:</label>
-							<CustomNumberInput
+							<UInput
 								v-model="adults"
 								icon="ic:baseline-group"
+								type="number"
+								placeholder="0"
+  								min="0"
 								required
 							/>
 						</UFormGroup>
 						<UFormGroup class="p-2 basis-1/3" required>
 							<label class="block mb-1 required-field"># Youth Participants:</label>
-							<CustomNumberInput
+							<UInput
 								v-model="youths"
 								icon="healthicons:child-program"
+								type="number"
+								placeholder="0"
+  								min="0"
 								required
 							/>
 						</UFormGroup>
 					</div>
-					<div class="flex">
-						<UFormGroup class="p-2">
+					<div class="w-full px-2">
+						<UFormGroup>
 							<label class="block mb-1">Other non-KYWW Samplers:</label>
-								<UTextarea 
+							<UTextarea 
 								v-model="otherSamplers" 
 								rows="2"
 								class="w-full min-h-[60px] resize-y"
 								placeholder="List any non-KYWW samplers here"
-								/>
+							/>
 						</UFormGroup>
 					</div>
 					<div class="flex">
@@ -2002,17 +2007,22 @@ const confirmCancel = () => {
 						</UFormGroup>
 						<UFormGroup class="p-2 basis-1/4" required>
 							<label class="block mb-1 required-field">Total Volunteer Minutes:</label>
-							<CustomNumberInput
+							<UInput
 								v-model="totalVolunteerMinutes"
 								placeholder="Travel+Sampling"
+								type="number"
+  								min="0"
 								required
 							/>
 						</UFormGroup>
 						<UFormGroup class="p-2 basis-1/4">
 							<label class="block mb-1 required-field">Miles Driven:</label>
-							<CustomNumberInput
+							<UInput
 								v-model="milesDriven"
 								icon="fa-solid:car-side"
+								type="number"
+								placeholder="0"
+  								min="0"
 								required
 							/>
 						</UFormGroup>
@@ -2610,5 +2620,16 @@ const confirmCancel = () => {
   min-height: 200px;
   line-height: 1.5;
   padding: 0.75rem;
+}
+
+/* Hide number input spinners globally */
+:deep(input[type="number"]::-webkit-outer-spin-button),
+:deep(input[type="number"]::-webkit-inner-spin-button) {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+:deep(input[type="number"]) {
+  -moz-appearance: textfield;
 }
 </style>

@@ -1,3 +1,4 @@
+// File: server/api/contact-sampler.ts
 import sendgrid from '@sendgrid/mail';
 import { defineEventHandler, readBody, createError } from 'h3';
 import { getApiConfig, getDirectusHeaders } from '../utils/config';

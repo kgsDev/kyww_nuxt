@@ -1,4 +1,5 @@
 //This API page is for inviting users - sends off emails to users who have attended a training session
+//invite-users.post.ts
 import { v4 as uuidv4 } from 'uuid';
 import sendgrid from '@sendgrid/mail';
 import { readBody, send } from 'h3'; // Correct imports from h3

@@ -1,4 +1,5 @@
 //This is the signup API for the KYWW portal. It is used to create a new user account in Directus and send a welcome email to the new user.
+//signup.post.ts
 import sendgrid from '@sendgrid/mail';
 import { getApiConfig, getDirectusHeaders } from '../utils/config';
 import { readBody } from 'h3';

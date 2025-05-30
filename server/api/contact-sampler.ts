@@ -1,3 +1,5 @@
+//this is a server-side API endpoint for contacting samplers
+//contact-sampler.ts
 import sendgrid from '@sendgrid/mail';
 import { getApiConfig, getDirectusHeaders } from '../utils/config';
 import { readBody, parseCookies } from 'h3';

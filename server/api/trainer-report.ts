@@ -1,3 +1,5 @@
+//this is for the trainer report page, which shows all users managed by a trainer
+//trainer-report.ts
 import { getApiConfig, getDirectusHeaders } from '../utils/config';
 import { v4 as uuidv4 } from 'uuid';
 import sendgrid from '@sendgrid/mail';
