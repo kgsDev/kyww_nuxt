@@ -1,4 +1,5 @@
 <script setup lang="ts">
+//users/index.vue - display and manage users in the Kentucky Watershed Watch portal
 import { ref, computed, onMounted } from 'vue'
 import PolicyGuard from '../../components/PolicyGuard.vue'
 import SamplingIntentSummary from '~/components/SamplingIntentSummary.vue'
@@ -12,12 +13,15 @@ const users = ref([])
 const showHubInfo = ref({})
 const currentYear = ref(new Date().getFullYear())
 const samplersWithPlans = ref(0) // Track samplers with plans
+const actualSamplingData = ref([]) // Track actual sampling sites
 
 // Search and filter states
 const searchQuery = ref('')
 const selectedStatus = ref('all')
 const selectedHub = ref('all')
 const selectedTraining = ref('all')
+const selectedSamplingActivity = ref('all') // NEW
+const siteSearchQuery = ref('') // NEW
 const sortBy = ref('name')
 const sortDirection = ref('asc')
 
@@ -26,6 +30,14 @@ const uniqueHubs = computed(() => {
   const hubs = new Set(users.value.map(user => user.sampler_data?.hub_id?.Description).filter(Boolean))
   return ['all', ...Array.from(hubs)]
 })
+
+const samplingActivityOptions = [
+  { value: 'all', label: 'All Users' },
+  { value: 'active_samplers', label: 'Active Samplers (Has Samples)' },
+  { value: 'inactive_samplers', label: 'No Samples Yet' },
+  { value: 'high_activity', label: 'High Activity (5+ Samples)' },
+  { value: 'multiple_sites', label: 'Multiple Sites (2+ Sites)' }
+]
 
 // Training options
 const trainingOptions = [
@@ -55,6 +67,7 @@ const getSortValue = (user, field) => {
 // Filter and sort users
 const filteredAndSortedUsers = computed(() => {
   return users.value.filter(user => {
+    // Existing filters
     const matchesSearch = searchQuery.value === '' ||
       formatName(user).toLowerCase().includes(searchQuery.value.toLowerCase()) ||
       user.email?.toLowerCase().includes(searchQuery.value.toLowerCase())
@@ -66,8 +79,38 @@ const filteredAndSortedUsers = computed(() => {
     
     const matchesTraining = selectedTraining.value === 'all' || 
       user.sampler_data?.[`training_${selectedTraining.value}`]
+
+    // NEW: Sampling activity filter
+    const userSampleCount = getUserSamplingCount(user.id)
+    const userSiteCount = getUserUniqueSites(user.id).length
     
-    return matchesSearch && matchesStatus && matchesHub && matchesTraining
+    let matchesSamplingActivity = true
+    switch (selectedSamplingActivity.value) {
+      case 'active_samplers':
+        matchesSamplingActivity = userSampleCount > 0
+        break
+      case 'inactive_samplers':
+        matchesSamplingActivity = userSampleCount === 0
+        break
+      case 'high_activity':
+        matchesSamplingActivity = userSampleCount >= 5
+        break
+      case 'multiple_sites':
+        matchesSamplingActivity = userSiteCount >= 2
+        break
+      case 'all':
+      default:
+        matchesSamplingActivity = true
+    }
+
+    // NEW: Site search filter
+    const matchesSiteSearch = siteSearchQuery.value === '' || 
+      getUserUniqueSites(user.id).some(site => 
+        site.toLowerCase().includes(siteSearchQuery.value.toLowerCase())
+      )
+    
+    return matchesSearch && matchesStatus && matchesHub && matchesTraining && 
+           matchesSamplingActivity && matchesSiteSearch
   }).sort((a, b) => {
     const aValue = getSortValue(a, sortBy.value)
     const bValue = getSortValue(b, sortBy.value)
@@ -77,15 +120,45 @@ const filteredAndSortedUsers = computed(() => {
   })
 })
 
+const filterStats = computed(() => {
+  const totalUsers = users.value.length
+  const activeSamplers = users.value.filter(user => getUserSamplingCount(user.id) > 0).length
+  const inactiveSamplers = totalUsers - activeSamplers
+  const highActivitySamplers = users.value.filter(user => getUserSamplingCount(user.id) >= 5).length
+  const multipleSiteSamplers = users.value.filter(user => getUserUniqueSites(user.id).length >= 2).length
+  
+  return {
+    totalUsers,
+    activeSamplers,
+    inactiveSamplers,
+    highActivitySamplers,
+    multipleSiteSamplers
+  }
+})
+
 // Get user IDs for sampling intent summary
 const filteredUserIds = computed(() => {
   return filteredAndSortedUsers.value.map(user => user.id);
 });
 
+
+const clearAllFilters = () => {
+  searchQuery.value = ''
+  selectedStatus.value = 'all'
+  selectedHub.value = 'all'
+  selectedTraining.value = 'all'
+  selectedSamplingActivity.value = 'all'
+  siteSearchQuery.value = ''
+  sortBy.value = 'name'
+  sortDirection.value = 'asc'
+}
+
 // Handle count update from the SamplingIntentSummary component
 const updateSamplersCount = (count) => {
   samplersWithPlans.value = count;
 };
+
+
 
 // Function to fetch samplers with plans count
 const fetchSamplersWithPlansCount = async () => {
@@ -108,7 +181,80 @@ const fetchSamplersWithPlansCount = async () => {
   }
 };
 
-// Export to CSV function with sampling intent data
+// Fetch actual sampling data for the current year
+const fetchActualSamplingData = async () => {
+  try {
+    const response = await useDirectus(readItems('base_samples', {
+      filter: {
+        date: { 
+          _gte: `${currentYear.value}-01-01`, 
+          _lte: `${currentYear.value}-12-31` 
+        }
+      },
+      fields: [
+        'volunteer_id.id',  // Get the actual ID
+        'volunteer_id.first_name',
+        'volunteer_id.last_name', 
+        'wwky_id.description',
+        'wwky_id.wwkyid_pk',
+        'date'
+      ],
+      limit: -1
+    }));
+    
+    actualSamplingData.value = response;
+  } catch (err) {
+    console.error('Error fetching actual sampling data:', err);
+    actualSamplingData.value = [];
+  }
+};
+
+// Update the getUserSamplingCount function:
+const getUserSamplingCount = (userId) => {
+  return actualSamplingData.value.filter(sample => {
+    // Handle both cases: volunteer_id as object or direct ID
+    const sampleVolunteerId = sample.volunteer_id?.id || sample.volunteer_id;
+    return sampleVolunteerId === userId;
+  }).length;
+};
+
+// Fixed: getUserUniqueSites function  
+const getUserUniqueSites = (userId) => {
+  const userSamples = actualSamplingData.value.filter(sample => {
+    // Handle both cases: volunteer_id as object or direct ID
+    const sampleVolunteerId = sample.volunteer_id?.id || sample.volunteer_id;
+    return sampleVolunteerId === userId;
+  });
+  
+  const uniqueSites = new Set(
+    userSamples
+      .map(sample => {
+        if (sample.wwky_id?.wwkyid_pk && sample.wwky_id?.description) {
+          return `${sample.wwky_id.wwkyid_pk}: ${sample.wwky_id.description}`;
+        }
+        return sample.wwky_id?.wwkyid_pk || sample.wwky_id?.description || sample.wwky_id;
+      })
+      .filter(Boolean)
+  );
+  return Array.from(uniqueSites);
+};
+
+const getUserUniqueSiteIds = (userId) => {
+  const userSamples = actualSamplingData.value.filter(sample => {
+    // Handle both cases: volunteer_id as object or direct ID
+    const sampleVolunteerId = sample.volunteer_id?.id || sample.volunteer_id;
+    return sampleVolunteerId === userId;
+  });
+  
+  const uniqueSiteIds = new Set(
+    userSamples
+      .map(sample => sample.wwky_id?.wwkyid_pk)
+      .filter(Boolean)
+  );
+  return Array.from(uniqueSiteIds);
+};
+
+// Export to CSV function with sampling intent data AND actual sampling data
 const exportToCSV = async () => {
   // Define months for consistency
   const months = [
@@ -143,13 +289,16 @@ const exportToCSV = async () => {
     'Training Habitat',
     'Training Biological',
     'Original Training Date',
-    'Latest Training Date'
+    'Latest Training Date',
+    'Actual Samples Collected',
+    'Unique Sites Sampled',
+    'Sites List'
   ];
 
   // Add sampling intent columns for each month
   months.forEach(month => {
-    headers.push(`${month.abbr} Sites`);
-    headers.push(`${month.abbr} E.coli Cards`);
+    headers.push(`${month.abbr} Sites (Planned)`);
+    headers.push(`${month.abbr} E.coli Cards (Planned)`);
   });
 
   // First, fetch all sampling intent data for the current year in one query
@@ -174,7 +323,7 @@ const exportToCSV = async () => {
     intentByUserId[intent.user_id] = intent;
   });
 
-  // Process user data and combine with sampling intent
+  // Process user data and combine with sampling intent and actual sampling
   const csvData = filteredAndSortedUsers.value.map(user => {
     // Basic user data
     const userData = [
@@ -193,7 +342,10 @@ const exportToCSV = async () => {
       user.sampler_data?.training_habitat ? 'Yes' : 'No',
       user.sampler_data?.training_biological ? 'Yes' : 'No',
       formatDate(user.sampler_data?.original_training_date),
-      formatDate(user.sampler_data?.training_date_latest)
+      formatDate(user.sampler_data?.training_date_latest),
+      getUserSamplingCount(user.id),
+      getUserUniqueSites(user.id).length,
+      getUserUniqueSiteIds(user.id).join(' | ') // Changed to use site IDs with pipe separation
     ];
 
     // Get sampling intent data for this user
@@ -267,6 +419,7 @@ const visibleGroups = ref(Object.keys(userGroups).reduce((acc, key) => {
 const changeYear = (newYear) => {
   currentYear.value = newYear;
   fetchSamplersWithPlansCount();
+  fetchActualSamplingData();
 };
 
 const fetchUsers = async () => {
@@ -371,10 +524,16 @@ const samplerCount = computed(() => {
   ).length;
 });
 
+// Navigate to sampling dashboard
+const goToSamplingIntentDashboard = () => {
+  navigateTo('/portal/SamplingIntentDashboard');
+};
+
 // Load data on mount
 onMounted(() => {
   fetchUsers();
   fetchSamplersWithPlansCount();
+  fetchActualSamplingData();
 });
 </script>
 
@@ -401,92 +560,164 @@ onMounted(() => {
        
         <template v-else>
           <!-- Filter Controls -->
-          <UCard>
-            <div class="space-y-4">
-              <div class="flex justify-between items-center mb-2">
+         <UCard>
+          <div class="space-y-4">
+            <div class="flex justify-between items-center mb-2">
+              <div class="flex items-center gap-4">
                 <h3 class="text-lg font-semibold">Filters</h3>
-                
-                <!-- Year selection -->
-                <div class="flex items-center gap-2">
-                  <span class="text-sm text-gray-600">Current Year:</span>
-                  <UButtonGroup size="sm">
-                    <UButton
-                      :color="currentYear === currentYear - 1 ? 'primary' : 'gray'"
-                      @click="changeYear(currentYear - 1)"
-                    >
-                      {{ currentYear - 1 }}
-                    </UButton>
-                    <UButton
-                      :color="currentYear === currentYear ? 'primary' : 'gray'"
-                      @click="changeYear(currentYear)"
-                    >
-                      {{ currentYear }}
-                    </UButton>
-                    <UButton
-                      :color="currentYear === currentYear + 1 ? 'primary' : 'gray'"
-                      :disabled="currentYear + 1 > new Date().getFullYear() + 1"
-                      @click="changeYear(currentYear + 1)"
-                    >
-                      {{ currentYear + 1 }}
-                    </UButton>
-                  </UButtonGroup>
-                </div>
+                <UBadge color="blue" variant="soft">
+                  {{ filteredAndSortedUsers.length }} of {{ users.length }} users
+                </UBadge>
               </div>
-
-              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <!-- Search -->
-                <UInput
-                  v-model="searchQuery"
-                  icon="i-heroicons-magnifying-glass"
-                  placeholder="Search users..."
-                />
-
-                <!-- Status Filter -->
-                <USelect
-                  v-model="selectedStatus"
-                  :options="[
-                    { value: 'all', label: 'All Statuses' },
-                    { value: 'active', label: 'Active' },
-                    { value: 'inactive', label: 'Inactive' }
-                  ]"
-                />
-
-                <!-- Hub Filter -->
-                <USelect
-                  v-model="selectedHub"
-                  :options="uniqueHubs.map(hub => ({
-                    value: hub,
-                    label: hub === 'all' ? 'All Hubs' : hub
-                  }))"
-                />
-
-                <!-- Training Filter -->
-                <USelect
-                  v-model="selectedTraining"
-                  :options="trainingOptions"
-                />
-              </div>
-
-              <div class="flex justify-between items-center">
-                <!-- Sort Controls -->
-                <div class="flex items-center gap-2">
-                  <USelect
-                    v-model="sortBy"
-                    :options="[
-                      { value: 'name', label: 'Sort by Name' },
-                      { value: 'email', label: 'Sort by Email' },
-                      { value: 'hub', label: 'Sort by Hub' },
-                      { value: 'status', label: 'Sort by Status' }
-                    ]"
-                    class="w-40"
-                  />
+              
+              <!-- Year selection -->
+              <div class="flex items-center gap-2">
+                <span class="text-sm text-gray-600">Current Year:</span>
+                <UButtonGroup size="sm">
                   <UButton
-                    @click="sortDirection = sortDirection === 'asc' ? 'desc' : 'asc'"
-                    :icon="sortDirection === 'asc' ? 'i-heroicons-arrow-up' : 'i-heroicons-arrow-down'"
-                    color="gray"
-                    variant="ghost"
-                  />
+                    :color="currentYear === currentYear - 1 ? 'primary' : 'gray'"
+                    @click="changeYear(currentYear - 1)"
+                  >
+                    {{ currentYear - 1 }}
+                  </UButton>
+                  <UButton
+                    :color="currentYear === currentYear ? 'primary' : 'gray'"
+                    @click="changeYear(currentYear)"
+                  >
+                    {{ currentYear }}
+                  </UButton>
+                  <UButton
+                    :color="currentYear === currentYear + 1 ? 'primary' : 'gray'"
+                    :disabled="currentYear + 1 > new Date().getFullYear() + 1"
+                    @click="changeYear(currentYear + 1)"
+                  >
+                    {{ currentYear + 1 }}
+                  </UButton>
+                </UButtonGroup>
+              </div>
+            </div>
+
+            <!-- Filter Statistics -->
+            <div class="bg-gray-50 p-3 rounded-lg">
+              <div class="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
+                <div class="text-center">
+                  <div class="font-semibold text-green-600">{{ filterStats.activeSamplers }}</div>
+                  <div class="text-gray-600">Active Samplers</div>
                 </div>
+                <div class="text-center">
+                  <div class="font-semibold text-gray-600">{{ filterStats.inactiveSamplers }}</div>
+                  <div class="text-gray-600">No Samples Yet</div>
+                </div>
+                <div class="text-center">
+                  <div class="font-semibold text-blue-600">{{ filterStats.highActivitySamplers }}</div>
+                  <div class="text-gray-600">High Activity (5+)</div>
+                </div>
+                <div class="text-center">
+                  <div class="font-semibold text-purple-600">{{ filterStats.multipleSiteSamplers }}</div>
+                  <div class="text-gray-600">Multiple Sites</div>
+                </div>
+                <div class="text-center">
+                  <div class="font-semibold text-orange-600">{{ users.length }}</div>
+                  <div class="text-gray-600">Total Users</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Main Filters - First Row -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <!-- Search -->
+              <UInput
+                v-model="searchQuery"
+                icon="i-heroicons-magnifying-glass"
+                placeholder="Search users..."
+              />
+
+              <!-- Status Filter -->
+              <USelect
+                v-model="selectedStatus"
+                :options="[
+                  { value: 'all', label: 'All Statuses' },
+                  { value: 'active', label: 'Active' },
+                  { value: 'inactive', label: 'Inactive' }
+                ]"
+              />
+
+              <!-- Hub Filter -->
+              <USelect
+                v-model="selectedHub"
+                :options="uniqueHubs.map(hub => ({
+                  value: hub,
+                  label: hub === 'all' ? 'All Hubs' : hub
+                }))"
+              />
+
+              <!-- Training Filter -->
+              <USelect
+                v-model="selectedTraining"
+                :options="trainingOptions"
+              />
+            </div>
+
+            <!-- Second Row - New Sampling Filters -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <!-- Sampling Activity Filter -->
+              <USelect
+                v-model="selectedSamplingActivity"
+                :options="samplingActivityOptions"
+                placeholder="Filter by sampling activity"
+              >
+                <template #label>
+                  <UIcon name="i-heroicons-beaker" class="w-4 h-4 mr-1" />
+                  Sampling Activity
+                </template>
+              </USelect>
+
+              <!-- Site Search -->
+              <UInput
+                v-model="siteSearchQuery"
+                icon="i-heroicons-map-pin"
+                placeholder="Search by site ID or description..."
+              >
+                <template #label>
+                  Site Search
+                </template>
+              </UInput>
+            </div>
+
+            <!-- Controls Row -->
+            <div class="flex justify-between items-center">
+              <!-- Sort Controls -->
+              <div class="flex items-center gap-2">
+                <USelect
+                  v-model="sortBy"
+                  :options="[
+                    { value: 'name', label: 'Sort by Name' },
+                    { value: 'email', label: 'Sort by Email' },
+                    { value: 'hub', label: 'Sort by Hub' },
+                    { value: 'status', label: 'Sort by Status' }
+                  ]"
+                  class="w-40"
+                />
+                <UButton
+                  @click="sortDirection = sortDirection === 'asc' ? 'desc' : 'asc'"
+                  :icon="sortDirection === 'asc' ? 'i-heroicons-arrow-up' : 'i-heroicons-arrow-down'"
+                  color="gray"
+                  variant="ghost"
+                />
+              </div>
+
+              <!-- Action Buttons -->
+              <div class="flex items-center gap-2">
+                <!-- Clear Filters -->
+                <UButton
+                  @click="clearAllFilters"
+                  color="gray"
+                  variant="outline"
+                  size="sm"
+                  icon="i-heroicons-x-mark"
+                >
+                  Clear Filters
+                </UButton>
 
                 <!-- Export Button -->
                 <UButton
@@ -498,7 +729,37 @@ onMounted(() => {
                 </UButton>
               </div>
             </div>
-          </UCard>
+
+            <!-- Active Filters Display -->
+            <div v-if="searchQuery || selectedStatus !== 'all' || selectedHub !== 'all' || selectedTraining !== 'all' || selectedSamplingActivity !== 'all' || siteSearchQuery" class="flex flex-wrap gap-2">
+              <span class="text-sm text-gray-600">Active filters:</span>
+              
+              <UBadge v-if="searchQuery" color="blue" variant="soft" @click="searchQuery = ''" class="cursor-pointer">
+                Search: "{{ searchQuery }}" ×
+              </UBadge>
+              
+              <UBadge v-if="selectedStatus !== 'all'" color="green" variant="soft" @click="selectedStatus = 'all'" class="cursor-pointer">
+                Status: {{ selectedStatus }} ×
+              </UBadge>
+              
+              <UBadge v-if="selectedHub !== 'all'" color="purple" variant="soft" @click="selectedHub = 'all'" class="cursor-pointer">
+                Hub: {{ selectedHub }} ×
+              </UBadge>
+              
+              <UBadge v-if="selectedTraining !== 'all'" color="orange" variant="soft" @click="selectedTraining = 'all'" class="cursor-pointer">
+                Training: {{ trainingOptions.find(t => t.value === selectedTraining)?.label }} ×
+              </UBadge>
+              
+              <UBadge v-if="selectedSamplingActivity !== 'all'" color="red" variant="soft" @click="selectedSamplingActivity = 'all'" class="cursor-pointer">
+                Activity: {{ samplingActivityOptions.find(a => a.value === selectedSamplingActivity)?.label }} ×
+              </UBadge>
+              
+              <UBadge v-if="siteSearchQuery" color="gray" variant="soft" @click="siteSearchQuery = ''" class="cursor-pointer">
+                Site: "{{ siteSearchQuery }}" ×
+              </UBadge>
+            </div>
+          </div>
+        </UCard>
 
           <!-- Sampling Intent Summary -->
           <UCard>
@@ -756,6 +1017,27 @@ onMounted(() => {
                         <p v-if="user.sampler_data.PH_expire" class="text-gray-600">
                           pH Expiration: {{ formatDate(user.sampler_data.PH_expire) }}
                         </p>
+                      </div>
+
+                      <!-- Actual Sampling Activity -->
+                      <div class="mb-2">
+                        <p class="text-gray-900">{{ currentYear }} Sampling Activity:</p>
+                        <div class="bg-blue-50 p-2 rounded mt-1">
+                          <p class="text-blue-800 font-medium">
+                            Samples Collected: {{ getUserSamplingCount(user.id) }}
+                          </p>
+                          <p class="text-blue-700">
+                            Unique Sites: {{ getUserUniqueSites(user.id).length }}
+                          </p>
+                          <div v-if="getUserUniqueSites(user.id).length > 0" class="mt-1">
+                            <p class="text-blue-700 text-xs">Sites:</p>
+                            <div class="text-blue-600 text-xs">
+                              <div v-for="site in getUserUniqueSites(user.id)" :key="site" class="mb-1">
+                                {{ site }}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
                       </div>
                       
                       <!-- Sampling Plans -->

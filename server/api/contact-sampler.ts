@@ -3,6 +3,7 @@
 import sendgrid from '@sendgrid/mail';
 import { getApiConfig, getDirectusHeaders } from '../utils/config';
 import { readBody, parseCookies } from 'h3';
+import { sendEmailSafely } from '../utils/emailUtils';
 
 // Define TypeScript interfaces
 interface ContactRequest {
@@ -51,7 +52,6 @@ export default eventHandler(async (event) => {
       event.node.res.statusCode = statusCode;
       event.node.res.end(JSON.stringify(data));
     };
-
 
     // Get authentication info from cookies
     const cookies = parseCookies(event);
@@ -285,9 +285,9 @@ export default eventHandler(async (event) => {
     };
 
     let sendToEmail = samplerData.user_id.email;
-    //sendToEmail = 'dropstones@gmail.com'
+
     // 5. Send email to the sampler
-    await sendgrid.send({
+    const samplerEmailResult = await sendEmailSafely({
       to: sendToEmail,
       from: { email: 'contact@kywater.org', name: 'Kentucky Watershed Watch' },
       replyTo: currentUser.email,
@@ -324,7 +324,7 @@ export default eventHandler(async (event) => {
     });
 
     // 6. Send confirmation email to the requesting user
-    await sendgrid.send({
+    const confirmationEmailResult = await sendEmailSafely({
       to: currentUser.email,
       from: { email: 'contact@kywater.org', name: 'Kentucky Watershed Watch' },
       subject: 'Your Kentucky Watershed Watch Connection Request Was Sent',
@@ -352,12 +352,11 @@ export default eventHandler(async (event) => {
       `
     });
 
+    // 7. Log the connection request (non-critical)
     try {
-
-      // Make the API call using server credentials only
       const response = await fetch(`${config.public.directusUrl}/items/sampler_connections`, {
         method: 'POST',
-        headers: getDirectusHeaders(config), // Use ONLY server credentials
+        headers: getDirectusHeaders(config),
         body: JSON.stringify({
           requesting_user_id: user.id,
           samplerid: samplerId,
@@ -368,22 +367,39 @@ export default eventHandler(async (event) => {
         }),
       });
       
-      // Check if the response was successful
       if (!response.ok) {
         const errorText = await response.text();
         console.error(`API error (${response.status}):`, errorText);
-        // Don't throw error, as this is non-critical
         console.warn('Failed to log connection, but emails were sent successfully');
-      } else {
-        // Log the successful response data
-        const responseData = await response.json();
       }
     } catch (error) {
       console.error('Failed to log connection request:', error);
       // Non-critical, continue with the response
     }
 
-    // 8. Send success response
+    // 8. Determine response based on email results
+    if (!samplerEmailResult.success && !confirmationEmailResult.success) {
+      return respondWithJSON(createErrorResponse(
+        'Failed to send your message. Please try again later.',
+        'EMAIL_FAILED',
+        500
+      ));
+    } else if (!samplerEmailResult.success) {
+      return respondWithJSON(createErrorResponse(
+        'Failed to deliver your message to the sampler. Please try again later.',
+        'DELIVERY_FAILED',
+        500
+      ));
+    } else if (!confirmationEmailResult.success) {
+      return respondWithJSON({
+        status: 'success',
+        message: 'Your message was sent successfully, but we couldn\'t send you a confirmation email.',
+        code: 'PARTIAL_SUCCESS',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    // Complete success
     return respondWithJSON({
       status: 'success',
       message: 'Your message has been sent successfully.',
@@ -392,11 +408,10 @@ export default eventHandler(async (event) => {
 
   } catch (error) {
     console.error('Contact sampler error:', error);
-    return { 
-      status: 'error',
-      message: 'Failed to send your message. Please try again later.', 
-      code: 'INTERNAL_ERROR',
-      timestamp: new Date().toISOString()
-    };
+    return respondWithJSON(createErrorResponse(
+      'Failed to send your message. Please try again later.',
+      'INTERNAL_ERROR',
+      500
+    ));
   }
 });

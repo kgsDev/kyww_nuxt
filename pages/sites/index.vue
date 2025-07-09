@@ -371,9 +371,11 @@ onMounted(async () => {
   <div class="max-w-7xl mx-auto px-4 py-6 lg:px-8">
     <!-- Hero section -->
     <div class="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg shadow-sm p-8 mb-8">
-      <h1 class="text-3xl font-bold text-blue-800 mb-3">Kentucky Watershed Watch Sampling Sites</h1>
+      <h1 class="text-3xl font-bold text-blue-800 mb-3">Kentucky Watershed Watch Sampling Data</h1>
       <p class="text-gray-700 max-w-3xl">
-        Explore water quality monitoring sites across Kentucky watersheds. View sample data, water quality metrics, and see where volunteer water monitoring efforts are making a difference.
+        Explore water quality data collected by trained volunteers at monitoring sites across Kentucky watersheds. View sample data, water quality metrics, and see where volunteer water monitoring efforts are making a difference.
+        <br><br>
+        If you're interessted in volunteering to collect water quality data, please find more information on the <a href="https://www.kywater.org" target="_blank">Kentucky Watershed Watch website</a> or contact your local support hub.
       </p>
     </div>
     
@@ -520,7 +522,7 @@ onMounted(async () => {
               id="site-search"
               v-model="siteSearchQuery"
               type="text"
-              placeholder="Search by name, ID, or description"
+              placeholder="Search ID, stream name, or description"
               class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
             />
           </div>

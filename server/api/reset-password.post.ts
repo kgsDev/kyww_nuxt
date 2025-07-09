@@ -1,7 +1,8 @@
-// File: server/api/contact-sampler.ts
+// File: server/api/reset-password.post.ts
 import sendgrid from '@sendgrid/mail';
 import { defineEventHandler, readBody, createError } from 'h3';
 import { getApiConfig, getDirectusHeaders } from '../utils/config';
+import { sendEmailSafely } from '../utils/emailUtils';
 
 const config = getApiConfig();
 sendgrid.setApiKey(config.SENDGRID_API_KEY);
@@ -68,9 +69,9 @@ export default defineEventHandler(async (event) => {
       });
     }
 
-    // Send confirmation email
-    await sendgrid.send({
-      to: user.email,
+    // Send confirmation email with proper error handling
+    const emailResult = await sendEmailSafely({
+      to: user.email, // Use the user's email from the database
       from: {
         email: 'contact@kywater.org',
         name: 'Kentucky Watershed Watch',
@@ -100,7 +101,18 @@ export default defineEventHandler(async (event) => {
       `,
     });
 
+    if (!emailResult.success) {
+      console.error('Password reset confirmation email failed:', emailResult.error);
+      // Password was successfully reset, but email failed
+      // Still return success since the main operation worked
+      return { 
+        success: true, 
+        message: 'Password reset successfully, but we couldn\'t send a confirmation email.' 
+      };
+    }
+
     return { success: true };
+
   } catch (error) {
     console.error('Password reset error:', error);
     throw createError({

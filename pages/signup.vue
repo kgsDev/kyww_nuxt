@@ -27,6 +27,20 @@
         </div>
       </div>
 
+      <!-- Date validation warning -->
+      <div 
+        v-if="dateValidationWarning && showForm" 
+        class="message warning-message"
+      >
+        <div class="flex items-center">
+          <UIcon 
+            name="i-heroicons-exclamation-triangle"
+            class="h-5 w-5 text-yellow-500 mr-2"
+          />
+          <span>{{ dateValidationWarning }}</span>
+        </div>
+      </div>
+
       <form ref="signupForm" v-if="showForm" @submit.prevent="onSubmit">
         <h2>Welcome to Kentucky Watershed Watch!</h2>
         <h1>We greatly appreciate your interest in supporting the organization and Kentucky's waterways with your stream sampling efforts.
@@ -110,11 +124,27 @@
         <div class="read-group-div">
           <div class="form-group">
             <label>Original Training Date:</label>
-            <input type="text" :value="originalTrainingDate" disabled class="readonly-field"/>
+            <input 
+              type="text" 
+              :value="displayOriginalTrainingDate" 
+              disabled 
+              class="readonly-field"
+              :class="{ 'date-warning': hasDateIssue }"
+            />
+            <p v-if="hasDateIssue" class="date-warning-text">
+              ⚠️ This date appears to have an issue. Please contact your trainer if this looks incorrect.
+            </p>
           </div>
           <div class="form-group">
             <label>Latest Training Date:</label>
-            <input type="text" :value="trainingDateLatest" disabled readonly  class="readonly-field"/>
+            <input 
+              type="text" 
+              :value="displayLatestTrainingDate" 
+              disabled 
+              readonly  
+              class="readonly-field"
+              :class="{ 'date-warning': hasDateIssue }"
+            />
           </div>
           <div class="form-group">
             <label>Training Location:</label>
@@ -152,7 +182,8 @@
           </div>
           <div v-if="equip_ph" class="form-group">
             <label>pH Kit Expiration Date:
-            <input type="date" v-model="equip_ph_expiration" id="equip_ph_expiration"/></label>
+            <input type="date" v-model="equip_ph_expiration" id="equip_ph_expiration" @input="validateEquipmentDate('ph')"/></label>
+            <p v-if="equipmentDateErrors.ph" class="error-message">{{ equipmentDateErrors.ph }}</p>
           </div>
           <div class="form-group">
             <label>Dissolved oxygen kit:
@@ -160,7 +191,8 @@
           </div>
           <div v-if="equip_do" class="form-group">
             <label>DO Kit Expiration Date:
-            <input type="date" v-model="equip_do_expiration" id="equip_do_expiration"/></label>
+            <input type="date" v-model="equip_do_expiration" id="equip_do_expiration" @input="validateEquipmentDate('do')"/></label>
+            <p v-if="equipmentDateErrors.do" class="error-message">{{ equipmentDateErrors.do }}</p>
           </div>
           <div class="form-group">
             <label>
@@ -251,7 +283,7 @@
         </div>
         
         <div class="form-group">
-          <label for="county_residence">County of Residence:</label>
+          <label for="county_residence">KY county you will primarily sample or identify with:</label>
           <select v-model="county_residence" id="county_residence" required>
             <option v-for="county in counties" :key="county.id" :value="county.id">{{ county.name }}</option>
           </select>
@@ -276,7 +308,7 @@
           <select v-model="desiredHub" id="desiredHub" required>
             <option value="">Select a Support Hub</option>
             <option v-for="hub in hubs" :key="hub.hub_id" :value="hub.hub_id">
-              {{ hub.Basin }} - {{ hub.Description }}
+              {{ hub.Description }} - {{ hub.City }}
             </option>
           </select>
         </div>
@@ -288,6 +320,7 @@
           data-sitekey="6LeSlG4qAAAAAKo9KheTqBdOD1HhHGxjCAvt9Seg"
           data-callback="onSubmit"
           data-size="invisible"
+          :disabled="!canSubmitForm"
         >
           Sign Up
         </button>
@@ -363,6 +396,82 @@
   const signupForm = ref(null);
   const recaptchaContainer = ref(null);
   const hasRecaptchaRendered = ref(false);
+  const dateValidationWarning = ref('');
+  const equipmentDateErrors = ref({ ph: '', do: '' });
+
+  // Date validation functions
+  function validateTrainingDate(dateString) {
+    if (!dateString) return { isValid: true, message: '', displayDate: '' };
+    
+    const date = new Date(dateString);
+    const currentYear = new Date().getFullYear();
+    
+    // Check if date is valid
+    if (isNaN(date.getTime())) {
+      return { 
+        isValid: false, 
+        message: 'Invalid date format', 
+        displayDate: 'Invalid Date' 
+      };
+    }
+    
+    const year = date.getFullYear();
+    
+    // Check if year is reasonable (between 2020 and current year + 5)
+    if (year < 2020 || year > currentYear + 5) {
+      return { 
+        isValid: false, 
+        message: `Training date appears to be from year ${year}, which seems incorrect`, 
+        displayDate: `${date.toLocaleDateString()} (Year ${year} - Please verify)` 
+      };
+    }
+    
+    return { 
+      isValid: true, 
+      message: '', 
+      displayDate: date.toLocaleDateString() 
+    };
+  }
+
+  function validateEquipmentDate(equipmentType) {
+    const dateValue = equipmentType === 'ph' ? equip_ph_expiration.value : equip_do_expiration.value;
+    
+    if (!dateValue) {
+      equipmentDateErrors.value[equipmentType] = '';
+      return;
+    }
+    
+    const validation = validateTrainingDate(dateValue);
+    if (!validation.isValid) {
+      equipmentDateErrors.value[equipmentType] = validation.message;
+    } else {
+      equipmentDateErrors.value[equipmentType] = '';
+    }
+  }
+
+  // Computed properties for date display and validation
+  const originalDateValidation = computed(() => validateTrainingDate(originalTrainingDate.value));
+  const latestDateValidation = computed(() => validateTrainingDate(trainingDateLatest.value));
+  
+  const displayOriginalTrainingDate = computed(() => originalDateValidation.value.displayDate);
+  const displayLatestTrainingDate = computed(() => latestDateValidation.value.displayDate);
+  
+  const hasDateIssue = computed(() => 
+    !originalDateValidation.value.isValid || !latestDateValidation.value.isValid
+  );
+
+  const canSubmitForm = computed(() => {
+    // Check all validation states
+    const hasValidationErrors = 
+      emailMessage.value || 
+      phoneMessage.value || 
+      passwordMessage.value || 
+      passwordMatchMessage.value ||
+      equipmentDateErrors.value.ph ||
+      equipmentDateErrors.value.do;
+    
+    return !hasValidationErrors;
+  });
 
   // Counties data array
   const counties = [
@@ -627,8 +736,10 @@ const validatePasswordMatch = () => {
     validateEmail();
     validatePassword();
     validatePasswordMatch();
+    validateEquipmentDate('ph');
+    validateEquipmentDate('do');
 
-    if (emailMessage.value || phoneMessage.value || passwordMessage.value || passwordMatchMessage.value) {
+    if (emailMessage.value || phoneMessage.value || passwordMessage.value || passwordMatchMessage.value || equipmentDateErrors.value.ph || equipmentDateErrors.value.do) {
       apiError.value = 'Please fix all validation errors before submitting.';
       // Scroll to error message
       nextTick(() => {
@@ -637,12 +748,31 @@ const validatePasswordMatch = () => {
       return;
     }
 
+    // Check if we have date issues and warn the user
+    if (hasDateIssue.value) {
+      dateValidationWarning.value = 'Your training date appears to have an issue. The signup will proceed, but please contact your trainer to verify the correct training date.';
+    }
+
     if (typeof grecaptcha !== 'undefined') {
       grecaptcha.execute();
     } else {
       message.value = 'reCAPTCHA could not load. Please refresh the page.';
     }
   };
+
+  // Function to sanitize dates before sending to API
+  function sanitizeDate(dateString) {
+    if (!dateString) return null;
+    
+    const validation = validateTrainingDate(dateString);
+    if (!validation.isValid) {
+      // If date is invalid, return null to prevent API errors
+      console.warn(`Invalid date detected: ${dateString}, sending null instead`);
+      return null;
+    }
+    
+    return dateString;
+  }
 
   // reCAPTCHA response handler
   const handleReCaptchaResponse = async (captchaToken) => {
@@ -670,9 +800,10 @@ const validatePasswordMatch = () => {
             zip: address.value.zip
           },
           kitOption: kitOption.value,
-          trainer_name:trainer_name.value,
-          originalTrainingDate: originalTrainingDate.value,
-          trainingDateLatest: trainingDateLatest.value,
+          trainer_name: trainer_name.value,
+          // Sanitize dates before sending to API
+          originalTrainingDate: sanitizeDate(originalTrainingDate.value),
+          trainingDateLatest: sanitizeDate(trainingDateLatest.value),
           trainingLocation: trainingLocation.value,
           training_field_chemistry: training_field_chemistry.value,
           training_r_card: training_r_card.value,
@@ -686,8 +817,8 @@ const validatePasswordMatch = () => {
           equip_pan: equip_pan.value,
           equip_flip: equip_flip.value,
           equip_incubator: equip_incubator.value,
-          DO_expire: equip_do_expiration.value,
-          PH_expire: equip_ph_expiration.value,
+          DO_expire: sanitizeDate(equip_do_expiration.value),
+          PH_expire: sanitizeDate(equip_ph_expiration.value),
         }
       });
 
@@ -719,12 +850,35 @@ const validatePasswordMatch = () => {
         nextTick(() => {
             document.getElementById('error-message')?.scrollIntoView({ behavior: 'smooth' });
           });
-        } else if (data.value?.message) {
-          //showForm.value = false;
-          message.value = data.value.message;
-          setTimeout(() => {
-            window.location.href = '/auth/signin'; // Change to signin page
-          }, 2000); // Give them 2 seconds to see success message
+        } else if (data.value) {
+          const response = data.value;
+          
+          if (response.status === 'success') {
+            // Check if there was an email warning
+            if (response.code === 'EMAIL_WARNING') {
+              message.value = `⚠️ ${response.message}`;
+            } else if (hasDateIssue.value) {
+              message.value = `✅ ${response.message}<br><br>⚠️ Note: Your training date had some issues. Please contact your trainer to verify the correct training date after logging in.`;
+            } else {
+              message.value = `✅ ${response.message}`;
+            }
+            
+            showForm.value = false;
+            setTimeout(() => {
+              window.location.href = '/auth/signin';
+            }, 3000); // Give more time for warnings
+          } else {
+            // Legacy support
+            let successMessage = response.message || 'Account created successfully!';
+            if (hasDateIssue.value) {
+              successMessage += '<br><br>⚠️ Note: Your training date had some issues. Please contact your trainer to verify the correct training date after logging in.';
+            }
+            message.value = successMessage;
+            showForm.value = false;
+            setTimeout(() => {
+              window.location.href = '/auth/signin';
+            }, 3000);
+          }
         }
     } catch (err) {
       console.error('Fetch failed:', err);
@@ -795,6 +949,14 @@ const validatePasswordMatch = () => {
         training_r_card.value = data.training_r_card;
         training_habitat.value = data.training_habitat;
         training_biological.value = data.training_biological;
+
+        // Check for date issues after loading data
+        const originalValidation = validateTrainingDate(originalTrainingDate.value);
+        const latestValidation = validateTrainingDate(trainingDateLatest.value);
+        
+        if (!originalValidation.isValid || !latestValidation.isValid) {
+          dateValidationWarning.value = 'There appears to be an issue with your training date. You can still complete signup, but please contact your trainer to verify the correct date.';
+        }
       }
     } catch (error) {
       console.error('Error during invite lookup:', error);
@@ -1020,6 +1182,11 @@ const validatePasswordMatch = () => {
   .submit-button:hover {
     background-color: #45a049;
   }
+
+  .submit-button:disabled {
+    background-color: #cccccc;
+    cursor: not-allowed;
+  }
   
   .message {
     margin-top: 1rem;
@@ -1064,6 +1231,12 @@ const validatePasswordMatch = () => {
     color: #B91C1C;
   }
 
+  .warning-message {
+    background-color: #FFFBEB;
+    border: 1px solid #FDE68A;
+    color: #92400E;
+  }
+
   .relative {
     position: relative;
   }
@@ -1091,4 +1264,25 @@ const validatePasswordMatch = () => {
   input[type="text"] {
     padding-right: 2.5rem;
   }
-  </style>
+
+  /* Date validation styling */
+  .date-warning {
+    border-color: #f59e0b !important;
+    background-color: #fffbeb !important;
+  }
+
+  .date-warning-text {
+    font-size: 0.85rem;
+    color: #92400e;
+    margin-top: 0.25rem;
+    font-style: italic;
+  }
+
+  .flex {
+    display: flex;
+  }
+
+  .items-center {
+    align-items: center;
+  }
+</style>

@@ -1,8 +1,10 @@
+
 // server/api/request-password.post.ts
 import { v4 as uuidv4 } from 'uuid';
 import sendgrid from '@sendgrid/mail';
-import { defineEventHandler, readBody } from 'h3';
+import { defineEventHandler, readBody, createError } from 'h3';
 import { getApiConfig, getDirectusHeaders } from '../utils/config';
+import { sendEmailSafely } from '../utils/emailUtils';
 
 const config = getApiConfig();
 sendgrid.setApiKey(config.SENDGRID_API_KEY);
@@ -83,9 +85,9 @@ export default defineEventHandler(async (event) => {
       });
     }
 
-    // Send password reset email
+    // Send password reset email with proper error handling
     const resetLink = `https://kyww.uky.edu/reset-password?token=${resetToken}`;
-    await sendgrid.send({
+    const emailResult = await sendEmailSafely({
       to: email,
       from: {
         email: 'contact@kywater.org',
@@ -117,6 +119,14 @@ export default defineEventHandler(async (event) => {
         </div>
       `,
     });
+
+    if (!emailResult.success) {
+      console.error('Password reset email failed:', emailResult.error);
+      throw createError({
+        statusCode: 500,
+        message: 'We had trouble sending your password reset email. Please try again in a few minutes.',
+      });
+    }
 
     return { message: 'If an account exists, a reset link has been sent.' };
 

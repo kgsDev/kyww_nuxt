@@ -12,6 +12,7 @@ const training_field_chemistry = ref(false)
 const training_r_card = ref(false)
 const training_habitat = ref(false)
 const training_biological = ref(false)
+const training_no_training = ref(false)
 const error = ref('')
 const success = ref('')
 const showModal = ref(false)
@@ -21,7 +22,44 @@ const hasTrainingSelected = computed(() => {
 	return training_field_chemistry.value || 
 			training_r_card.value || 
 			training_habitat.value || 
-			training_biological.value;
+			training_biological.value ||
+			training_no_training.value;
+});
+
+// Enhanced date validation
+function validateTrainingDate(dateString: string): { isValid: boolean; message: string } {
+	if (!dateString?.trim()) {
+		return { isValid: false, message: 'Training date is required' };
+	}
+
+	const selectedDate = new Date(dateString);
+	const today = new Date();
+	const currentYear = today.getFullYear();
+	
+	// Check if date is valid
+	if (isNaN(selectedDate.getTime())) {
+		return { isValid: false, message: 'Please enter a valid date' };
+	}
+	
+	// Check if year is reasonable (between 2020 and current year + 2)
+	const selectedYear = selectedDate.getFullYear();
+	if (selectedYear < 2020 || selectedYear > currentYear + 5) {
+		return { isValid: false, message: `Valid training date must be between 2020 and ${currentYear + 5}` };
+	}
+	
+	// Check if date is not more than 2 years in the future
+	const fiveYearsFromNow = new Date();
+	fiveYearsFromNow.setFullYear(currentYear + 5);
+	
+	if (selectedDate > fiveYearsFromNow) {
+		return { isValid: false, message: 'Training date cannot be more than 5 years in the future' };
+	}
+	
+	return { isValid: true, message: '' };
+}
+
+const dateValidation = computed(() => {
+	return validateTrainingDate(training_date.value);
 });
 
 const canSubmit = computed(() => {
@@ -29,8 +67,9 @@ const canSubmit = computed(() => {
 		// Check that emails are valid and present
 		emails.value?.trim().length > 0 &&
 		validateEmails(emails.value) &&
-		// Check that training date is selected
+		// Check that training date is selected and valid
 		!!training_date.value?.length &&
+		dateValidation.value.isValid &&
 		// Check that location is entered
 		training_location.value?.trim().length > 0 &&
 		// Check that at least one training type is selected
@@ -63,43 +102,116 @@ function confirmSubmit() {
 		return;
 	}
 
+	// Additional date validation before submission
+	const dateCheck = validateTrainingDate(training_date.value);
+	if (!dateCheck.isValid) {
+		error.value = `Invalid training date: ${dateCheck.message}`;
+		return;
+	}
+
 	showModal.value = true;
 }
 
 async function submitEmails() {
 	showModal.value = false;
+	error.value = ''; // Clear previous errors
+
+	// Final date validation before API call
+	const dateCheck = validateTrainingDate(training_date.value);
+	if (!dateCheck.isValid) {
+		error.value = `Cannot submit: ${dateCheck.message}`;
+		return;
+	}
 
 	try {
 		const emailList = emails.value.split(/[ ,;]/).map(email => email.trim()).filter(Boolean);
 
 		const response = await fetch('/api/invite-users', {
-		method: 'POST',
-		headers: {
-			'Content-Type': 'application/json',
-		},
-		body: JSON.stringify({
-			emails: emailList,
-			training_date: training_date.value,
-			training_location: training_location.value,
-			training_field_chemistry: training_field_chemistry.value,
-			training_r_card: training_r_card.value,
-			training_habitat: training_habitat.value,
-			training_biological: training_biological.value,
-			trainer_id: user.value.id,
-			trainer_name: `${user.value.first_name} ${user.value.last_name}`
-		}),
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+			},
+			body: JSON.stringify({
+				emails: emailList,
+				training_date: training_date.value,
+				training_location: training_location.value,
+				training_field_chemistry: training_field_chemistry.value,
+				training_r_card: training_r_card.value,
+				training_habitat: training_habitat.value,
+				training_biological: training_biological.value,
+				training_no_training: training_no_training.value,
+				trainer_id: user.value.id,
+				trainer_name: `${user.value.first_name} ${user.value.last_name}`
+			}),
 		});
 
+		// Handle 202 Accepted response specially
+		if (response.status === 202) {
+			// For 202 responses, try to parse JSON but handle cases where it might be empty
+			let data;
+			try {
+				const responseText = await response.text();
+				data = responseText ? JSON.parse(responseText) : {};
+			} catch (parseError) {
+				console.warn('Could not parse 202 response as JSON:', parseError);
+				data = { message: 'Invitations are being processed.' };
+			}
+			
+			success.value = data.message || 'Invitations are being processed. You will be notified of any failures.';
+			showSuccessModal.value = true;
+			resetForm();
+			return;
+		}
+
+		// Handle other successful responses
 		if (response.ok) {
-		showSuccessModal.value = true;
-		resetForm();
+			const data = await response.json();
+			
+			// Handle different response types from improved API
+			if (data.status === 'success') {
+				if (data.code === 'PROCESSING') {
+					success.value = 'Invitations are being processed. You will be notified of any failures.';
+				} else {
+					success.value = data.message || 'Invitations sent successfully!';
+				}
+			} else {
+				success.value = data.message || 'Invitations sent successfully!';
+			}
+			
+			showSuccessModal.value = true;
+			resetForm();
 		} else {
-		const errorData = await response.json();
-		error.value = errorData.message || 'Failed to send invitations!';
+			// Handle error responses
+			let errorData;
+			try {
+				errorData = await response.json();
+			} catch (parseError) {
+				console.warn('Could not parse error response as JSON:', parseError);
+				errorData = { message: 'An error occurred while processing your request.' };
+			}
+			
+			switch(response.status) {
+				case 400:
+					error.value = errorData.message || 'Please check your input and try again.';
+					break;
+				case 500:
+					error.value = 'Server error occurred. Some invitations may have failed to send.';
+					break;
+				default:
+					error.value = errorData.message || 'Failed to send invitations!';
+			}
 		}
 	} catch (err) {
-		console.error(err);
-		error.value = 'Failed to send invitations!';
+		console.error('Submit error:', err);
+		
+		// Handle different types of errors
+		if (err.name === 'SyntaxError' && err.message.includes('JSON')) {
+			error.value = 'Server response was invalid. Please try again or contact support.';
+		} else if (err.name === 'TypeError' && err.message.includes('fetch')) {
+			error.value = 'Failed to reach server. Please check your connection and try again.';
+		} else {
+			error.value = 'An unexpected error occurred. Please try again.';
+		}
 	}
 }
 
@@ -111,6 +223,14 @@ function resetForm() {
 	training_r_card.value = false;
 	training_habitat.value = false;
 	training_biological.value = false;
+	training_no_training.value = false; // Add new field
+	error.value = '';
+	success.value = '';
+}
+
+async function retrySubmission() {
+	error.value = '';
+	await submitEmails();
 }
 
 function closeSuccessModal() {
@@ -183,9 +303,14 @@ function viewReport() {
 			<input
 				type="date"
 				v-model="training_date"
+				@input="clearMessages"
 				class="w-full p-2 border rounded-lg"
+				:class="{ 'border-red-500': training_date && !dateValidation.isValid }"
 				required
 			/>
+			<div v-if="training_date && !dateValidation.isValid" class="text-sm text-red-500 mt-1">
+				{{ dateValidation.message }}
+			</div>
   
 			<label class="block mt-4 mb-2 font-bold required">Training Location:</label>
 			<input
@@ -214,6 +339,10 @@ function viewReport() {
 			  <label>Biological:</label>
 			  <input type="checkbox" v-model="training_biological" />
 			</div>
+			<div class="form-group checkbox-group">
+				<label>No Training Conducted (for Hub contacts and non-samplers only):</label>
+				<input type="checkbox" v-model="training_no_training" />
+			</div>
 	
 			<div v-if="!canSubmit" class="text-sm text-red-500 mt-2">
 				<p v-if="!emails?.trim() || !validateEmails(emails)">
@@ -222,11 +351,14 @@ function viewReport() {
 				<p v-if="!training_date">
 					Please select a training date
 				</p>
+				<p v-if="training_date && !dateValidation.isValid">
+					{{ dateValidation.message }}
+				</p>
 				<p v-if="!training_location?.trim()">
 					Please enter a training location
 				</p>
 				<p v-if="!hasTrainingSelected">
-					Please select at least one training type
+					Please select at least one training type or 'No Training Conducted'
 				</p>
 			</div>
 
@@ -251,19 +383,47 @@ function viewReport() {
 		  </div>
 
   		  <!-- Success Modal -->
-			<div v-if="showSuccessModal" class="modal">
+		<div v-if="showSuccessModal" class="modal">
 			<div class="modal-content">
-				<p>Invitations sent successfully!</p>
+				<div class="flex items-center justify-center mb-4">
+				<svg class="h-8 w-8 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+					<path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+				</svg>
+				<h3 class="text-lg font-semibold">Invitations Sent!</h3>
+				</div>
+				<p class="mb-4">{{ success }}</p>
 				<div class="flex gap-4 justify-center mt-4">
 				<UButton variant="solid" @click="viewReport">View Report</UButton>
 				<UButton variant="outline" @click="closeSuccessModal">Close</UButton>
 				</div>
 			</div>
-			</div>
+		</div>
   
 		  <!-- Display Messages -->
-		  <p v-if="error" class="text-red-500">{{ error }}</p>
-		  <p v-if="success" class="text-green-500">{{ success }}</p>
+		<div v-if="error" class="error-message-container">
+			<div class="flex items-center">
+				<svg class="h-5 w-5 text-red-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+				<path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+				</svg>
+				<span>{{ error }}</span>
+			</div>
+			<button 
+				v-if="error.includes('server') || error.includes('connection')"
+				@click="retrySubmission"
+				class="retry-button mt-2"
+			>
+				Try Again
+			</button>
+		</div>
+
+		<div v-if="success" class="success-message-container">
+			<div class="flex items-center">
+				<svg class="h-5 w-5 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+				<path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+				</svg>
+				<span>{{ success }}</span>
+			</div>
+			</div>
 		</div>
 	  </PageContainer>
 		</div>
@@ -366,5 +526,49 @@ function viewReport() {
 		opacity: 0.5;
 		cursor: not-allowed;
 	}
+
+	.error-message-container {
+		background-color: #fef2f2;
+		border: 1px solid #fca5a5;
+		color: #b91c1c;
+		padding: 1rem;
+		border-radius: 0.375rem;
+		margin: 1rem 0;
+	}
+
+	.success-message-container {
+		background-color: #f0fdf4;
+		border: 1px solid #86efac;
+		color: #166534;
+		padding: 1rem;
+		border-radius: 0.375rem;
+		margin: 1rem 0;
+	}
+
+	.retry-button {
+		background-color: #6b7280;
+		color: white;
+		padding: 0.5rem 1rem;
+		border-radius: 0.25rem;
+		border: none;
+		cursor: pointer;
+		font-size: 0.875rem;
+	}
+
+	.retry-button:hover {
+		background-color: #4b5563;
+	}
+
+	/* Additional styles for date validation */
+	.border-red-500 {
+		border-color: #ef4444 !important;
+	}
+
+	.text-red-500 {
+		color: #ef4444;
+	}
+
+	.mt-1 {
+		margin-top: 0.25rem;
+	}
 </style>
-  

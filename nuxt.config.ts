@@ -152,13 +152,14 @@ export default defineNuxtConfig({
                 cors: true,
                 credentials: true
             },
-            '/': { redirect: '/auth/signin' },
+            '/': { redirect: '/sites' },
             '/auth': { redirect: '/auth/signin' },
             '/reset-password': { ssr: false },
             '/request-password': { ssr: false },
             '/signup': { ssr: false },
-            '/projects': { ssr: false },
-            '/data': { ssr: false }
+			'/signin': { redirect: '/auth/signin' },
+            '/projects': { redirect: '/sites' },
+            '/data': { redirect: '/sites' },
         },
         // Add development proxy for Directus
         devProxy: process.env.NODE_ENV === 'development' ? {

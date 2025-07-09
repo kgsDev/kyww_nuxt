@@ -2,7 +2,9 @@
 //signup.post.ts
 import sendgrid from '@sendgrid/mail';
 import { getApiConfig, getDirectusHeaders } from '../utils/config';
-import { readBody } from 'h3';
+import { readBody, createError } from 'h3';
+import { sendEmailSafely } from '../utils/emailUtils';
+import { createApiResponse, respondWithStatus } from '../utils/responseUtils';
 
 const config = getApiConfig();
 sendgrid.setApiKey(config.SENDGRID_API_KEY);
@@ -42,32 +44,19 @@ export default eventHandler(async (event) => {
       PH_expire,
       equip_incubator,
     } = await readBody(event);
-    
-    const createErrorResponse = (message, code, statusCode = 500) => ({
-      status: 'error',
-      message,
-      code,
-      timestamp: new Date().toISOString()
-    });
-   
-    const respondWithJSON = (data, statusCode = 200) => {
-      event.node.res.setHeader('Content-Type', 'application/json');
-      event.node.res.statusCode = statusCode;
-      event.node.res.end(JSON.stringify(data));
-    };
 
     // Check required fields
     if (!captchaToken || !token || !firstName || !lastName || !email) {
-      return respondWithJSON(createErrorResponse(
+      return respondWithStatus(event, createApiResponse(
+        'error',
         'Please fill in all required fields.',
-        'MISSING_FIELDS',
-        400
-      ));
+        'MISSING_FIELDS'
+      ), 400);
     }
 
     // Verify CAPTCHA with Google
     // Skip CAPTCHA verification in development
-		if (!config.isDev == 'development'){
+    if (config.isDev !== 'development') {
       try {
         const captchaVerify = await fetch(
           `https://www.google.com/recaptcha/api/siteverify?secret=${config.RECAPTCHA_SECRET_KEY}&response=${captchaToken}`,
@@ -79,17 +68,21 @@ export default eventHandler(async (event) => {
 
         if (!captchaResult.success) {
           console.warn('CAPTCHA verification failed');
-          return respondWithJSON(createErrorResponse(
+          return respondWithStatus(event, createApiResponse(
+            'error',
             'Please verify that you are human and try again.',
-            'CAPTCHA_FAILED',
-            400
-          ));
+            'CAPTCHA_FAILED'
+          ), 400);
         }
       } catch (error) {
         console.error('CAPTCHA verification error:', error);
-        return respondWithJSON({ message: 'Internal CAPTCHA verification error' }, 500);
+        return respondWithStatus(event, createApiResponse(
+          'error',
+          'Internal CAPTCHA verification error',
+          'CAPTCHA_ERROR'
+        ), 500);
       }
-    }else{
+    } else {
       console.log('Skipping CAPTCHA verification in development');
     }
 
@@ -101,29 +94,28 @@ export default eventHandler(async (event) => {
       
       if (!existingUserResponse.ok) {
         console.error('Failed to check existing user:', await existingUserResponse.text());
-        return respondWithJSON({ 
-          status: 'error',
-          message: 'Unable to verify account status. Please try again later.',
-          code: 'USER_VERIFICATION_ERROR' 
-        }, 500);
+        return respondWithStatus(event, createApiResponse(
+          'error',
+          'Unable to verify account status. Please try again later.',
+          'USER_VERIFICATION_ERROR'
+        ), 500);
       }
 
       const existingUserData = await existingUserResponse.json();
       if (existingUserData.data && existingUserData.data.length > 0) {
-        return respondWithJSON({
-          status: 'error',
-          message: 'An account with this email already exists. You can reset your password at the login page if needed.',
-          code: 'USER_EXISTS',
-          redirect: '/auth/signin'
-        }, 409);
+        return respondWithStatus(event, createApiResponse(
+          'error',
+          'An account with this email already exists. You can reset your password at the login page if needed.',
+          'USER_EXISTS'
+        ), 409);
       }
     } catch (error) {
       console.error('User verification error:', error);
-      return respondWithJSON({ 
-        status: 'error',
-        message: 'Unable to complete registration. Please try again later.',
-        code: 'INTERNAL_ERROR'
-      }, 500);
+      return respondWithStatus(event, createApiResponse(
+        'error',
+        'Unable to complete registration. Please try again later.',
+        'INTERNAL_ERROR'
+      ), 500);
     }
 
     // Validate token and fetch invite data
@@ -137,15 +129,19 @@ export default eventHandler(async (event) => {
       inviteData = await inviteResponse.json();
       if (!inviteData.data || inviteData.data.length === 0) {
         console.warn('Invalid or expired token');
-        return respondWithJSON(createErrorResponse(
+        return respondWithStatus(event, createApiResponse(
+          'error',
           'This invitation link has expired or is invalid. Please request a new invitation.',
-          'INVALID_TOKEN',
-          400
-        ));
+          'INVALID_TOKEN'
+        ), 400);
       }
     } catch (error) {
       console.error('Token validation error:', error);
-      return respondWithJSON({ message: 'Internal error during token validation' }, 500);
+      return respondWithStatus(event, createApiResponse(
+        'error',
+        'Internal error during token validation',
+        'TOKEN_ERROR'
+      ), 500);
     }
 
     // Create user and sampler data
@@ -266,15 +262,14 @@ export default eventHandler(async (event) => {
 
     } catch (error) {
       console.error('User/Sampler creation error:', error);
-      return respondWithJSON(createErrorResponse(
+      return respondWithStatus(event, createApiResponse(
+        'error',
         'Unable to complete registration. Please try again or contact support.',
-        'REGISTRATION_FAILED',
-        500
-      ));
+        'REGISTRATION_FAILED'
+      ), 500);
     }
 
-
-    // 5. Delete the invite
+    // Delete the invite
     try {
       console.log('Starting invite deletion for token:', token);
       const inviteId = inviteData.data[0].id;
@@ -290,20 +285,19 @@ export default eventHandler(async (event) => {
     } catch (error) {
       console.error('Failed to delete invite:', error);
       // We've created the user and sampler data, but couldn't delete the invite
-      // We might want to handle this differently
-      return respondWithJSON({ 
-        message: 'Account created but there was an issue completing the process. Please contact support.' 
-      }, 500);
+      return respondWithStatus(event, createApiResponse(
+        'error',
+        'Account created but there was an issue completing the process. Please contact support.',
+        'CLEANUP_ERROR'
+      ), 500);
     }
 
-
-    // Send a welcome email to the new user
-    try {
-      await sendgrid.send({
-        to: email,
-        from: { email: 'contact@kywater.org', name: 'Kentucky Watershed Watch' },
-        subject: 'Welcome to Kentucky Watershed Watch',
-        html: `
+    // Send welcome email with proper error handling
+    const emailResult = await sendEmailSafely({
+      to: email,
+      from: { email: 'contact@kywater.org', name: 'Kentucky Watershed Watch' },
+      subject: 'Welcome to Kentucky Watershed Watch',
+      html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <h2>Welcome to Kentucky Watershed Watch!</h2>
           <p>Hello ${firstName} ${lastName},</p>
@@ -357,17 +351,31 @@ export default eventHandler(async (event) => {
         </div>
       `
     });
+
+    if (!emailResult.success) {
+      console.error('Welcome email failed:', emailResult.error);
+      
+      // User was created but email failed - inform them
+      return respondWithStatus(event, createApiResponse(
+        'success',
+        'Account created successfully, but we had trouble sending your welcome email. Please check your email or contact support if you need assistance.',
+        'EMAIL_WARNING'
+      ), 201);
+    }
+
+    // Complete success
+    return respondWithStatus(event, createApiResponse(
+      'success',
+      'Account created successfully! Check your email for welcome information.',
+      'ACCOUNT_CREATED'
+    ), 201);
+
   } catch (error) {
-    console.error('Error sending welcome email:', error);
-    return respondWithJSON({ message: 'Internal error during email sending' }, 500);
+    console.error('Signup error:', error);
+    return respondWithStatus(event, createApiResponse(
+      'error',
+      'Unable to create account. Please try again later.',
+      'SIGNUP_FAILED'
+    ), 500);
   }
-
-  return respondWithJSON({
-    message: 'Account created successfully! You will receive a confirmation email shortly.',
-  }, 201);
-
-} catch (error) {
-  console.error('Signup error:', error);
-  return respondWithJSON({ message: 'Internal server error' }, 500);
-}
 });

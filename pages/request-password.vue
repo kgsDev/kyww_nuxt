@@ -34,7 +34,7 @@ const handleSubmitWithToken = async (token) => {
   message.value = '';
   
   try {
-    const { data } = await useFetch('/api/request-password', {
+    const { data, error } = await useFetch('/api/request-password', {
       method: 'POST',
       body: { 
         email: email.value,
@@ -42,11 +42,36 @@ const handleSubmitWithToken = async (token) => {
       },
     });
 
-    message.value = 'If an account exists, a reset link has been sent to your email.';
-    email.value = '';
+    if (error.value) {
+      console.error('API error:', error.value);
+      
+      // Handle specific error messages from your improved API
+      switch(error.value.statusCode) {
+        case 400:
+          if (error.value.data?.message?.includes('CAPTCHA')) {
+            message.value = 'Please verify that you are human and try again.';
+          } else {
+            message.value = error.value.data?.message || 'Please check your input and try again.';
+          }
+          break;
+        case 500:
+          if (error.value.data?.message?.includes('email')) {
+            message.value = 'We had trouble sending your password reset email. Please try again in a few minutes.';
+          } else {
+            message.value = 'A server error occurred. Please try again later.';
+          }
+          break;
+        default:
+          message.value = error.value.data?.message || 'An error occurred. Please try again later.';
+      }
+    } else if (data.value) {
+      // Success - always show the same message for security
+      message.value = data.value.message || 'If an account exists, a reset link has been sent to your email.';
+      email.value = ''; // Clear the email field on success
+    }
   } catch (error) {
-    console.error('Error:', error);
-    message.value = 'An error occurred. Please try again later.';
+    console.error('Unexpected error:', error);
+    message.value = 'Failed to reach server. Please check your internet connection and try again.';
   } finally {
     loading.value = false;
     // Reset reCAPTCHA
@@ -110,7 +135,10 @@ onMounted(() => {
             <span v-if="emailError" class="error-message">{{ emailError }}</span>
           </div>
           
-          <p v-if="message" :class="{ 'success-message': !message.includes('error') }">
+          <p v-if="message" :class="{ 
+              'success-message': !message.includes('error') && !message.includes('trouble'),
+              'error-message': message.includes('error') || message.includes('trouble')
+            }">
             {{ message }}
           </p>
 
@@ -245,4 +273,4 @@ onMounted(() => {
   background-color: #cccccc;
   cursor: not-allowed;
 }
-  </style>
+</style>

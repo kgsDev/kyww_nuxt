@@ -174,13 +174,13 @@ const hubs = ref([]);
 const fetchHubs = async () => {
   try {
     const response = await useDirectus(readItems('wwky_hubs', {
-      sort: ['Description'],
-      fields: ['hub_id', 'Basin', 'Description']
+      sort: ['sort','Description'],
+      fields: ['hub_id', 'Basin', 'Description', 'City']
     }));
     hubs.value = response.map(hub => ({
       ...hub,
       value: hub.hub_id,  // Add this for USelect
-      label: `${hub.Basin} - ${hub.Description}`  // Add this for USelect
+      label: `${hub.Description} - ${hub.City}`  // Add this for USelect
     }));
   } catch (error) {
     console.error('Error fetching hubs:', error);
@@ -601,13 +601,13 @@ watch(isEditing, (newValue) => {
                   <p>{{ formatPhoneNumber(userData?.phone) }}</p>
                 </div>
                 <div>
-                  <label class="text-sm text-gray-500">County</label>
+                  <label class="text-sm text-gray-500">KY county you primarily sample or identify with</label>
                   <p>{{ formatCounty(userData?.county_residence) }}</p>
                 </div>
                 <div>
                   <label class="text-sm text-gray-500">Preferred Support Hub</label>
                   <p v-if="samplerData?.hub_id">
-                    {{ samplerData.hub_id.Basin }} - {{ samplerData.hub_id.Description }}
+                    {{ samplerData.hub_id.Description }} - {{ samplerData.hub_id.City }}
                   </p>
                   <p v-else>Not assigned</p>
                 </div>
@@ -654,7 +654,7 @@ watch(isEditing, (newValue) => {
                   <UInput v-model="editForm.phone" />
                 </UFormGroup>
                 
-                <UFormGroup label="County">
+                <UFormGroup label="KY county you primarily sample or identify with">
                   <USelect
                     v-model="editForm.county_residence"
                     :options="counties"
@@ -673,10 +673,10 @@ watch(isEditing, (newValue) => {
                     placeholder="Select a support hub"
                   >
                     <template #option="{ option }">
-                      {{ option.Basin }} - {{ option.Description }}
+                      {{ option.Description }} - {{ option.City }}
                     </template>
                     <template #selected-option="{ option }">
-                      {{ option.Basin }} - {{ option.Description }}
+                      {{ option.Description }} - {{ option.City }}
                     </template>
                   </USelect>
                 </UFormGroup>

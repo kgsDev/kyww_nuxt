@@ -121,6 +121,10 @@ const validateConfirmPassword = () => {
 };
 
 /// Handle form submission
+// Key improvements needed for the reset-password page:
+
+// 1. Update the onSubmit function to handle new API response structure:
+
 const onSubmit = async () => {
   if (loading.value || !tokenValid.value) return;
   
@@ -142,21 +146,49 @@ const onSubmit = async () => {
       }
     });
 
-    if (error.value) throw error.value;
+    if (error.value) {
+      console.error('Reset error:', error.value);
+      
+      // Handle specific error messages from the API
+      switch(error.value.statusCode) {
+        case 400:
+          message.value = error.value.data?.message || 'Invalid or expired reset token.';
+          break;
+        case 500:
+          message.value = error.value.data?.message || 'A server error occurred. Please try again.';
+          break;
+        default:
+          message.value = error.value.data?.message || 'An error occurred while resetting your password. Please try again.';
+      }
+      return;
+    }
 
-    message.value = 'Password successfully reset! You will be redirected to login...';
-    
-    // Clear form
-    password.value = '';
-    confirmPassword.value = '';
-    
-    // Redirect to login after 1 seconds
-    setTimeout(() => {
-      router.push('/auth/signin');
-    }, 1000);
+    if (data.value) {
+      // Handle success response - check if there was an email issue
+      if (data.value.success) {
+        if (data.value.message && data.value.message.includes("couldn't send")) {
+          // Password reset succeeded but confirmation email failed
+          message.value = '✅ Password reset successfully! ' + data.value.message;
+        } else {
+          // Complete success
+          message.value = '✅ Password successfully reset! You will be redirected to login...';
+        }
+        
+        // Clear form
+        password.value = '';
+        confirmPassword.value = '';
+        
+        // Redirect to login after 2 seconds (give time to read message)
+        setTimeout(() => {
+          router.push('/auth/signin');
+        }, 2000);
+      } else {
+        message.value = data.value.message || 'Password reset successfully!';
+      }
+    }
   } catch (error) {
-    console.error('Reset error:', error);
-    message.value = 'An error occurred while resetting your password. Please try again.';
+    console.error('Unexpected error:', error);
+    message.value = 'An unexpected error occurred. Please try again.';
   } finally {
     loading.value = false;
   }
@@ -234,8 +266,9 @@ const onSubmit = async () => {
           </div>
 
           <p v-if="message" :class="{ 
-            'success-message': !message.includes('error'), 
-            'error-message': message.includes('error') 
+            'success-message': message.includes('✅') || (!message.includes('error') && !message.includes('expired') && !message.includes('invalid')), 
+            'warning-message': message.includes('successfully') && message.includes('couldn\'t'),
+            'error-message': message.includes('error') || message.includes('expired') || message.includes('invalid')
           }">
             {{ message }}
           </p>
@@ -403,5 +436,14 @@ const onSubmit = async () => {
   .submit-button:disabled {
     background-color: #cccccc;
     cursor: not-allowed;
+  }
+
+  .warning-message {
+    color: #856404;
+    background-color: #fff3cd;
+    border: 1px solid #ffeaa7;
+    padding: 0.75rem;
+    border-radius: 0.375rem;
+    margin: 1rem 0;
   }
 </style>

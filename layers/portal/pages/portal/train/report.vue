@@ -218,7 +218,7 @@
     </UModal>
     
     <!-- Resend Confirmation Modal -->
-    <UModal v-model="showResendModal" :ui="{ width: 'sm:max-w-md', rounded: 'rounded-lg' }">
+    <UModal v-model="showResendModal" :ui="{ width: 'sm:max-w-lg', rounded: 'rounded-lg' }">
       <UCard>
         <template #header>
           <div class="flex items-center gap-2">
@@ -227,13 +227,32 @@
           </div>
         </template>
         
-        <p>Are you sure you want to resend the invitation to <span class="font-semibold">{{ selectedInvite?.email }}</span>?</p>
-        <p class="text-sm text-gray-600 mt-2 font-semibold">This will generate a new invitation link and send an email to the trainee.</p>
+        <div class="space-y-4">
+          <p>Are you sure you want to resend the invitation to <span class="font-semibold">{{ selectedInvite?.email }}</span>?</p>
+          
+          <UAlert
+            type="info"
+            title="This will generate a new invitation link and send an email to the trainee."
+            icon="i-heroicons-information-circle"
+          />
 
-        <p class="text-sm text-gray-600 mt-2"><b>Note:</b> If the trainee is having issues with their email, you can send them this unique link from your own email to complete their signup (copy/paste the URL below into an email to send to them):<br><br> https://kyww.uky.edu/signup/?token={{ selectedInvite?.invite_token }}</p>
+          <div class="bg-gray-50 p-4 rounded-lg">
+            <p class="text-sm font-semibold mb-2">Manual Backup Link:</p>
+            <p class="text-sm text-gray-600 mb-2">
+              If email delivery fails, you can send this link directly to the trainee:
+            </p>
+            <div class="bg-white p-2 rounded border text-xs font-mono break-all">
+              https://kyww.uky.edu/signup/?token={{ selectedInvite?.invite_token }}
+            </div>
+          </div>
 
-        <p class="text-sm text-gray-600 mt-2">Unfortunately, there may be issues with email getting through some email systems such as hotmail.com, outlook.com and some personalized email systems (e.g. hiddenrivercave.com). 
-          <br><br>Please advise those trainees who do not receive an email to complete their signup with another email client if possible (e.g. gmail).</p>
+          <UAlert
+            type="warning"
+            title="Email Delivery Issues"
+            description="Some email systems (hotmail.com, outlook.com, and some personal domains) may block our emails. Advise trainees to use Gmail if they don't receive the invitation."
+            icon="i-heroicons-exclamation-triangle"
+          />
+        </div>
         
         <template #footer>
           <div class="flex justify-end gap-2">
@@ -243,20 +262,56 @@
               :loading="processingId === 'confirming-resend'"
               @click="processResendInvite"
             >
-              Resend
+              Resend Invitation
             </UButton>
           </div>
         </template>
       </UCard>
     </UModal>
+
+    <!-- Email Status Modal for showing detailed feedback -->
+    <UModal v-model="showEmailStatusModal" :ui="{ width: 'sm:max-w-md', rounded: 'rounded-lg' }">
+      <UCard>
+        <template #header>
+          <div class="flex items-center gap-2">
+            <UIcon 
+              :name="emailStatus.success ? 'i-heroicons-check-circle' : 'i-heroicons-exclamation-triangle'" 
+              :class="emailStatus.success ? 'text-green-500' : 'text-yellow-500'" 
+            />
+            <h3 class="text-lg font-semibold">
+              {{ emailStatus.success ? 'Email Sent' : 'Email Issue' }}
+            </h3>
+          </div>
+        </template>
+        
+        <div class="space-y-4">
+          <p>{{ emailStatus.message }}</p>
+          
+          <div v-if="!emailStatus.success && selectedInvite" class="bg-gray-50 p-4 rounded-lg">
+            <p class="text-sm font-semibold mb-2">Manual Backup Link:</p>
+            <p class="text-sm text-gray-600 mb-2">
+              You can send this link directly to the trainee:
+            </p>
+            <div class="bg-white p-2 rounded border text-xs font-mono break-all">
+              https://kyww.uky.edu/signup/?token={{ selectedInvite?.invite_token }}
+            </div>
+          </div>
+        </div>
+        
+        <template #footer>
+          <div class="flex justify-end">
+            <UButton @click="closeEmailStatusModal">Close</UButton>
+          </div>
+        </template>
+      </UCard>
+    </UModal>
   </div>
-  
-  <!-- We'll use the useToast composable instead of component-based notifications -->
   </PolicyGuard>
 </template>
   
 <script setup>
 import PolicyGuard from '../../components/PolicyGuard.vue';
+
 const loading = ref(true);
 const loadingOtherInvites = ref(true);
 const error = ref(null);
@@ -267,11 +322,13 @@ const invites = ref([]);
 const registeredUsers = ref([]);
 const otherTraineesInvites = ref([]);
 
-// New states for delete/resend functionality
+// Modal states
 const processingId = ref(null);
 const showDeleteModal = ref(false);
 const showResendModal = ref(false);
+const showEmailStatusModal = ref(false);
 const selectedInvite = ref(null);
+const emailStatus = ref({ success: false, message: '' });
 
 // Format functions
 const formatDateTime = (dateString) => {
@@ -286,7 +343,7 @@ const formatDateTime = (dateString) => {
   });
 };
 
-// Column definitions with added actions column and removed status column
+// Column definitions
 const inviteColumns = [
   { key: 'email', label: 'Email' },
   { key: 'training_date', label: 'Training Date' },
@@ -351,21 +408,22 @@ const filteredUsers = computed(() => {
   );
 });
 
-// Using the composable for notifications
+// Toast notifications
 const toast = useToast();
 
-// Helper function to display notifications
 const showToast = (message, type = 'success') => {
   toast.add({
-    title: type === 'success' ? 'Success' : 'Error',
+    title: type === 'success' ? 'Success' : type === 'warning' ? 'Warning' : 'Error',
     description: message,
     color: type,
-    timeout: 3000,
-    icon: type === 'success' ? 'i-heroicons-check-circle' : 'i-heroicons-exclamation-circle'
+    timeout: type === 'warning' ? 5000 : 3000,
+    icon: type === 'success' ? 'i-heroicons-check-circle' : 
+          type === 'warning' ? 'i-heroicons-exclamation-triangle' : 
+          'i-heroicons-exclamation-circle'
   });
 };
 
-// Invitation management functions
+// Modal management
 const confirmDeleteInvite = (invite) => {
   selectedInvite.value = invite;
   showDeleteModal.value = true;
@@ -373,18 +431,42 @@ const confirmDeleteInvite = (invite) => {
 
 const closeDeleteModal = () => {
   showDeleteModal.value = false;
-  // Add a small delay before clearing the selected invite to avoid UI jumps
   setTimeout(() => {
     selectedInvite.value = null;
   }, 150);
 };
 
+const resendInvite = (invite) => {
+  selectedInvite.value = invite;
+  showResendModal.value = true;
+};
+
+const resendOtherInvite = (invite) => {
+  selectedInvite.value = invite;
+  showResendModal.value = true;
+};
+
+const closeResendModal = () => {
+  showResendModal.value = false;
+  setTimeout(() => {
+    selectedInvite.value = null;
+  }, 150);
+};
+
+const closeEmailStatusModal = () => {
+  showEmailStatusModal.value = false;
+  setTimeout(() => {
+    emailStatus.value = { success: false, message: '' };
+  }, 150);
+};
+
+// Delete functionality
 const deleteInvite = async () => {
   processingId.value = 'confirming-delete';
   
   try {
     const { user } = useDirectusAuth();
-    const response = await useFetch('/api/trainer-report', {
+    const { data, error } = await useFetch('/api/trainer-report', {
       method: 'DELETE',
       body: {
         trainerId: user.value.id,
@@ -392,43 +474,36 @@ const deleteInvite = async () => {
       }
     });
     
-    if (!response.data.value?.success) {
-      throw new Error('Failed to delete invitation');
+    if (error.value) {
+      throw new Error(error.value.data?.message || 'Failed to delete invitation');
+    }
+    
+    if (!data.value?.success) {
+      throw new Error(data.value?.message || 'Failed to delete invitation');
     }
     
     // Remove from local list
     invites.value = invites.value.filter(invite => invite.id !== selectedInvite.value.id);
     
-    // Show success message
     showToast('Invitation deleted successfully');
   } catch (err) {
     console.error('Error deleting invitation:', err);
-    showToast('Failed to delete invitation', 'error');
+    showToast(err.message || 'Failed to delete invitation', 'error');
   } finally {
     processingId.value = null;
     closeDeleteModal();
   }
 };
 
-const resendInvite = async (invite) => {
-  selectedInvite.value = invite;
-  showResendModal.value = true;
-};
-
-const resendOtherInvite = async (invite) => {
-  selectedInvite.value = invite;
-  showResendModal.value = true;
-};
-
+// Resend functionality with improved email handling
 const processResendInvite = async () => {
   processingId.value = 'confirming-resend';
   
   try {
     const { user } = useDirectusAuth();
-    // If it's an invite from another trainer, we'll use their trainer_id instead of the current user's ID
     const isOtherTrainerInvite = otherTraineesInvites.value.some(invite => invite.id === selectedInvite.value.id);
     
-    const response = await useFetch('/api/trainer-report', {
+    const { data, error } = await useFetch('/api/trainer-report', {
       method: 'POST',
       body: {
         trainerId: isOtherTrainerInvite ? selectedInvite.value.trainer_id : user.value.id,
@@ -437,60 +512,65 @@ const processResendInvite = async () => {
       }
     });
     
-    if (!response.data.value?.success) {
-      throw new Error('Failed to resend invitation');
-    }
-    
-    // Update invite sent timestamp for the appropriate list
-    if (isOtherTrainerInvite) {
-      const updatedInvites = [...otherTraineesInvites.value];
-      const inviteIndex = updatedInvites.findIndex(item => item.id === selectedInvite.value.id);
-      
-      if (inviteIndex !== -1) {
-        updatedInvites[inviteIndex] = {
-          ...updatedInvites[inviteIndex],
-          invite_sent_at: new Date().toISOString()
+    if (error.value) {
+      // Handle specific error types from improved API
+      const errorMessage = error.value.data?.message || 'Failed to resend invitation';
+      if (error.value.statusCode === 500 && errorMessage.includes('email')) {
+        showToast('Invitation updated but email delivery failed. Use the manual link below.', 'warning');
+        emailStatus.value = {
+          success: false,
+          message: 'The invitation was updated but we couldn\'t send the email. You can copy the manual link below and send it directly to the trainee.'
         };
-        otherTraineesInvites.value = updatedInvites;
+        showEmailStatusModal.value = true;
+      } else {
+        throw new Error(errorMessage);
       }
+    } else if (data.value?.success) {
+      // Update invite sent timestamp for the appropriate list
+      if (isOtherTrainerInvite) {
+        const updatedInvites = [...otherTraineesInvites.value];
+        const inviteIndex = updatedInvites.findIndex(item => item.id === selectedInvite.value.id);
+        
+        if (inviteIndex !== -1) {
+          updatedInvites[inviteIndex] = {
+            ...updatedInvites[inviteIndex],
+            invite_sent_at: new Date().toISOString()
+          };
+          otherTraineesInvites.value = updatedInvites;
+        }
+      } else {
+        const updatedInvites = [...invites.value];
+        const inviteIndex = updatedInvites.findIndex(item => item.id === selectedInvite.value.id);
+        
+        if (inviteIndex !== -1) {
+          updatedInvites[inviteIndex] = {
+            ...updatedInvites[inviteIndex],
+            invite_sent_at: new Date().toISOString()
+          };
+          invites.value = updatedInvites;
+        }
+      }
+      
+      showToast('Invitation resent successfully');
     } else {
-      const updatedInvites = [...invites.value];
-      const inviteIndex = updatedInvites.findIndex(item => item.id === selectedInvite.value.id);
-      
-      if (inviteIndex !== -1) {
-        updatedInvites[inviteIndex] = {
-          ...updatedInvites[inviteIndex],
-          invite_sent_at: new Date().toISOString()
-        };
-        invites.value = updatedInvites;
-      }
+      throw new Error(data.value?.message || 'Failed to resend invitation');
     }
     
-    // Show success message
-    showToast('Invitation resent successfully');
   } catch (err) {
     console.error('Error resending invitation:', err);
-    showToast('Failed to resend invitation', 'error');
+    showToast(err.message || 'Failed to resend invitation', 'error');
   } finally {
     processingId.value = null;
     closeResendModal();
   }
 };
 
-const closeResendModal = () => {
-  showResendModal.value = false;
-  // Add a small delay before clearing the selected invite to avoid UI jumps
-  setTimeout(() => {
-    selectedInvite.value = null;
-  }, 150);
-};
-
-// Fetch data
+// Data fetching
 onMounted(async () => {
   try {
     const { user } = useDirectusAuth();
     
-    // Fetch pending invites (this stays the same)
+    // Fetch pending invites
     const invitesResponse = await useDirectus(readItems('user_invites', {
       filter: {
         trainer_id: { _eq: user.value.id }
@@ -506,7 +586,6 @@ onMounted(async () => {
       ]
     }));
     
-    // No status mapping needed since we only have pending invites in this table
     invites.value = invitesResponse;
 
     // Get users data
@@ -558,8 +637,6 @@ onMounted(async () => {
     // Fetch other trainers' invites
     loadingOtherInvites.value = true;
     
-    // Use an API endpoint to fetch all other invites with trainer information
-    // Pass the current user's ID as a query parameter
     const { data: otherInvitesData } = await useFetch('/api/other-trainer-invites', {
       query: {
         userId: user.value.id

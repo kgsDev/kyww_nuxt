@@ -25,6 +25,7 @@ const formData = reactive({
   email: '',
   county: [],
   basin: [],
+  city: [],
   sampling_kits: false,
   incubator: false,
   biological_kit: false,
@@ -66,7 +67,7 @@ async function fetchHubs() {
   try {
     const hubsList = await useDirectus(
       readItems('wwky_hubs', {
-        sort: ['Description'],
+        sort: ['sort','Description'],
         fields: ['*']
       })
     );
@@ -106,6 +107,7 @@ async function loadHubData(hubId) {
     formData.availability = hubData.Availability;
     formData.basin = hubData.Basin ? hubData.Basin.split(', ') : [];
     formData.county = hubData.County ? hubData.County.split(', ') : [];
+    formData.city = hubData.City;
     formData.sampling_kits = hubData.Sampling_kits;
     formData.incubator = hubData.Incubator;
     formData.biological_kit = hubData.Biological_kit;
@@ -365,6 +367,7 @@ async function resetForm() {
   formData.organization = '';
   formData.basin = [];
   formData.county = [];
+  formData.city = [];
   formData.full_address = '';
   formData.mailing_address = '';
   formData.contact_person = '';
@@ -398,6 +401,7 @@ async function submitData() {
       organization: formData.organization,
       Basin: formData.basin.join(', '),
       County: formData.county.join(', '),
+      City: formData.city,
       Full_Address: formData.full_address,
       mailing_address: formData.mailing_address,
       Contact_Person: formData.contact_person,
@@ -708,6 +712,7 @@ const viewHubList = () => {
 						searchable 
 						placeholder="Basin"
 					/>
+          <span class="text-xs text-gray-500">Select basin(s) that this hub <b>serves</b></span>
 					</UFormGroup>
 					<UFormGroup class="p-2 basis-1/2" label="County" required>
 					<USelectMenu 
@@ -718,7 +723,14 @@ const viewHubList = () => {
 						searchable 
 						placeholder="County"
 					/>
+          <span class="text-xs text-gray-500">Select county or counties that this hub <b>serves</b></span>
 				</UFormGroup>
+        <UFormGroup class="p-2 basis-1/2" label="City" required>
+					<UInput
+						v-model="formData.city" 
+					/>
+          <span class="text-xs text-gray-500">For display to users signing up, enter the city (e.g. Burlington, KY) where the hub <b>is located</b>.</span>
+        </UFormGroup>
 			</div>
 		</div>
 		<div class="bg-white rounded-lg shadow p-6">
@@ -832,6 +844,10 @@ const viewHubList = () => {
               <div>
                 <dt class="font-medium">Counties:</dt>
                 <dd>{{ formData.county.join(', ') }}</dd>
+              </div>
+              <div>
+                <dt class="font-medium">City:</dt>
+                <dd>{{ formData.city }}</dd>
               </div>
               <div>
                 <dt class="font-medium">Services Offered:</dt>

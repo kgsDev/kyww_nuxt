@@ -3,6 +3,7 @@
 import { getApiConfig, getDirectusHeaders } from '../utils/config';
 import { v4 as uuidv4 } from 'uuid';
 import sendgrid from '@sendgrid/mail';
+import { sendEmailSafely } from '../utils/emailUtils';
 
 export default defineEventHandler(async (event) => {
   const config = getApiConfig();
@@ -163,9 +164,9 @@ export default defineEventHandler(async (event) => {
         throw new Error('Failed to update invitation token');
       }
       
-      // Send email
+      // Send email with proper error handling
       const signupLink = `https://kyww.uky.edu/signup/?token=${token}`;
-      await sendgrid.send({
+      const emailResult = await sendEmailSafely({
         to: email,
         from: {
           email: 'contact@kywater.org',
@@ -204,10 +205,20 @@ export default defineEventHandler(async (event) => {
         `,
       });
       
+      if (!emailResult.success) {
+        console.error('Resend invite email failed:', emailResult.error);
+        throw createError({
+          statusCode: 500,
+          message: 'Failed to send invitation email. Please try again later.'
+        });
+      }
+      
+      // Success - return proper response
       return {
         success: true,
         message: 'Invitation resent successfully'
       };
+      
     } catch (error) {
       console.error('Resend invite error:', error);
       throw createError({

@@ -4,7 +4,7 @@ import { useKYWWMap } from '~/composables/useKYWWMap';
 
 const { loading: messagesLoading, error: messagesError, messages: greetingMessages } = useGreetings();
 
-// Separate evergreen and dated messages
+// Separate evergreen and dated messages with proper sorting
 const evergreenMessage = computed(() => {
   if (!greetingMessages.value) return null;
   return greetingMessages.value.find(msg => !msg.start_date && !msg.end_date);
@@ -12,7 +12,9 @@ const evergreenMessage = computed(() => {
 
 const timedMessages = computed(() => {
   if (!greetingMessages.value) return [];
-  return greetingMessages.value.filter(msg => msg.start_date || msg.end_date);
+  return greetingMessages.value
+    .filter(msg => msg.start_date || msg.end_date)
+    .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0)); // Sort by sort_order
 });
 
 const { user } = useDirectusAuth();
@@ -31,7 +33,6 @@ const samplingStats = ref({
   siteSamplingHistory: [], // New field for detailed sampling history
   samples: [] // Store all samples for reference
 });
-
 
 const formatDate = (date) => {
   if (!date) return 'Not recorded';
@@ -255,10 +256,13 @@ onMounted(async () => {
     <div v-else class="space-y-4">
       <!-- Evergreen Message -->
       <div v-if="evergreenMessage" class="text-xl font-medium text-gray-700">
-        {{ evergreenMessage.message }}
+        <div class="flex items-start">
+          <UIcon name="i-heroicons-megaphone" class="w-6 h-6 text-blue-600 mr-3 mt-1 flex-shrink-0" />
+          <div v-html="evergreenMessage.message" class="message-content flex-1"></div>
+        </div>
       </div>
       
-      <!-- Timed Messages -->
+      <!-- Timed Messages (sorted by sort_order) -->
       <div v-if="timedMessages.length > 0" class="ml-4 space-y-2">
         <div 
           v-for="message in timedMessages" 
@@ -266,9 +270,8 @@ onMounted(async () => {
           class="text-md font-medium text-gray-800 border-l-4 border-yellow-500 pl-4 pr-6 py-3 bg-yellow-50 rounded-r shadow-sm hover:bg-yellow-100 transition-all"
         >
           <div class="flex items-start">
-            <span class="mr-2 mt-1">📣</span>
-            <div v-if="message.hasHtml" v-html="message.message" class="message-content"></div>
-            <div v-else class="message-content whitespace-pre-line">{{ message.message }}</div>
+            <UIcon name="i-heroicons-megaphone" class="w-5 h-5 text-yellow-600 mr-3 mt-1 flex-shrink-0" />
+            <div v-html="message.message" class="message-content flex-1"></div>
           </div>
         </div>
       </div>
@@ -511,8 +514,47 @@ onMounted(async () => {
 .message-content :deep(p) {
   margin-bottom: 0.5rem;
 }
-.message-content :deep(ul, ol) {
+
+.message-content :deep(ul) {
+  list-style-type: disc;
+  list-style-position: outside;
   margin-left: 1.5rem;
   margin-bottom: 0.5rem;
+  padding-left: 1rem;
+}
+
+.message-content :deep(ol) {
+  list-style-type: decimal;
+  list-style-position: outside;
+  margin-left: 1.5rem;
+  margin-bottom: 0.5rem;
+  padding-left: 1rem;
+}
+
+.message-content :deep(li) {
+  margin-bottom: 0.25rem;
+  padding-left: 0;
+}
+
+.message-content :deep(h1, h2, h3, h4, h5, h6) {
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.message-content :deep(strong) {
+  font-weight: 600;
+}
+
+.message-content :deep(em) {
+  font-style: italic;
+}
+
+.message-content :deep(a) {
+  color: #3b82f6;
+  text-decoration: underline;
+}
+
+.message-content :deep(a:hover) {
+  color: #1d4ed8;
 }
 </style>
