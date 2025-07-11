@@ -1,4 +1,5 @@
 <script setup lang="ts">
+//this is the main page for the KYWW Sites and Hubs portal sites/index.vue
 import { useKYWWMap } from '~/composables/useKYWWMap';
 
 const mapContainer = ref(null);

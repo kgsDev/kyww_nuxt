@@ -1,4 +1,5 @@
 <script setup lang="ts">
+// /sample/index.vue - base stream sample form 
 import MapSelector from '../sites/MapSelector.vue';
 import PhotoUpload from '../../components/PhotoUpload.vue';
 import PolicyGuard from '../../components/PolicyGuard.vue';

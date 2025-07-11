@@ -1,4 +1,5 @@
 // Basic type definitions
+//this is the useKYWWMap composable for Kentucky Water Watch map functionality useKYWWMap.ts
 interface Site {
   wwkyid_pk: number;
   latitude: number;

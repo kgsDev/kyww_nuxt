@@ -33,7 +33,7 @@ export default defineEventHandler(async (event) => {
         const sampleId = fields.sampleId?.[0];
         const formType = fields.formType?.[0];
         const siteID = fields.siteId?.[0];
-
+        
         if (!sampleId || !formType) {
           console.warn('Missing required fields: Sample ID or Form Type');
           throw createError({ statusCode: 400, message: 'Sample ID and Form Type are required.' });
@@ -42,7 +42,8 @@ export default defineEventHandler(async (event) => {
         const folderMap = { base: 'base', bio: 'bio', hab: 'hab' };
         const folderName = folderMap[formType] || 'base';
         const folderPath = path.join('/webshare/kyww_images', folderName, siteID, String(sampleId));
-        
+
+
         // Ensure the folder path exists
         await fs.mkdir(folderPath, { recursive: true });
 

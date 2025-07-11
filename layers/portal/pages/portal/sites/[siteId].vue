@@ -1,4 +1,5 @@
 <script setup lang="ts">
+//this is the main page for a single site in the KYWW portal [siteId].vue
 import { useKYWWMap } from '~/composables/useKYWWMap';
 import SampleForm from '../sample/index.vue'; // Import form
 import ContactSamplerForm from '~/components/ContactSamplerForm.vue'; // Import contact form

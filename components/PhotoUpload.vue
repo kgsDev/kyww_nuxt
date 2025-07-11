@@ -192,6 +192,11 @@ const props = defineProps({
   siteId: {  // site ID prop
     type: [Number, String],
     required: true
+  },
+  formType: { // New prop to determine form type: 'base', 'bio', 'hab'
+    type: String,
+    default: 'base',
+    validator: (value) => ['base', 'bio', 'hab'].includes(value)
   }
 });
 
@@ -209,6 +214,34 @@ const sampleFormRef = ref(null);
 const existingPhotos = ref([]);
 const existingFiles = ref({});
 const existingFormFile = ref(null);
+
+// Get the appropriate database table and folder based on form type
+const getPhotoTableName = () => {
+  switch (props.formType) {
+    case 'bio':
+      return 'lu_biological_photos';
+    case 'hab':
+      return 'lu_habitat_photos';
+    default:
+      return 'lu_sample_photos';
+  }
+};
+
+const getFolderName = () => {
+  switch (props.formType) {
+    case 'bio':
+      return 'bio';
+    case 'hab':
+      return 'hab';
+    default:
+      return 'base';
+  }
+};
+
+const getPhotoUrlPath = (siteId, sampleId, type, extension) => {
+  const folder = getFolderName();
+  return `https://kyww.uky.edu/webshare/kyww_images/${folder}/${siteId}/${sampleId}/${type}_${sampleId}.${extension}`;
+};
 
 onMounted(() => {
   fields.forEach(field => {
@@ -308,9 +341,12 @@ const deleteExistingFile = async () => {
       throw new Error('Sample ID not found');
     }
 
+    const tableName = getPhotoTableName();
+    const formType = getFolderName();
+
     // Delete from database first
     await useDirectus(
-      deleteItems('lu_sample_photos', {
+      deleteItems(tableName, {
         filter: {
           sample_id: { _eq: sampleId },
           type: { _eq: field }
@@ -328,7 +364,7 @@ const deleteExistingFile = async () => {
         sampleId,
         siteId: props.siteId,
         fileType: field,
-        formType: 'base'
+        formType: formType
       })
     });
 

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+//this is the main page for a single sample in the KYWW portal [sampleid].vue
 const route = useRoute();
 const sampleId = computed(() => route.params.sampleid);
 const { user } = useDirectusAuth();

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+//this is the MapSelector component for selecting sites on a map
 import mapboxgl from 'mapbox-gl'; //import from node_modules
 import 'mapbox-gl/dist/mapbox-gl.css'; //css for mapbox
 
