@@ -1,5 +1,4 @@
-// Basic type definitions
-//this is the useKYWWMap composable for Kentucky Water Watch map functionality useKYWWMap.ts
+// Updated useKYWWMap composable for Kentucky Water Watch map functionality useKYWWMap.ts
 interface Site {
   wwkyid_pk: number;
   latitude: number;
@@ -8,54 +7,58 @@ interface Site {
   wwkybasin: string;
   description: string;
   sample_count?: number;
+  biological_count?: number;
+  habitat_count?: number;
   has_samples?: boolean;
   latest_sample_date?: string | null;
   ecoli_count?: number;
 }
   
-  interface Hub {
-    hub_id: number;
-    Description: string;
-    latitude: number;
-    longitude: number;
-    organization: string;
-    Full_Address: string;
-    mailing_address: string;
-    Contact_Person: string;
-    Phone: string;
-    Email: string;
-    Availability: string;
-    Basin: string;
-    County: string;
-    Sampling_kits?: boolean;
-    Incubator?: boolean;
-    Biological_kit?: boolean;
-    Events_and_meetings?: boolean;
-    Site_selection_assist?: boolean;
-    Data_entry_assistance?: boolean;
-    Interpret_findings?: boolean;
-    Coordinate_community?: boolean;
-    Host_outreach_materials?: boolean;
-  }
+interface Hub {
+  hub_id: number;
+  Description: string;
+  latitude: number;
+  longitude: number;
+  organization: string;
+  Full_Address: string;
+  mailing_address: string;
+  Contact_Person: string;
+  Phone: string;
+  Email: string;
+  Availability: string;
+  Basin: string;
+  County: string;
+  Sampling_kits?: boolean;
+  Incubator?: boolean;
+  Biological_kit?: boolean;
+  Events_and_meetings?: boolean;
+  Site_selection_assist?: boolean;
+  Data_entry_assistance?: boolean;
+  Interpret_findings?: boolean;
+  Coordinate_community?: boolean;
+  Host_outreach_materials?: boolean;
+}
 
-  interface SingleSiteConfig {
-    wwkyid_pk: number;
-    latitude: number;
-    longitude: number;
-    stream_name: string;
-    wwkybasin: string;
-    description: string;
-    popupTemplate?: any;
-  }
-  
-  interface MapOptions {
-    center?: [number, number];
-    zoom?: number;
-    showSites?: boolean;
-    showHubs?: boolean;
-    singleSite?: SingleSiteConfig;
-  }
-  
+interface SingleSiteConfig {
+  wwkyid_pk: number;
+  latitude: number;
+  longitude: number;
+  stream_name: string;
+  wwkybasin: string;
+  description: string;
+  popupTemplate?: any;
+}
+
+interface MapOptions {
+  center?: [number, number];
+  zoom?: number;
+  showSites?: boolean;
+  showHubs?: boolean;
+  showBiological?: boolean;
+  showHabitat?: boolean;
+  singleSite?: SingleSiteConfig;
+}
+
 // Add constants for Kentucky's bounds
 const KENTUCKY_CENTER = [-85.8, 37.8];
 const KENTUCKY_ZOOM = 7;
@@ -66,6 +69,8 @@ export function useKYWWMap() {
   // State
   const hubs = ref<Hub[]>([]);
   const sites = ref<Site[]>([]);
+  const biologicalSites = ref<any[]>([]);
+  const habitatSites = ref<any[]>([]);
   const userSites = ref<any[]>([]);
   const loading = ref(true);
   const error = ref<string | null>(null);
@@ -74,6 +79,8 @@ export function useKYWWMap() {
   // Layer visibility controls
   const hubsVisible = ref(true);
   const sitesVisible = ref(true);
+  const biologicalVisible = ref(true);
+  const habitatVisible = ref(true);
   const userSitesVisible = ref(false);
   
   // Search state
@@ -85,6 +92,8 @@ export function useKYWWMap() {
   let view: any = null;
   let hubsLayer: any = null;
   let sitesLayer: any = null;
+  let biologicalLayer: any = null;
+  let habitatLayer: any = null;
   let userSitesLayer: any = null;
   let graphicsLayer: any = null;
 
@@ -107,27 +116,39 @@ export function useKYWWMap() {
     try {
       loading.value = true;
 
-      // Fetch sampled sites and hubs
-      const [sitesData, hubsData] = await Promise.all([
+      // Fetch all data types
+      const [sitesData, hubsData, biologicalData, habitatData] = await Promise.all([
         fetch(API_SAMPLED_SITES).then(res => res.json()),
         useDirectus(readItems('wwky_hubs', {
           sort: ['Description'],
           fields: ['*']
+        })),
+        useDirectus(readItems('biological_samples', {
+          fields: [
+            'id', 'wwky_id', 'date', 'biological_water_quality_score',
+            'volunteer_id.first_name', 'volunteer_id.last_name'
+          ],
+          sort: ['-date']
+        })),
+        useDirectus(readItems('habitat_samples', {
+          fields: [
+            'id', 'wwky_id', 'date', 'physical_assessment_score',
+            'volunteer_id.first_name', 'volunteer_id.last_name'
+          ],
+          sort: ['-date']
         }))
       ]);
 
-      // Process sampled sites directly
+      // Process sampled sites (stream samples)
       const processedSampledSites: Site[] = [];
       const siteMap = new Map<number, Site>();
       
-      // Check if features array exists and has items
       if (!sitesData.features || sitesData.features.length === 0) {
         console.warn('No sampled sites found in API response');
       } else {
         sitesData.features.forEach(feature => {
           const siteId = feature.properties.siteId;
           
-          // If we haven't seen this site yet, create a new site object
           if (!siteMap.has(siteId)) {
             const site: Site = {
               wwkyid_pk: siteId,
@@ -145,11 +166,9 @@ export function useKYWWMap() {
             siteMap.set(siteId, site);
             processedSampledSites.push(site);
           } else {
-            // Update existing site information
             const existingSite = siteMap.get(siteId)!;
             existingSite.sample_count!++;
             
-            // Update latest sample date if this sample is newer
             if (feature.properties.sampleDate) {
               const currentDate = existingSite.latest_sample_date 
                 ? new Date(existingSite.latest_sample_date) 
@@ -161,12 +180,70 @@ export function useKYWWMap() {
               }
             }
             
-            // Count E. coli samples
             if (feature.properties.eColiAvg != null) {
               existingSite.ecoli_count!++;
             }
           }
         });
+      }
+
+      // Process biological sites
+      const biologicalSiteMap = new Map();
+      biologicalData.forEach(sample => {
+        if (!biologicalSiteMap.has(sample.wwky_id)) {
+          biologicalSiteMap.set(sample.wwky_id, {
+            wwky_id: sample.wwky_id,
+            samples: []
+          });
+        }
+        biologicalSiteMap.get(sample.wwky_id).samples.push(sample);
+      });
+
+      // Process habitat sites
+      const habitatSiteMap = new Map();
+      habitatData.forEach(sample => {
+        if (!habitatSiteMap.has(sample.wwky_id)) {
+          habitatSiteMap.set(sample.wwky_id, {
+            wwky_id: sample.wwky_id,
+            samples: []
+          });
+        }
+        habitatSiteMap.get(sample.wwky_id).samples.push(sample);
+      });
+
+      // Get site details for biological and habitat sites
+      const allSampleSiteIds = new Set([
+        ...Array.from(biologicalSiteMap.keys()),
+        ...Array.from(habitatSiteMap.keys())
+      ]);
+
+      if (allSampleSiteIds.size > 0) {
+        const siteDetails = await useDirectus(readItems('wwky_sites', {
+          filter: {
+            wwkyid_pk: { _in: Array.from(allSampleSiteIds) }
+          },
+          fields: ['wwkyid_pk', 'stream_name', 'wwkybasin', 'description', 'latitude', 'longitude']
+        }));
+
+        // Process biological sites with location data
+        biologicalSites.value = siteDetails.filter(site => 
+          biologicalSiteMap.has(site.wwkyid_pk)
+        ).map(site => ({
+          ...site,
+          samples: biologicalSiteMap.get(site.wwkyid_pk).samples,
+          latitude: parseFloat(site.latitude),
+          longitude: parseFloat(site.longitude)
+        }));
+
+        // Process habitat sites with location data
+        habitatSites.value = siteDetails.filter(site => 
+          habitatSiteMap.has(site.wwkyid_pk)
+        ).map(site => ({
+          ...site,
+          samples: habitatSiteMap.get(site.wwkyid_pk).samples,
+          latitude: parseFloat(site.latitude),
+          longitude: parseFloat(site.longitude)
+        }));
       }
       
       // Store processed data
@@ -181,48 +258,58 @@ export function useKYWWMap() {
     }
   }
   
-    // Toggle layer visibility
-    function toggleLayerVisibility(layerType: 'hubs' | 'sites' | 'userSites') {
-      switch (layerType) {
-        case 'hubs':
-          hubsVisible.value = !hubsVisible.value;
-          if (hubsLayer) hubsLayer.visible = hubsVisible.value;
-          break;
-        case 'sites':
-          sitesVisible.value = !sitesVisible.value;
-          if (sitesLayer) sitesLayer.visible = sitesVisible.value;
-          break;
-        case 'userSites':
-          userSitesVisible.value = !userSitesVisible.value;
-          if (userSitesLayer) userSitesLayer.visible = userSitesVisible.value;
-          break;
-      }
+  // Toggle layer visibility
+  function toggleLayerVisibility(layerType: 'hubs' | 'sites' | 'biological' | 'habitat' | 'userSites') {
+    switch (layerType) {
+      case 'hubs':
+        hubsVisible.value = !hubsVisible.value;
+        if (hubsLayer) hubsLayer.visible = hubsVisible.value;
+        break;
+      case 'sites':
+        sitesVisible.value = !sitesVisible.value;
+        if (sitesLayer) sitesLayer.visible = sitesVisible.value;
+        break;
+      case 'biological':
+        biologicalVisible.value = !biologicalVisible.value;
+        if (biologicalLayer) biologicalLayer.visible = biologicalVisible.value;
+        break;
+      case 'habitat':
+        habitatVisible.value = !habitatVisible.value;
+        if (habitatLayer) habitatLayer.visible = habitatVisible.value;
+        break;
+      case 'userSites':
+        userSitesVisible.value = !userSitesVisible.value;
+        if (userSitesLayer) userSitesLayer.visible = userSitesVisible.value;
+        break;
     }
+  }
 
-    // Search for sites by ID
-    function searchSiteById(query: string) {
-      if (!query) {
-        searchResults.value = [];
-        isSearching.value = false;
-        return;
-      }
-      
-      isSearching.value = true;
-      const results = sites.value.filter(site => 
-        site.wwkyid_pk.toString().includes(query) ||
-        (site.stream_name && site.stream_name.toLowerCase().includes(query.toLowerCase()))
-      );
-      
-      searchResults.value = results.slice(0, 20); // Limit to 20 results
+  // Search for sites by ID
+  function searchSiteById(query: string) {
+    if (!query) {
+      searchResults.value = [];
       isSearching.value = false;
+      return;
     }
+    
+    isSearching.value = true;
+    const results = sites.value.filter(site => 
+      site.wwkyid_pk.toString().includes(query) ||
+      (site.stream_name && site.stream_name.toLowerCase().includes(query.toLowerCase()))
+    );
+    
+    searchResults.value = results.slice(0, 20);
+    isSearching.value = false;
+  }
 
-  // Update initialize map to use correct Kentucky coordinates
+  // Initialize map with all sample types
   async function initializeMap(container: HTMLElement, options: MapOptions = {
     center: KENTUCKY_CENTER,
     zoom: KENTUCKY_ZOOM,
     showSites: true,
-    showHubs: true
+    showHubs: true,
+    showBiological: true,
+    showHabitat: true
   }) {
     if (!container) {
       console.error('No container provided for map');
@@ -243,7 +330,6 @@ export function useKYWWMap() {
         basemap: 'topo-vector'
       });
   
-      // Set initial view to Kentucky right away
       const initialCenter = options.singleSite ? 
         [options.singleSite.longitude, options.singleSite.latitude] : 
         KENTUCKY_CENTER;
@@ -253,8 +339,8 @@ export function useKYWWMap() {
       const viewInstance = new MapView({
         container,
         map: mapInstance,
-        center: initialCenter,  // Use calculated initial center
-        zoom: initialZoom,      // Use calculated initial zoom
+        center: initialCenter,
+        zoom: initialZoom,
         constraints: {
           rotationEnabled: false,
           minZoom: 6,
@@ -282,6 +368,14 @@ export function useKYWWMap() {
         id: 'sites',
         visible: sitesVisible.value 
       });
+      biologicalLayer = new GraphicsLayer({
+        id: 'biological',
+        visible: biologicalVisible.value
+      });
+      habitatLayer = new GraphicsLayer({
+        id: 'habitat', 
+        visible: habitatVisible.value
+      });
       hubsLayer = new GraphicsLayer({
         id: 'hubs',
         visible: hubsVisible.value
@@ -291,74 +385,62 @@ export function useKYWWMap() {
         visible: userSitesVisible.value 
       });
       
-    // Add sites if enabled
-    if (options.showSites) {
+      // Add stream sample sites
+      if (options.showSites !== false) {
         sites.value.forEach(site => {
-        if (site.longitude && site.latitude) {
+          if (site.longitude && site.latitude) {
             const point = new Point({
-            longitude: site.longitude,
-            latitude: site.latitude
+              longitude: site.longitude,
+              latitude: site.latitude
             });
 
             const markerSymbol = {
-            type: "simple-marker",
-            //color: [255, 165, 0, 0.7], // Orange color - all sites - not used here
-            color: [168,50,113, 0.7], //purple - sampled site
-            outline: {
+              type: "simple-marker",
+              color: [168,50,113, 0.7], // Purple - stream samples
+              size: 10,
+              outline: {
                 color: [0, 0, 0],
                 width: 1
-            }
+              }
             };
             
             const popupTemplate = new PopupTemplate({
-              title: `Site: ${site.wwkyid_pk}`,
-              // Instead of an HTML string, use a function to generate a DOM node.
+              title: `Stream Samples - Site: ${site.wwkyid_pk}`,
               content: function () {
-                // Create a container div
                 const container = document.createElement("div");
                 container.className = "bg-gray-50 p-4 rounded";
             
-                // Create a description list (dl)
                 const dl = document.createElement("dl");
                 dl.className = "space-y-2";
             
-                // Helper function to create a dt/dd pair
                 function addDetail(term, detail) {
                   const div = document.createElement("div");
-            
                   const dt = document.createElement("dt");
                   dt.className = "font-medium";
                   dt.textContent = term;
                   div.appendChild(dt);
-            
                   const dd = document.createElement("dd");
                   dd.textContent = detail || "No description available";
                   div.appendChild(dd);
-            
                   dl.appendChild(div);
                 }
             
                 addDetail("Stream Name:", site.stream_name || "Unnamed");
                 addDetail("Basin:", site.wwkybasin);
                 addDetail("Description:", site.description || "No description available");
+                addDetail("Stream Samples:", site.sample_count?.toString() || "0");
             
                 container.appendChild(dl);
             
-                // Create a div to hold the button
                 const buttonContainer = document.createElement("div");
                 buttonContainer.className = "mt-4";
-
-                // Create the button element
                 const button = document.createElement("button");
                 button.className = "esri-button esri-button--secondary";
                 button.style.cursor = "pointer";
-                button.textContent = "View Site Samples";
-                
-                // Add onclick event to navigate
+                button.textContent = "View Site Details";
                 button.onclick = function () {
                   navigateTo(`/portal/sites/${site.wwkyid_pk}`);
                 };
-
                 buttonContainer.appendChild(button);
                 container.appendChild(buttonContainer);
 
@@ -366,38 +448,199 @@ export function useKYWWMap() {
               }
             });
 
-          const pointGraphic = new Graphic({
+            const pointGraphic = new Graphic({
               geometry: point,
               symbol: markerSymbol,
               popupTemplate: popupTemplate,
-              attributes: {
-                ...site,  // Spread all site attributes
-                wwkyid_pk: site.wwkyid_pk  // Ensure this specific attribute is present
-              }
+              attributes: site
             });
 
             sitesLayer.add(pointGraphic);
-        }
+          }
         });
-    }
+      }
 
-    // Add hubs if enabled
-    if (options.showHubs) {
-        hubs.value.forEach(hub => {
-        if (hub.longitude && hub.latitude) {
+      // Add biological sample sites
+      if (options.showBiological !== false) {
+        biologicalSites.value.forEach(site => {
+          if (site.longitude && site.latitude) {
             const point = new Point({
-            longitude: hub.longitude,
-            latitude: hub.latitude
+              longitude: site.longitude,
+              latitude: site.latitude
             });
 
             const markerSymbol = {
-            type: "simple-marker",
-            size: 16,
-            color: [46, 204, 113, 0.7],
-            outline: {
+              type: "simple-marker",
+              color: [34, 139, 34, 0.7], // Forest green - biological
+              size: 8,
+              outline: {
                 color: [0, 0, 0],
                 width: 1
-            }
+              }
+            };
+
+            const popupTemplate = new PopupTemplate({
+              title: `Biological Assessments - Site: ${site.wwkyid_pk}`,
+              content: function () {
+                const container = document.createElement("div");
+                container.className = "bg-gray-50 p-4 rounded";
+            
+                const dl = document.createElement("dl");
+                dl.className = "space-y-2";
+            
+                function addDetail(term, detail) {
+                  const div = document.createElement("div");
+                  const dt = document.createElement("dt");
+                  dt.className = "font-medium";
+                  dt.textContent = term;
+                  div.appendChild(dt);
+                  const dd = document.createElement("dd");
+                  dd.textContent = detail || "No description available";
+                  div.appendChild(dd);
+                  dl.appendChild(div);
+                }
+            
+                addDetail("Stream Name:", site.stream_name || "Unnamed");
+                addDetail("Basin:", site.wwkybasin);
+                addDetail("Biological Assessments:", site.samples?.length?.toString() || "0");
+                
+                if (site.samples?.length > 0) {
+                  const latestSample = site.samples[0];
+                  addDetail("Latest Assessment:", new Date(latestSample.date).toLocaleDateString());
+                  if (latestSample.biological_water_quality_score) {
+                    addDetail("Latest Bio Score:", latestSample.biological_water_quality_score.toString());
+                  }
+                }
+            
+                container.appendChild(dl);
+            
+                const buttonContainer = document.createElement("div");
+                buttonContainer.className = "mt-4";
+                const button = document.createElement("button");
+                button.className = "esri-button esri-button--secondary";
+                button.style.cursor = "pointer";
+                button.textContent = "View Site Details";
+                button.onclick = function () {
+                  navigateTo(`/portal/sites/${site.wwkyid_pk}`);
+                };
+                buttonContainer.appendChild(button);
+                container.appendChild(buttonContainer);
+
+                return container;
+              }
+            });
+
+            const pointGraphic = new Graphic({
+              geometry: point,
+              symbol: markerSymbol,
+              popupTemplate: popupTemplate,
+              attributes: site
+            });
+
+            biologicalLayer.add(pointGraphic);
+          }
+        });
+      }
+
+      // Add habitat sample sites  
+      if (options.showHabitat !== false) {
+        habitatSites.value.forEach(site => {
+          if (site.longitude && site.latitude) {
+            const point = new Point({
+              longitude: site.longitude,
+              latitude: site.latitude
+            });
+
+            const markerSymbol = {
+              type: "simple-marker",
+              color: [255, 140, 0, 0.7], // Dark orange - habitat
+              size: 8,
+              outline: {
+                color: [0, 0, 0],
+                width: 1
+              }
+            };
+
+            const popupTemplate = new PopupTemplate({
+              title: `Habitat Assessments - Site: ${site.wwkyid_pk}`,
+              content: function () {
+                const container = document.createElement("div");
+                container.className = "bg-gray-50 p-4 rounded";
+            
+                const dl = document.createElement("dl");
+                dl.className = "space-y-2";
+            
+                function addDetail(term, detail) {
+                  const div = document.createElement("div");
+                  const dt = document.createElement("dt");
+                  dt.className = "font-medium";
+                  dt.textContent = term;
+                  div.appendChild(dt);
+                  const dd = document.createElement("dd");
+                  dd.textContent = detail || "No description available";
+                  div.appendChild(dd);
+                  dl.appendChild(div);
+                }
+            
+                addDetail("Stream Name:", site.stream_name || "Unnamed");
+                addDetail("Basin:", site.wwkybasin);
+                addDetail("Habitat Assessments:", site.samples?.length?.toString() || "0");
+                
+                if (site.samples?.length > 0) {
+                  const latestSample = site.samples[0];
+                  addDetail("Latest Assessment:", new Date(latestSample.date).toLocaleDateString());
+                  if (latestSample.physical_assessment_score) {
+                    addDetail("Latest Habitat Score:", latestSample.physical_assessment_score.toString());
+                  }
+                }
+            
+                container.appendChild(dl);
+            
+                const buttonContainer = document.createElement("div");
+                buttonContainer.className = "mt-4";
+                const button = document.createElement("button");
+                button.className = "esri-button esri-button--secondary";
+                button.style.cursor = "pointer";
+                button.textContent = "View Site Details";
+                button.onclick = function () {
+                  navigateTo(`/portal/sites/${site.wwkyid_pk}`);
+                };
+                buttonContainer.appendChild(button);
+                container.appendChild(buttonContainer);
+
+                return container;
+              }
+            });
+
+            const pointGraphic = new Graphic({
+              geometry: point,
+              symbol: markerSymbol,
+              popupTemplate: popupTemplate,
+              attributes: site
+            });
+
+            habitatLayer.add(pointGraphic);
+          }
+        });
+      }
+
+      // Add hubs if enabled
+      if (options.showHubs !== false) {
+        hubs.value.forEach(hub => {
+          if (hub.longitude && hub.latitude) {
+            const point = new Point({
+              longitude: hub.longitude,
+              latitude: hub.latitude
+            });
+
+            const markerSymbol = {
+              type: "simple-marker",
+              size: 16,
+              color: [46, 204, 113, 0.7],
+              outline: {
+                color: [0, 0, 0],
+                width: 1
+              }
             };
 
             const popupTemplate = new PopupTemplate({
@@ -413,11 +656,11 @@ export function useKYWWMap() {
             });
 
             hubsLayer.add(pointGraphic);
-        }
+          }
         });
       }
       
-      // Zoom to extent if valid sites are available
+      // Handle single site display
       if (options.singleSite) {
         const site = options.singleSite;
         const point = new Point({
@@ -438,29 +681,22 @@ export function useKYWWMap() {
 
         const singleSitePopupTemplate = new PopupTemplate({
           title: `Site: ${site.wwkyid_pk}`,
-          // Instead of an HTML string, use a function to generate a DOM node.
           content: function () {
-            // Create a container div
             const container = document.createElement("div");
             container.className = "bg-gray-50 p-4 rounded";
         
-            // Create a description list (dl)
             const dl = document.createElement("dl");
             dl.className = "space-y-2";
         
-            // Helper function to create a dt/dd pair
             function addDetail(term, detail) {
               const div = document.createElement("div");
-        
               const dt = document.createElement("dt");
               dt.className = "font-medium";
               dt.textContent = term;
               div.appendChild(dt);
-        
               const dd = document.createElement("dd");
               dd.textContent = detail || "No description available";
               div.appendChild(dd);
-        
               dl.appendChild(div);
             }
         
@@ -470,21 +706,15 @@ export function useKYWWMap() {
         
             container.appendChild(dl);
         
-            // Create a div to hold the button
             const buttonContainer = document.createElement("div");
             buttonContainer.className = "mt-4";
-
-            // Create the button element
             const button = document.createElement("button");
             button.className = "esri-button esri-button--secondary";
             button.style.cursor = "pointer";
-            button.textContent = "View Site Samples";
-            
-            // Add onclick event to navigate
+            button.textContent = "View Site Details";
             button.onclick = function () {
               navigateTo(`/portal/sites/${site.wwkyid_pk}`);
             };
-
             buttonContainer.appendChild(button);
             container.appendChild(buttonContainer);
 
@@ -495,26 +725,25 @@ export function useKYWWMap() {
         const sitegraphic = new Graphic({
           geometry: point,
           symbol: markerSymbol,
-          popupTemplate: site.popupTemplate || singleSitePopupTemplate, // Allow custom template override
+          popupTemplate: site.popupTemplate || singleSitePopupTemplate,
           attributes: site
         });
   
         graphicsLayer.add(sitegraphic);
   
-        // Center and zoom to the site
         await viewInstance.goTo({
           target: point,
           zoom: options.zoom || 14
         });
       } else {
-        // Force initial view to Kentucky if not showing a single site
         await viewInstance.goTo({
           center: KENTUCKY_CENTER,
           zoom: KENTUCKY_ZOOM
         });
       }
-      // Add layers to the map  
-      mapInstance.addMany([graphicsLayer, hubsLayer, sitesLayer, userSitesLayer ]);
+      
+      // Add layers to the map in proper order
+      mapInstance.addMany([graphicsLayer, hubsLayer, sitesLayer, biologicalLayer, habitatLayer, userSitesLayer]);
 
       return viewInstance;
     } catch (err) {
@@ -523,251 +752,231 @@ export function useKYWWMap() {
     }
   }
   
-    // Helper function to create hub popup content
-    function createHubPopupContent(hub: Hub) {
-      return `
-        <div class="bg-gray-50 p-4 rounded">
-          <dl class="space-y-2">
-            <div>
-              <dt class="font-medium">Organization:</dt>
-              <dd>${hub.organization || 'Organization not specified'}</dd>
-            </div>
-            <div>
-              <dt class="font-medium">Address:</dt>
-              <dd>${hub.Full_Address || 'Address not available'}</dd>
-            </div>
-            <div>
-              <dt class="font-medium">Contact:</dt>
-              <dd>${hub.Contact_Person || 'Contact not specified'}</dd>
-            </div>
-            <div>
-              <dt class="font-medium">Phone:</dt>
-              <dd>${hub.Phone || 'Phone number not available'}</dd>
-            </div>
-            <div>
-              <dt class="font-medium">Email:</dt>
-              <dd>${hub.Email || 'Email not available'}</dd>
-            </div>
-            <div>
-              <dt class="font-medium">Basin(s):</dt>
-              <dd>${hub.Basin || 'Basin not specified'}</dd>
-            </div>
-          </dl>
-        </div>
-      `;
-    }
+  // Helper function to create hub popup content
+  function createHubPopupContent(hub: Hub) {
+    return `
+      <div class="bg-gray-50 p-4 rounded">
+        <dl class="space-y-2">
+          <div>
+            <dt class="font-medium">Organization:</dt>
+            <dd>${hub.organization || 'Organization not specified'}</dd>
+          </div>
+          <div>
+            <dt class="font-medium">Address:</dt>
+            <dd>${hub.Full_Address || 'Address not available'}</dd>
+          </div>
+          <div>
+            <dt class="font-medium">Contact:</dt>
+            <dd>${hub.Contact_Person || 'Contact not specified'}</dd>
+          </div>
+          <div>
+            <dt class="font-medium">Phone:</dt>
+            <dd>${hub.Phone || 'Phone number not available'}</dd>
+          </div>
+          <div>
+            <dt class="font-medium">Email:</dt>
+            <dd>${hub.Email || 'Email not available'}</dd>
+          </div>
+          <div>
+            <dt class="font-medium">Basin(s):</dt>
+            <dd>${hub.Basin || 'Basin not specified'}</dd>
+          </div>
+        </dl>
+      </div>
+    `;
+  }
   
-    async function highlightUserSites(userSites: any[]) {
-        if (!view || !userSitesLayer) return;
+  async function highlightUserSites(userSites: any[]) {
+    if (!view || !userSitesLayer) return;
 
-        // Clear existing user sites
-        userSitesLayer.removeAll();
-      
-        const { Graphic, Point, PopupTemplate } = await loadArcGISModules();
-      
-        //load extent for calculating boundary extents
-        const Extent = await import('@arcgis/core/geometry/Extent').then(m => m.default);
+    userSitesLayer.removeAll();
+  
+    const { Graphic, Point, PopupTemplate } = await loadArcGISModules();
+    const Extent = await import('@arcgis/core/geometry/Extent').then(m => m.default);
 
-        const validSites: Array<{longitude: number, latitude: number}> = [];
+    const validSites: Array<{longitude: number, latitude: number}> = [];
 
-        userSites.forEach(site => {
-          if (site.latitude && site.longitude) {
-            validSites.push({
-              longitude: site.longitude,
-              latitude: site.latitude
-            });
-
-            const point = new Point({
-              longitude: site.longitude,
-              latitude: site.latitude
-            });
-      
-            const markerSymbol = {
-              type: "simple-marker",
-              color: [0, 0, 255, 0.7],
-              size: 12,
-              outline: {
-                color: [255, 255, 255],
-                width: 2
-              }
-            };
-
-            const popupTemplate = new PopupTemplate({
-              title: `Your Sample Site: ${site.stream_name || 'Unnamed Stream'}`,
-              // Instead of an HTML string, use a function to generate a DOM node.
-              content: function () {
-                // Create a container div
-                const container = document.createElement("div");
-                container.className = "bg-blue-50 p-4 rounded";
-            
-                // Create a description list (dl)
-                const dl = document.createElement("dl");
-                dl.className = "space-y-2";
-            
-                // Helper function to create a dt/dd pair
-                function addDetail(term, detail) {
-                  const div = document.createElement("div");
-            
-                  const dt = document.createElement("dt");
-                  dt.className = "font-medium";
-                  dt.textContent = term;
-                  div.appendChild(dt);
-            
-                  const dd = document.createElement("dd");
-                  dd.textContent = detail || "No description available";
-                  div.appendChild(dd);
-            
-                  dl.appendChild(div);
-                }
-            
-                addDetail("Stream Name:", site.stream_name || "Unnamed");
-                addDetail("Basin:", site.wwkybasin);
-                addDetail("Description:", site.description || "No description available");
-            
-                container.appendChild(dl);
-            
-               // Create a div to hold the button
-                const buttonContainer = document.createElement("div");
-                buttonContainer.className = "mt-4";
-
-                // Create the button element
-                const button = document.createElement("button");
-                button.className = "esri-button esri-button--secondary";
-                button.style.cursor = "pointer";
-                button.textContent = "View Site Samples";
-                
-                // Add onclick event to navigate
-                button.onclick = function () {
-                  navigateTo(`/portal/sites/${site.wwkyid_pk}`);
-                };
-
-                buttonContainer.appendChild(button);
-                container.appendChild(buttonContainer);
-
-                return container;
-              }
-            });
-
-            const graphic = new Graphic({
-              geometry: point,
-              symbol: markerSymbol,
-              popupTemplate: popupTemplate,
-              attributes: site
-            });
-      
-            userSitesLayer.add(graphic);
-          }
+    userSites.forEach(site => {
+      if (site.latitude && site.longitude) {
+        validSites.push({
+          longitude: site.longitude,
+          latitude: site.latitude
         });
-      
-        // Make layer visible when sites are added
-        userSitesVisible.value = true;
-        userSitesLayer.visible = true;
+
+        const point = new Point({
+          longitude: site.longitude,
+          latitude: site.latitude
+        });
+  
+        const markerSymbol = {
+          type: "simple-marker",
+          color: [0, 0, 255, 0.7],
+          size: 12,
+          outline: {
+            color: [255, 255, 255],
+            width: 2
+          }
+        };
+
+        const popupTemplate = new PopupTemplate({
+          title: `Your Site: ${site.stream_name || 'Unnamed Stream'}`,
+          content: function () {
+            const container = document.createElement("div");
+            container.className = "bg-blue-50 p-4 rounded";
         
-        // Calculate and zoom to extent if we have valid sites
-        if (validSites.length > 0) {
-          const xCoords = validSites.map(c => c.longitude);
-          const yCoords = validSites.map(c => c.latitude);
-
-          const minX = Math.min(...xCoords);
-          const maxX = Math.max(...xCoords);
-          const minY = Math.min(...yCoords);
-          const maxY = Math.max(...yCoords);
-
-          // Add padding to the extent (10% of the range)
-          const xPadding = Math.max((maxX - minX) * 0.05, 0.01); // Minimum 0.01 degrees
-          const yPadding = Math.max((maxY - minY) * 0.05, 0.01); // Minimum 0.01 degrees
-
-          const extent = new Extent({
-            xmin: minX - xPadding,
-            xmax: maxX + xPadding,
-            ymin: minY - yPadding,
-            ymax: maxY + yPadding,
-            spatialReference: { wkid: 4326 }
-          });
-
-          // Add options to the goTo for tighter zoom
-          await view.goTo({
-            target: extent,
-            options: {
-              animate: true,
-              duration: 1000,
-              easing: "ease-out"
+            const dl = document.createElement("dl");
+            dl.className = "space-y-2";
+        
+            function addDetail(term, detail) {
+              const div = document.createElement("div");
+              const dt = document.createElement("dt");
+              dt.className = "font-medium";
+              dt.textContent = term;
+              div.appendChild(dt);
+              const dd = document.createElement("dd");
+              dd.textContent = detail || "No description available";
+              div.appendChild(dd);
+              dl.appendChild(div);
             }
-          });
+        
+            addDetail("Stream Name:", site.stream_name || "Unnamed");
+            addDetail("Basin:", site.wwkybasin);
+            addDetail("Description:", site.description || "No description available");
+        
+            container.appendChild(dl);
+        
+            const buttonContainer = document.createElement("div");
+            buttonContainer.className = "mt-4";
+            const button = document.createElement("button");
+            button.className = "esri-button esri-button--secondary";
+            button.style.cursor = "pointer";
+            button.textContent = "View Site Details";
+            button.onclick = function () {
+              navigateTo(`/portal/sites/${site.wwkyid_pk}`);
+            };
+            buttonContainer.appendChild(button);
+            container.appendChild(buttonContainer);
 
-          // If it's a single site, zoom in further
-          if (validSites.length === 1) {
-            await view.goTo({
-              target: extent,
-              zoom: 13 // Closer zoom for single site
-            });
+            return container;
           }
-        } else {
-          // If no valid sites, zoom to Kentucky
-          await view.goTo({
-            center: KENTUCKY_CENTER,
-            zoom: KENTUCKY_ZOOM
-          });
-        }
-      }
-    
-      // Add toggle function for user sites
-      function toggleUserSites(visible?: boolean) {
-        if (!userSitesLayer) return;
-        
-        if (visible !== undefined) {
-          userSitesVisible.value = visible;
-        } else {
-          userSitesVisible.value = !userSitesVisible.value;
-        }
-        
-        userSitesLayer.visible = userSitesVisible.value;
-      }
-  
-    // Zoom function
-    function zoomTo(coordinates: [number, number], zoom = 12) {
-        if (!view) return;
-        
-        // Ensure coordinates are within Kentucky bounds
-        const [longitude, latitude] = coordinates;
-        if (longitude < -89.57 || longitude > -81.96 || 
-            latitude < 36.49 || latitude > 39.15) {
-          console.warn('Coordinates outside Kentucky bounds, defaulting to center');
-          coordinates = KENTUCKY_CENTER;
-        }
-        
-        view.goTo({
-          center: coordinates,
-          zoom: zoom
         });
-      }
+
+        const graphic = new Graphic({
+          geometry: point,
+          symbol: markerSymbol,
+          popupTemplate: popupTemplate,
+          attributes: site
+        });
   
-    // Cleanup
-    onUnmounted(() => {
-      if (view) {
-        view.destroy();
-        view = null;
+        userSitesLayer.add(graphic);
       }
     });
   
-    return {
-        hubs,
-        sites,
-        userSites,
-        loading,
-        error,
-        mapView,
-        userSitesVisible,  // Export the visibility state
-        hubsVisible,
-        sitesVisible,
-        fetchData,
-        initializeMap,
-        highlightUserSites,
-        toggleUserSites,   // Export the toggle function
-        zoomTo,
-        toggleLayerVisibility,
-        searchSiteById,
-        KENTUCKY_CENTER,
-        KENTUCKY_ZOOM
-      };
+    userSitesVisible.value = true;
+    userSitesLayer.visible = true;
+    
+    if (validSites.length > 0) {
+      const xCoords = validSites.map(c => c.longitude);
+      const yCoords = validSites.map(c => c.latitude);
+
+      const minX = Math.min(...xCoords);
+      const maxX = Math.max(...xCoords);
+      const minY = Math.min(...yCoords);
+      const maxY = Math.max(...yCoords);
+
+      const xPadding = Math.max((maxX - minX) * 0.05, 0.01);
+      const yPadding = Math.max((maxY - minY) * 0.05, 0.01);
+
+      const extent = new Extent({
+        xmin: minX - xPadding,
+        xmax: maxX + xPadding,
+        ymin: minY - yPadding,
+        ymax: maxY + yPadding,
+        spatialReference: { wkid: 4326 }
+      });
+
+      await view.goTo({
+        target: extent,
+        options: {
+          animate: true,
+          duration: 1000,
+          easing: "ease-out"
+        }
+      });
+
+      if (validSites.length === 1) {
+        await view.goTo({
+          target: extent,
+          zoom: 13
+        });
+      }
+    } else {
+      await view.goTo({
+        center: KENTUCKY_CENTER,
+        zoom: KENTUCKY_ZOOM
+      });
+    }
   }
+
+  function toggleUserSites(visible?: boolean) {
+    if (!userSitesLayer) return;
+    
+    if (visible !== undefined) {
+      userSitesVisible.value = visible;
+    } else {
+      userSitesVisible.value = !userSitesVisible.value;
+    }
+    
+    userSitesLayer.visible = userSitesVisible.value;
+  }
+
+  // Zoom function
+  function zoomTo(coordinates: [number, number], zoom = 12) {
+    if (!view) return;
+    
+    const [longitude, latitude] = coordinates;
+    if (longitude < -89.57 || longitude > -81.96 || 
+        latitude < 36.49 || latitude > 39.15) {
+      console.warn('Coordinates outside Kentucky bounds, defaulting to center');
+      coordinates = KENTUCKY_CENTER;
+    }
+    
+    view.goTo({
+      center: coordinates,
+      zoom: zoom
+    });
+  }
+
+  // Cleanup
+  onUnmounted(() => {
+    if (view) {
+      view.destroy();
+      view = null;
+    }
+  });
+
+  return {
+    hubs,
+    sites,
+    biologicalSites,
+    habitatSites,
+    userSites,
+    loading,
+    error,
+    mapView,
+    userSitesVisible,
+    hubsVisible,
+    sitesVisible,
+    biologicalVisible,
+    habitatVisible,
+    fetchData,
+    initializeMap,
+    highlightUserSites,
+    toggleUserSites,
+    zoomTo,
+    toggleLayerVisibility,
+    searchSiteById,
+    KENTUCKY_CENTER,
+    KENTUCKY_ZOOM
+  };
+}

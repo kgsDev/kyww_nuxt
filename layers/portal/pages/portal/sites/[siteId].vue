@@ -1,5 +1,5 @@
 <script setup lang="ts">
-//this is the main page for a single site in the KYWW portal [siteId].vue
+//this is the main page for a single site in the KYWW portal [siteId].vue - UPDATED
 import { useKYWWMap } from '~/composables/useKYWWMap';
 import SampleForm from '../sample/index.vue'; // Import form
 import ContactSamplerForm from '~/components/ContactSamplerForm.vue'; // Import contact form
@@ -30,10 +30,15 @@ const successMessage = ref('');
 const route = useRoute();
 const siteId = computed(() => route.params.siteId);
 
+// Add activeTab reactive variable
+const activeTab = ref('stream');
+
 const loading = ref(true);
 const error = ref(null);
 const siteData = ref(null);
 const samples = ref([]);
+const biologicalSamples = ref([]);
+const habitatSamples = ref([]);
 const mapContainer = ref(null);
 const containerReady = ref(false);
 
@@ -64,15 +69,16 @@ const handleEditComplete = async () => {
 };
 
 const fetchSamplerConnectSettings = async () => {
-  // Get unique volunteer IDs from samples
-  const volunteerIds = [...new Set(samples.value
-    .filter(sample => sample.volunteer_id)
-    .map(sample => sample.volunteer_id.id))];
+  // Get unique volunteer IDs from all sample types
+  const volunteerIds = [...new Set([
+    ...samples.value.filter(sample => sample.volunteer_id).map(sample => sample.volunteer_id.id),
+    ...biologicalSamples.value.filter(sample => sample.volunteer_id).map(sample => sample.volunteer_id.id),
+    ...habitatSamples.value.filter(sample => sample.volunteer_id).map(sample => sample.volunteer_id.id)
+  ])];
   
-  if (volunteerIds.length === 0) return; // No need to fetch if there are no volunteers
+  if (volunteerIds.length === 0) return;
   
   try {
-    // Fetch sampler_data for all volunteers in one request
     const samplerDataResponse = await useDirectus(
       readItems('sampler_data', {
         filter: {
@@ -83,55 +89,44 @@ const fetchSamplerConnectSettings = async () => {
       })
     );
     
-    // Create a map for quick lookup - FIX: use user_id instead of directus_user_id
     const samplerDataMap = samplerDataResponse.reduce((map, data) => {
-      map[data.user_id] = data; // This is the key fix - use user_id to match the API response
+      map[data.user_id] = data;
       return map;
     }, {});
     
-   
-    // Update samples with the connection settings
-    samples.value = samples.value.map(sample => {
-      if (sample.volunteer_id && samplerDataMap[sample.volunteer_id.id]) {
-        // Create a new sample object with sampler_data attached to volunteer_id
-        return {
-          ...sample,
-          volunteer_id: {
-            ...sample.volunteer_id,
-            sampler_data: samplerDataMap[sample.volunteer_id.id]
-          }
-        };
-      }
-      
-      // If no sampler data found, add a default sampler_data object
-      if (sample.volunteer_id) {
-        return {
-          ...sample,
-          volunteer_id: {
-            ...sample.volunteer_id,
-            sampler_data: { allow_connections: false } // Default to not allowing connections
-          }
-        };
-      }
-      
-      return sample;
-    });
+    // Update all sample types with connection settings
+    const updateSampleArray = (sampleArray) => {
+      return sampleArray.map(sample => {
+        if (sample.volunteer_id && samplerDataMap[sample.volunteer_id.id]) {
+          return {
+            ...sample,
+            volunteer_id: {
+              ...sample.volunteer_id,
+              sampler_data: samplerDataMap[sample.volunteer_id.id]
+            }
+          };
+        }
+        
+        if (sample.volunteer_id) {
+          return {
+            ...sample,
+            volunteer_id: {
+              ...sample.volunteer_id,
+              sampler_data: { allow_connections: false }
+            }
+          };
+        }
+        
+        return sample;
+      });
+    };
+
+    samples.value = updateSampleArray(samples.value);
+    biologicalSamples.value = updateSampleArray(biologicalSamples.value);
+    habitatSamples.value = updateSampleArray(habitatSamples.value);
     
   } catch (err) {
     console.error('Error fetching sampler connection settings:', err);
-    // Set default connection settings if fetch fails
-    samples.value = samples.value.map(sample => {
-      if (sample.volunteer_id) {
-        return {
-          ...sample,
-          volunteer_id: {
-            ...sample.volunteer_id,
-            sampler_data: { allow_connections: false }
-          }
-        };
-      }
-      return sample;
-    });
   }
 };
 
@@ -153,11 +148,9 @@ const closeContactForm = (success = false) => {
   showContactForm.value = false;
   
   if (success) {
-    // Show success toast notification
     successMessage.value = `Your message has been sent to ${selectedSampler.value.name}. They'll respond via email if interested in connecting.`;
     showSuccessToast.value = true;
     
-    // Auto-hide the toast after 6 seconds
     setTimeout(() => {
       showSuccessToast.value = false;
     }, 6000);
@@ -167,9 +160,19 @@ const closeContactForm = (success = false) => {
 };
 
 //helper functions
-const calculateAverage = (field) => {
-  // Filter out null, undefined, and NaN values first
-  const validValues = samples.value
+const calculateAverage = (field, sampleType = 'stream') => {
+  let targetSamples = samples.value;
+  
+  // For biological and habitat samples, use their specific score fields
+  if (sampleType === 'biological') {
+    targetSamples = biologicalSamples.value;
+    field = 'biological_water_quality_score';
+  } else if (sampleType === 'habitat') {
+    targetSamples = habitatSamples.value;
+    field = 'physical_assessment_score';
+  }
+  
+  const validValues = targetSamples
     .map(s => {
       const val = parseFloat(s[field]);
       return !isNaN(val) ? val : null;
@@ -178,17 +181,23 @@ const calculateAverage = (field) => {
   
   if (!validValues.length) return null;
   
-  // Calculate average and round to 2 decimal places
   const sum = validValues.reduce((a, b) => a + b, 0);
   return (sum / validValues.length).toFixed(2);
 };
 
-// Update siteStats computed property to handle NaN/null values better
+// Update siteStats computed property to include all sample types
 const siteStats = computed(() => {
-  if (!samples.value.length) return null;
+  const totalSamples = samples.value.length + biologicalSamples.value.length + habitatSamples.value.length;
+  
+  if (!totalSamples) return null;
   
   return {
-    totalSamples: samples.value.length,
+    totalSamples: {
+      stream: samples.value.length,
+      biological: biologicalSamples.value.length,
+      habitat: habitatSamples.value.length,
+      total: totalSamples
+    },
     waterQuality: {
       avgTemp: calculateAverage('water_temperature'),
       avgPH: calculateAverage('pH'),
@@ -200,17 +209,37 @@ const siteStats = computed(() => {
       maxEColi: Math.max(...samples.value
         .map(s => parseFloat(s.bacteria_avg_ecoli_cfu))
         .filter(val => !isNaN(val) && val !== null)
-        .concat([0])), // Add 0 as fallback if no valid values
+        .concat([0])),
       minEColi: Math.min(...samples.value
         .filter(s => s.bacteria_avg_ecoli_cfu)
         .map(s => parseFloat(s.bacteria_avg_ecoli_cfu))
         .filter(val => !isNaN(val) && val !== null)
-        .concat([0])) // Add 0 as fallback if no valid values
+        .concat([0]))
+    },
+    biologicalScore: {
+      avg: calculateAverage('biological_water_quality_score', 'biological'),
+      count: biologicalSamples.value.length
+    },
+    habitatScore: {
+      avg: calculateAverage('physical_assessment_score', 'habitat'),
+      count: habitatSamples.value.length
     },
     volunteerImpact: {
-      totalMinutes: samples.value.reduce((acc, s) => acc + (parseInt(s.total_volunteer_minutes) || 0), 0),
-      totalAdults: samples.value.reduce((acc, s) => acc + (parseInt(s.participants_adults) || 0), 0),
-      totalYouth: samples.value.reduce((acc, s) => acc + (parseInt(s.participants_youth) || 0), 0)
+      totalMinutes: [
+        ...samples.value,
+        ...biologicalSamples.value,
+        ...habitatSamples.value
+      ].reduce((acc, s) => acc + (parseInt(s.total_volunteer_minutes) || 0), 0),
+      totalAdults: [
+        ...samples.value,
+        ...biologicalSamples.value,
+        ...habitatSamples.value
+      ].reduce((acc, s) => acc + (parseInt(s.participants_adults) || 0), 0),
+      totalYouth: [
+        ...samples.value,
+        ...biologicalSamples.value,
+        ...habitatSamples.value
+      ].reduce((acc, s) => acc + (parseInt(s.participants_youth) || 0), 0)
     }
   };
 });
@@ -259,7 +288,7 @@ const initializeSiteMap = async () => {
               </div>
               <div>
                 <dt class="font-medium">Total Samples:</dt>
-                <dd>${samples.value.length}</dd>
+                <dd>Stream: ${samples.value.length}, Bio: ${biologicalSamples.value.length}, Habitat: ${habitatSamples.value.length}</dd>
               </div>
             </dl>
           </div>
@@ -271,7 +300,6 @@ const initializeSiteMap = async () => {
   containerReady.value = true;
 };
 
-
 // Watch for container and data readiness
 watch([mapContainer, siteData], async ([newContainer, newSiteData]) => {
   if (newContainer && newSiteData) {
@@ -279,8 +307,9 @@ watch([mapContainer, siteData], async ([newContainer, newSiteData]) => {
   }
 });
 
-const primarySamples = computed(() => {
-  return samples.value.filter(sample => 
+// Helper functions for categorizing samples by user relationship
+const categorizeSamples = (sampleArray) => {
+  const primary = sampleArray.filter(sample => 
     sample.volunteer_id?.id === user.value?.id || // Primary sampler
     sample.user_created?.id === user.value?.id // Created the sample
   ).map(sample => ({
@@ -288,11 +317,8 @@ const primarySamples = computed(() => {
     isEnteredForOther: sample.user_created?.id === user.value?.id && 
                        sample.volunteer_id?.id !== user.value?.id
   }));
-});
 
-const additionalSamplerSamples = computed(() => {
-  return samples.value.filter(sample => {
-    // Check if user is an additional sampler
+  const additional = sampleArray.filter(sample => {
     const isAdditionalSampler = sample.additional_samplers?.some(
       entry => entry.directus_users_id?.id === user.value?.id
     );
@@ -301,28 +327,28 @@ const additionalSamplerSamples = computed(() => {
            sample.volunteer_id?.id !== user.value?.id && 
            sample.user_created?.id !== user.value?.id;
   });
-});
 
-const otherSamples = computed(() => {
-  if (!user.value) return [];
-  
-  return samples.value.filter(sample => {
-    // Exclude samples where user is primary sampler or creator
-    const isPrimarySample = sample.volunteer_id?.id === user.value.id || 
-                          sample.user_created?.id === user.value.id;
+  const other = sampleArray.filter(sample => {
+    const isPrimarySample = sample.volunteer_id?.id === user.value?.id || 
+                          sample.user_created?.id === user.value?.id;
     
-    // Exclude samples where user is additional sampler
     const isAdditionalSampler = sample.additional_samplers?.some(
-      entry => entry.directus_users_id?.id === user.value.id
+      entry => entry.directus_users_id?.id === user.value?.id
     );
     
     return !isPrimarySample && !isAdditionalSampler;
   });
-});
+
+  return { primary, additional, other };
+};
+
+// Computed properties for each sample type
+const streamSamples = computed(() => categorizeSamples(samples.value));
+const bioSamples = computed(() => categorizeSamples(biologicalSamples.value));
+const habSamples = computed(() => categorizeSamples(habitatSamples.value));
 
 // Fetch data
 onMounted(async () => {
-  //fetch sites and hubs from useKYWWMap:
   await fetchData();
 
   try {
@@ -349,44 +375,92 @@ onMounted(async () => {
       site.longitude = parseFloat(site.longitude);
       siteData.value = site;
 
-      // Fetch samples
+      // Fetch all three types of samples
       try {
-        const samplesResponse = await useDirectus(
-          readItems('base_samples', {
-            filter: {
-              wwky_id: { _eq: siteId.value }
-            },
-            fields: [
-              '*',
-              'user_created.id',
-              'user_created.first_name',
-              'user_created.last_name',
-              'volunteer_id.id',
-              'volunteer_id.first_name',
-              'volunteer_id.last_name',
-              'volunteer_id.sampler_data.allow_connections'
-            ],
-            sort: ['-date']
-          })
-        );
+        const [streamSamplesResponse, bioSamplesResponse, habitatSamplesResponse] = await Promise.all([
+          // Stream samples
+          useDirectus(
+            readItems('base_samples', {
+              filter: {
+                wwky_id: { _eq: siteId.value }
+              },
+              fields: [
+                '*',
+                'user_created.id',
+                'user_created.first_name',
+                'user_created.last_name',
+                'volunteer_id.id',
+                'volunteer_id.first_name',
+                'volunteer_id.last_name',
+                'volunteer_id.sampler_data.allow_connections'
+              ],
+              sort: ['-date']
+            })
+          ),
+          // Biological samples
+          useDirectus(
+            readItems('biological_samples', {
+              filter: {
+                wwky_id: { _eq: siteId.value }
+              },
+              fields: [
+                '*',
+                'user_created.id',
+                'user_created.first_name',
+                'user_created.last_name',
+                'volunteer_id.id',
+                'volunteer_id.first_name',
+                'volunteer_id.last_name',
+                'volunteer_id.sampler_data.allow_connections'
+              ],
+              sort: ['-date']
+            })
+          ),
+          // Habitat samples
+          useDirectus(
+            readItems('habitat_samples', {
+              filter: {
+                wwky_id: { _eq: siteId.value }
+              },
+              fields: [
+                '*',
+                'user_created.id',
+                'user_created.first_name',
+                'user_created.last_name',
+                'volunteer_id.id',
+                'volunteer_id.first_name',
+                'volunteer_id.last_name',
+                'volunteer_id.sampler_data.allow_connections'
+              ],
+              sort: ['-date']
+            })
+          )
+        ]);
 
-        // For each sample, get its additional samplers
-        const samplesWithSamplers = await Promise.all(
-          samplesResponse.map(async (sample) => {
-            const additionalSamplers = await useDirectus(
-              readItems('base_samples_directus_users', {
-                filter: { base_samples_id: { _eq: sample.id } },
-                fields: ['directus_users_id.*']
-              })
-            );
-            return {
-              ...sample,
-              additional_samplers: additionalSamplers
-            };
-          })
-        );
+        // Process samples with additional samplers for each type
+        const processAdditionalSamplers = async (sampleArray, tableName) => {
+          return await Promise.all(
+            sampleArray.map(async (sample) => {
+              const additionalSamplers = await useDirectus(
+                readItems(tableName, {
+                  filter: { 
+                    [`${tableName.split('_')[0]}_samples_id`]: { _eq: sample.id } 
+                  },
+                  fields: ['directus_users_id.*']
+                })
+              );
+              return {
+                ...sample,
+                additional_samplers: additionalSamplers
+              };
+            })
+          );
+        };
 
-        samples.value = samplesWithSamplers;
+        samples.value = await processAdditionalSamplers(streamSamplesResponse, 'base_samples_directus_users');
+        biologicalSamples.value = await processAdditionalSamplers(bioSamplesResponse, 'biological_samples_directus_users');
+        habitatSamples.value = await processAdditionalSamplers(habitatSamplesResponse, 'habitat_samples_directus_users');
+
         await fetchSamplerConnectSettings();
 
       } catch (err) {
@@ -538,6 +612,16 @@ onMounted(async () => {
           </template>
           <div class="space-y-4">
             <div>
+              <h3 class="font-medium text-gray-700">Sample Summary</h3>
+              <div class="grid grid-cols-2 gap-2 mt-2">
+                <div>Stream Samples: {{ siteStats.totalSamples.stream }}</div>
+                <div>Bio Assessments: {{ siteStats.totalSamples.biological }}</div>
+                <div>Habitat Assessments: {{ siteStats.totalSamples.habitat }}</div>
+                <div>Total: {{ siteStats.totalSamples.total }}</div>
+              </div>
+            </div>
+            
+            <div v-if="siteStats.totalSamples.stream > 0">
               <h3 class="font-medium text-gray-700">Water Quality Averages</h3>
               <div class="grid grid-cols-2 gap-2 mt-2">
                 <div>Temperature: {{ formatMeasurement(siteStats.waterQuality.avgTemp, '°C') }}</div>
@@ -546,13 +630,21 @@ onMounted(async () => {
                 <div>Conductivity: {{ formatMeasurement(siteStats.waterQuality.avgConductivity, 'μS/cm') }}</div>
               </div>
             </div>
-            <div>
-              <h3 class="font-medium text-gray-700">E. coli Results</h3>
-              <div class="grid grid-cols-2 gap-2 mt-2">
-                <div>Average: {{ formatMeasurement(siteStats.bacteria.avgEColi, 'CFU/100mL') }}</div>
-                <div>Maximum: {{ formatMeasurement(siteStats.bacteria.maxEColi, 'CFU/100mL') }}</div>
+            
+            <div v-if="siteStats.biologicalScore.count > 0">
+              <h3 class="font-medium text-gray-700">Biological Assessment</h3>
+              <div class="mt-2">
+                Average Score: {{ formatMeasurement(siteStats.biologicalScore.avg, '') }} ({{ siteStats.biologicalScore.count }} assessments)
               </div>
             </div>
+            
+            <div v-if="siteStats.habitatScore.count > 0">
+              <h3 class="font-medium text-gray-700">Habitat Assessment</h3>
+              <div class="mt-2">
+                Average Score: {{ formatMeasurement(siteStats.habitatScore.avg, '') }} ({{ siteStats.habitatScore.count }} assessments)
+              </div>
+            </div>
+            
             <div>
               <h3 class="font-medium text-gray-700">Volunteer Impact</h3>
               <div class="grid grid-cols-2 gap-2 mt-2">
@@ -564,203 +656,493 @@ onMounted(async () => {
         </UCard>
       </div>
 
-      <!-- Samples Table -->
-      <!-- Primary Samples Table -->
-      <UCard class="mt-6">
-        <template #header>
-          <div class="flex justify-between items-center">
-            <h2 class="text-lg font-semibold">Your Samples (Primary Sampler or Creator)</h2>
+      <!-- Sample Type Navigation -->
+      <div class="mb-6">
+        <div class="flex space-x-4 border-b">
+          <button
+            :class="[
+              'px-4 py-2 border-b-2 transition-colors',
+              activeTab === 'stream' ? 'border-blue-500 text-blue-600' : 'border-transparent hover:border-gray-300'
+            ]"
+            @click="activeTab = 'stream'"
+          >
+            Stream Samples ({{ samples.length }})
+          </button>
+          <button
+            :class="[
+              'px-4 py-2 border-b-2 transition-colors',
+              activeTab === 'biological' ? 'border-blue-500 text-blue-600' : 'border-transparent hover:border-gray-300'
+            ]"
+            @click="activeTab = 'biological'"
+          >
+            Biological Assessments ({{ biologicalSamples.length }})
+          </button>
+          <button
+            :class="[
+              'px-4 py-2 border-b-2 transition-colors',
+              activeTab === 'habitat' ? 'border-blue-500 text-blue-600' : 'border-transparent hover:border-gray-300'
+            ]"
+            @click="activeTab = 'habitat'"
+          >
+            Habitat Assessments ({{ habitatSamples.length }})
+          </button>
+        </div>
+      </div>
+
+      <!-- Stream Samples Section -->
+      <div v-show="activeTab === 'stream'">
+        <!-- Primary Stream Samples Table -->
+        <UCard class="mt-6">
+          <template #header>
+            <div class="flex justify-between items-center">
+              <h2 class="text-lg font-semibold">Your Stream Samples (Primary Sampler or Creator)</h2>
+              <UButton
+                icon="i-heroicons-plus"
+                @click="navigateTo('/portal/sample')"
+              >
+                New Stream Sample
+              </UButton>
+            </div>
+          </template>
+
+          <!-- Message if no primary samples -->
+          <div v-if="streamSamples.primary.length === 0" class="text-center py-4 text-gray-500">
+            You haven't created any stream samples or been a primary sampler for this site yet.
           </div>
-        </template>
 
-        <!-- Message if no primary samples -->
-        <div v-if="primarySamples.length === 0" class="text-center py-4 text-gray-500">
-          You haven't created any samples or been a primary sampler for this site yet.
-        </div>
-
-        <div v-else class="overflow-x-auto">
-          <table class="min-w-full divide-y divide-gray-200">
-            <thead>
-              <tr>
-                <th class="px-4 py-2 text-left">ID</th>
-                <th class="px-4 py-2 text-left">Date</th>
-                <th class="px-4 py-2 text-left">Temp (°C)</th>
-                <th class="px-4 py-2 text-left">pH</th>
-                <th class="px-4 py-2 text-left">DO (mg/L)</th>
-                <th class="px-4 py-2 text-left">Conduct (μS/cm)</th>
-                <th class="px-4 py-2 text-left">Avg E. coli (CFU/100mL)</th>
-                <th class="px-4 py-2 text-center">Details</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-200">
-              <tr v-for="sample in primarySamples" :key="sample.id" 
-                  :class="{'hover:bg-gray-50': true, 'bg-yellow-50': sample.user_created?.id === user?.id && sample.volunteer_id !== user?.id}">
-                <td class="px-4 py-2">{{ sample.id }}</td>
-                <td class="px-4 py-2">
-                  {{ formatDate(sample.date) }}
-                  <div v-if="sample.isEnteredForOther" 
-                      class="text-xs text-orange-600 font-medium">
-                    You entered this sample for {{ sample.volunteer_id.first_name }} {{ sample.volunteer_id.last_name }}
-                  </div>
-                </td>
-                <td class="px-4 py-2">{{ formatMeasurement(sample.water_temperature, '') }}</td>
-                <td class="px-4 py-2">{{ formatMeasurement(sample.pH, '') }}</td>
-                <td class="px-4 py-2">{{ formatMeasurement(sample.dissolved_oxygen, '') }}</td>
-                <td class="px-4 py-2">{{ formatMeasurement(sample.conductivity, '') }}</td>
-                <td class="px-4 py-2">{{ formatMeasurement(sample.bacteria_avg_ecoli_cfu, '') }}</td>
-                <td class="px-4 py-2 text-center">
-                  <div class="flex justify-center space-x-2">
-                    <UButton size="sm" variant="soft" @click="navigateTo(`/portal/sample/${sample.id}`)" 
-                            icon="i-heroicons-eye">View</UButton>
-                    <UButton size="sm" variant="soft" color="blue" 
-                            @click="navigateTo(`/portal/sample?edit=${sample.id}`)" 
-                            icon="i-heroicons-pencil-square">Edit</UButton>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </UCard>
-
-      <!-- Additional Sampler Samples Table -->
-      <UCard class="mt-6">
-        <template #header>
-          <div class="flex justify-between items-center">
-            <h2 class="text-lg font-semibold">Samples Where You're an Additional Sampler</h2>
+          <div v-else class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+              <thead>
+                <tr>
+                  <th class="px-4 py-2 text-left">ID</th>
+                  <th class="px-4 py-2 text-left">Date</th>
+                  <th class="px-4 py-2 text-left">Temp (°C)</th>
+                  <th class="px-4 py-2 text-left">pH</th>
+                  <th class="px-4 py-2 text-left">DO (mg/L)</th>
+                  <th class="px-4 py-2 text-left">Conduct (μS/cm)</th>
+                  <th class="px-4 py-2 text-left">Avg E. coli (CFU/100mL)</th>
+                  <th class="px-4 py-2 text-center">Details</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-200">
+                <tr v-for="sample in streamSamples.primary" :key="sample.id" 
+                    :class="{'hover:bg-gray-50': true, 'bg-yellow-50': sample.isEnteredForOther}">
+                  <td class="px-4 py-2">{{ sample.id }}</td>
+                  <td class="px-4 py-2">
+                    {{ formatDate(sample.date) }}
+                    <div v-if="sample.isEnteredForOther" 
+                        class="text-xs text-orange-600 font-medium">
+                      You entered this sample for {{ sample.volunteer_id.first_name }} {{ sample.volunteer_id.last_name }}
+                    </div>
+                  </td>
+                  <td class="px-4 py-2">{{ formatMeasurement(sample.water_temperature, '') }}</td>
+                  <td class="px-4 py-2">{{ formatMeasurement(sample.pH, '') }}</td>
+                  <td class="px-4 py-2">{{ formatMeasurement(sample.dissolved_oxygen, '') }}</td>
+                  <td class="px-4 py-2">{{ formatMeasurement(sample.conductivity, '') }}</td>
+                  <td class="px-4 py-2">{{ formatMeasurement(sample.bacteria_avg_ecoli_cfu, '') }}</td>
+                  <td class="px-4 py-2 text-center">
+                    <div class="flex justify-center space-x-2">
+                      <UButton size="sm" variant="soft" @click="navigateTo(`/portal/sample/${sample.id}`)" 
+                              icon="i-heroicons-eye">View</UButton>
+                      <UButton size="sm" variant="soft" color="blue" 
+                              @click="navigateTo(`/portal/sample?edit=${sample.id}`)" 
+                              icon="i-heroicons-pencil-square">Edit</UButton>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
-        </template>
+        </UCard>
 
-        <!-- Message if no additional sampler samples -->
-        <div v-if="additionalSamplerSamples.length === 0" class="text-center py-4 text-gray-500">
-          You haven't been an additional sampler for any samples at this site.
-        </div>
+        <!-- Additional Sampler Stream Samples Table -->
+        <UCard class="mt-6">
+          <template #header>
+            <div class="flex justify-between items-center">
+              <h2 class="text-lg font-semibold">Stream Samples Where You're an Additional Sampler</h2>
+            </div>
+          </template>
 
-        <div v-else class="overflow-x-auto">
-          <table class="min-w-full divide-y divide-gray-200">
-            <thead>
-              <tr>
-                <th class="px-4 py-2 text-left">ID</th>
-                <th class="px-4 py-2 text-left">Date</th>
-                <th class="px-4 py-2 text-left">Temp (°C)</th>
-                <th class="px-4 py-2 text-left">pH</th>
-                <th class="px-4 py-2 text-left">DO (mg/L)</th>
-                <th class="px-4 py-2 text-left">Conduct (μS/cm)</th>
-                <th class="px-4 py-2 text-left">Avg E. coli (CFU/100mL)</th>
-                <th class="px-4 py-2 text-center">Details</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-200">
-              <tr v-for="sample in additionalSamplerSamples" :key="sample.id" class="hover:bg-gray-50">
-                <td class="px-4 py-2">{{ sample.id }}</td>
-                <td class="px-4 py-2">{{ formatDate(sample.date) }}</td>
-                <td class="px-4 py-2">{{ formatMeasurement(sample.water_temperature, '') }}</td>
-                <td class="px-4 py-2">{{ formatMeasurement(sample.pH, '') }}</td>
-                <td class="px-4 py-2">{{ formatMeasurement(sample.dissolved_oxygen, '') }}</td>
-                <td class="px-4 py-2">{{ formatMeasurement(sample.conductivity, '') }}</td>
-                <td class="px-4 py-2">{{ formatMeasurement(sample.bacteria_avg_ecoli_cfu, '') }}</td>
-                <td class="px-4 py-2 text-center">
-                  <div class="flex justify-center space-x-2">
-                    <UButton size="sm" variant="soft" @click="navigateTo(`/portal/sample/${sample.id}`)" 
-                            icon="i-heroicons-eye">View</UButton>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </UCard>
-
-      <!-- Other Samples Table -->
-      <UCard class="mt-6">
-        <template #header>
-          <div class="flex justify-between items-center">
-            <h2 class="text-lg font-semibold">Other Samples at This Site</h2>
+          <div v-if="streamSamples.additional.length === 0" class="text-center py-4 text-gray-500">
+            You haven't been an additional sampler for any stream samples at this site.
           </div>
-        </template>
-        
-        <div v-if="otherSamples.length === 0" class="text-center py-4 text-gray-500">
-          There are no other samples recorded for this site.
-        </div>
 
-        <div v-else class="overflow-x-auto">
-          <table class="min-w-full divide-y divide-gray-200">
-            <thead>
-              <tr>
-                <th class="px-4 py-2 text-left">ID</th>
-                <th class="px-4 py-2 text-left">Date</th>
-                <th class="px-4 py-2 text-left">Primary Sampler</th>
-                <th class="px-4 py-2 text-left">Temp (°C)</th>
-                <th class="px-4 py-2 text-left">pH</th>
-                <th class="px-4 py-2 text-left">DO (mg/L)</th>
-                <th class="px-4 py-2 text-left">Conduct (μS/cm)</th>
-                <th class="px-4 py-2 text-left">Avg E. coli (CFU/100mL)</th>
-                <th class="px-4 py-2 text-center">Details</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-200">
-              <tr v-for="sample in otherSamples" :key="sample.id" class="hover:bg-gray-50">
-                <td class="px-4 py-2">{{ sample.id }}</td>
-                <td class="px-4 py-2">{{ formatDate(sample.date) }}</td>
-                <td class="px-4 py-2 whitespace-nowrap">
-                  <div class="flex flex-col space-y-2">
-                    <!-- User name with optional lock icon -->
-                    <div class="flex items-center">
-                      <span>{{ sample.volunteer_id?.first_name }} {{ sample.volunteer_id?.last_name }}</span>
+          <div v-else class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+              <thead>
+                <tr>
+                  <th class="px-4 py-2 text-left">ID</th>
+                  <th class="px-4 py-2 text-left">Date</th>
+                  <th class="px-4 py-2 text-left">Temp (°C)</th>
+                  <th class="px-4 py-2 text-left">pH</th>
+                  <th class="px-4 py-2 text-left">DO (mg/L)</th>
+                  <th class="px-4 py-2 text-left">Conduct (μS/cm)</th>
+                  <th class="px-4 py-2 text-left">Avg E. coli (CFU/100mL)</th>
+                  <th class="px-4 py-2 text-center">Details</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-200">
+                <tr v-for="sample in streamSamples.additional" :key="sample.id" class="hover:bg-gray-50">
+                  <td class="px-4 py-2">{{ sample.id }}</td>
+                  <td class="px-4 py-2">{{ formatDate(sample.date) }}</td>
+                  <td class="px-4 py-2">{{ formatMeasurement(sample.water_temperature, '') }}</td>
+                  <td class="px-4 py-2">{{ formatMeasurement(sample.pH, '') }}</td>
+                  <td class="px-4 py-2">{{ formatMeasurement(sample.dissolved_oxygen, '') }}</td>
+                  <td class="px-4 py-2">{{ formatMeasurement(sample.conductivity, '') }}</td>
+                  <td class="px-4 py-2">{{ formatMeasurement(sample.bacteria_avg_ecoli_cfu, '') }}</td>
+                  <td class="px-4 py-2 text-center">
+                    <div class="flex justify-center space-x-2">
+                      <UButton size="sm" variant="soft" @click="navigateTo(`/portal/sample/${sample.id}`)" 
+                              icon="i-heroicons-eye">View</UButton>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </UCard>
+
+        <!-- Other Stream Samples Table -->
+        <UCard class="mt-6">
+          <template #header>
+            <div class="flex justify-between items-center">
+              <h2 class="text-lg font-semibold">Other Stream Samples at This Site</h2>
+            </div>
+          </template>
+          
+          <div v-if="streamSamples.other.length === 0" class="text-center py-4 text-gray-500">
+            There are no other stream samples recorded for this site.
+          </div>
+
+          <div v-else class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+              <thead>
+                <tr>
+                  <th class="px-4 py-2 text-left">ID</th>
+                  <th class="px-4 py-2 text-left">Date</th>
+                  <th class="px-4 py-2 text-left">Primary Sampler</th>
+                  <th class="px-4 py-2 text-left">Temp (°C)</th>
+                  <th class="px-4 py-2 text-left">pH</th>
+                  <th class="px-4 py-2 text-left">DO (mg/L)</th>
+                  <th class="px-4 py-2 text-left">Conduct (μS/cm)</th>
+                  <th class="px-4 py-2 text-left">Avg E. coli (CFU/100mL)</th>
+                  <th class="px-4 py-2 text-center">Details</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-200">
+                <tr v-for="sample in streamSamples.other" :key="sample.id" class="hover:bg-gray-50">
+                  <td class="px-4 py-2">{{ sample.id }}</td>
+                  <td class="px-4 py-2">{{ formatDate(sample.date) }}</td>
+                  <td class="px-4 py-2 whitespace-nowrap">
+                    <div class="flex flex-col space-y-2">
+                      <div class="flex items-center">
+                        <span>{{ sample.volunteer_id?.first_name }} {{ sample.volunteer_id?.last_name }}</span>
+                        
+                        <template v-if="sample.volunteer_id && sample.volunteer_id.id !== user?.id">
+                          <UTooltip 
+                            v-if="!(sample.volunteer_id.sampler_data && sample.volunteer_id.sampler_data.allow_connections === true)" 
+                            text="This sampler is not accepting connection requests"
+                          >
+                            <UIcon 
+                              name="i-heroicons-lock-closed" 
+                              class="ml-2 text-gray-400 h-4 w-4" 
+                            />
+                          </UTooltip>
+                        </template>
+                      </div>
                       
-                      <!-- Lock icon (if not accepting connections) - show next to name -->
-                      <template v-if="sample.volunteer_id && sample.volunteer_id.id !== user?.id">
-                        <UTooltip 
-                          v-if="!(sample.volunteer_id.sampler_data && sample.volunteer_id.sampler_data.allow_connections === true)" 
-                          text="This sampler is not accepting connection requests"
+                      <div v-if="sample.volunteer_id && sample.volunteer_id.id !== user?.id">
+                        <UButton 
+                          v-if="sample.volunteer_id.sampler_data && sample.volunteer_id.sampler_data.allow_connections === true"
+                          size="sm" 
+                          variant="soft" 
+                          color="blue"
+                          @click="openContactForm(sample)"
+                          title="Connect with this sampler"
+                          class="mt-1"
                         >
-                          <UIcon 
-                            name="i-heroicons-lock-closed" 
-                            class="ml-2 text-gray-400 h-4 w-4" 
-                          />
-                        </UTooltip>
-                      </template>
+                          <div class="flex items-center space-x-1.5 px-0.5">
+                            <span class="i-heroicons-sparkles text-red-500 h-3 w-3"></span>
+                            <span class="font-medium">Connect</span>
+                          </div>
+                        </UButton>
+                      </div>
                     </div>
-                    
-                    <!-- Connect button (if accepting connections) - show below name -->
-                    <div v-if="sample.volunteer_id && sample.volunteer_id.id !== user?.id">
-                      <UButton 
-                        v-if="sample.volunteer_id.sampler_data && sample.volunteer_id.sampler_data.allow_connections === true"
-                        size="sm" 
-                        variant="soft" 
-                        color="blue"
-                        @click="openContactForm(sample)"
-                        title="Connect with this sampler"
-                        class="mt-1"
-                      >
-                        <div class="flex items-center space-x-1.5 px-0.5">
-                          <span class="i-heroicons-sparkles text-red-500 h-3 w-3"></span>
-                          <span class="font-medium">Connect</span>
-                        </div>
-                      </UButton>
+                  </td>
+                  <td class="px-4 py-2">{{ formatMeasurement(sample.water_temperature, '') }}</td>
+                  <td class="px-4 py-2">{{ formatMeasurement(sample.pH, '') }}</td>
+                  <td class="px-4 py-2">{{ formatMeasurement(sample.dissolved_oxygen, '') }}</td>
+                  <td class="px-4 py-2">{{ formatMeasurement(sample.conductivity, '') }}</td>
+                  <td class="px-4 py-2">{{ formatMeasurement(sample.bacteria_avg_ecoli_cfu, '') }}</td>
+                  <td class="px-4 py-2 text-center">
+                    <div class="flex justify-center space-x-2">
+                      <UButton size="sm" variant="soft" @click="navigateTo(`/portal/sample/${sample.id}`)" 
+                              icon="i-heroicons-eye">View</UButton>
                     </div>
-                  </div>
-                </td>
-                <td class="px-4 py-2">{{ formatMeasurement(sample.water_temperature, '') }}</td>
-                <td class="px-4 py-2">{{ formatMeasurement(sample.pH, '') }}</td>
-                <td class="px-4 py-2">{{ formatMeasurement(sample.dissolved_oxygen, '') }}</td>
-                <td class="px-4 py-2">{{ formatMeasurement(sample.conductivity, '') }}</td>
-                <td class="px-4 py-2">{{ formatMeasurement(sample.bacteria_avg_ecoli_cfu, '') }}</td>
-                <td class="px-4 py-2 text-center">
-                  <div class="flex justify-center space-x-2">
-                    <UButton size="sm" variant="soft" @click="navigateTo(`/portal/sample/${sample.id}`)" 
-                            icon="i-heroicons-eye">View</UButton>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </UCard>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </UCard>
+      </div>
+
+      <!-- Biological Samples Section -->
+      <div v-show="activeTab === 'biological'">
+        <!-- Primary Biological Samples Table -->
+        <UCard class="mt-6">
+          <template #header>
+            <div class="flex justify-between items-center">
+              <h2 class="text-lg font-semibold">Your Biological Assessments (Primary Sampler or Creator)</h2>
+              <UButton
+                icon="i-heroicons-plus"
+                @click="navigateTo('/portal/biological')"
+              >
+                New Biological Assessment
+              </UButton>
+            </div>
+          </template>
+
+          <div v-if="bioSamples.primary.length === 0" class="text-center py-4 text-gray-500">
+            You haven't created any biological assessments or been a primary sampler for this site yet.
+          </div>
+
+          <div v-else class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+              <thead>
+                <tr>
+                  <th class="px-4 py-2 text-left">ID</th>
+                  <th class="px-4 py-2 text-left">Date</th>
+                  <th class="px-4 py-2 text-left">Bio Score</th>
+                  <th class="px-4 py-2 text-left">Quality Rating</th>
+                  <th class="px-4 py-2 text-left">Weather/Flow</th>
+                  <th class="px-4 py-2 text-center">Details</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-200">
+                <tr v-for="sample in bioSamples.primary" :key="sample.id" 
+                    :class="{'hover:bg-gray-50': true, 'bg-yellow-50': sample.isEnteredForOther}">
+                  <td class="px-4 py-2">{{ sample.id }}</td>
+                  <td class="px-4 py-2">
+                    {{ formatDate(sample.date) }}
+                    <div v-if="sample.isEnteredForOther" 
+                        class="text-xs text-orange-600 font-medium">
+                      You entered this assessment for {{ sample.volunteer_id.first_name }} {{ sample.volunteer_id.last_name }}
+                    </div>
+                  </td>
+                  <td class="px-4 py-2">{{ sample.biological_water_quality_score || 'Not calculated' }}</td>
+                  <td class="px-4 py-2">
+                    <span v-if="sample.biological_water_quality_score" :class="{
+                      'text-red-600': sample.biological_water_quality_score < 19,
+                      'text-orange-600': sample.biological_water_quality_score >= 19 && sample.biological_water_quality_score <= 32,
+                      'text-yellow-600': sample.biological_water_quality_score > 32 && sample.biological_water_quality_score <= 41,
+                      'text-green-600': sample.biological_water_quality_score > 41
+                    }">
+                      {{ sample.biological_water_quality_score < 19 ? 'Poor' : 
+                         sample.biological_water_quality_score >= 19 && sample.biological_water_quality_score <= 32 ? 'Marginal' :
+                         sample.biological_water_quality_score > 32 && sample.biological_water_quality_score <= 41 ? 'Fair' : 'Good' }}
+                    </span>
+                  </td>
+                  <td class="px-4 py-2">{{ sample.weather_flow || 'Not recorded' }}</td>
+                  <td class="px-4 py-2 text-center">
+                    <div class="flex justify-center space-x-2">
+                      <UButton size="sm" variant="soft" @click="navigateTo(`/portal/biological/${sample.id}`)" 
+                              icon="i-heroicons-eye">View</UButton>
+                      <UButton size="sm" variant="soft" color="blue" 
+                              @click="navigateTo(`/portal/biological?edit=${sample.id}`)" 
+                              icon="i-heroicons-pencil-square">Edit</UButton>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </UCard>
+
+        <!-- Other Biological Samples -->
+        <UCard class="mt-6">
+          <template #header>
+            <h2 class="text-lg font-semibold">Other Biological Assessments at This Site</h2>
+          </template>
+          
+          <div v-if="bioSamples.other.length === 0" class="text-center py-4 text-gray-500">
+            There are no other biological assessments recorded for this site.
+          </div>
+
+          <div v-else class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+              <thead>
+                <tr>
+                  <th class="px-4 py-2 text-left">ID</th>
+                  <th class="px-4 py-2 text-left">Date</th>
+                  <th class="px-4 py-2 text-left">Primary Sampler</th>
+                  <th class="px-4 py-2 text-left">Bio Score</th>
+                  <th class="px-4 py-2 text-left">Quality Rating</th>
+                  <th class="px-4 py-2 text-center">Details</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-200">
+                <tr v-for="sample in bioSamples.other" :key="sample.id" class="hover:bg-gray-50">
+                  <td class="px-4 py-2">{{ sample.id }}</td>
+                  <td class="px-4 py-2">{{ formatDate(sample.date) }}</td>
+                  <td class="px-4 py-2">{{ sample.volunteer_id?.first_name }} {{ sample.volunteer_id?.last_name }}</td>
+                  <td class="px-4 py-2">{{ sample.biological_water_quality_score || 'Not calculated' }}</td>
+                  <td class="px-4 py-2">
+                    <span v-if="sample.biological_water_quality_score" :class="{
+                      'text-red-600': sample.biological_water_quality_score < 19,
+                      'text-orange-600': sample.biological_water_quality_score >= 19 && sample.biological_water_quality_score <= 32,
+                      'text-yellow-600': sample.biological_water_quality_score > 32 && sample.biological_water_quality_score <= 41,
+                      'text-green-600': sample.biological_water_quality_score > 41
+                    }">
+                      {{ sample.biological_water_quality_score < 19 ? 'Poor' : 
+                         sample.biological_water_quality_score >= 19 && sample.biological_water_quality_score <= 32 ? 'Marginal' :
+                         sample.biological_water_quality_score > 32 && sample.biological_water_quality_score <= 41 ? 'Fair' : 'Good' }}
+                    </span>
+                  </td>
+                  <td class="px-4 py-2 text-center">
+                    <div class="flex justify-center space-x-2">
+                      <UButton size="sm" variant="soft" @click="navigateTo(`/portal/biological/${sample.id}`)" 
+                              icon="i-heroicons-eye">View</UButton>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </UCard>
+      </div>
+
+      <!-- Habitat Samples Section -->
+      <div v-show="activeTab === 'habitat'">
+        <!-- Primary Habitat Samples Table -->
+        <UCard class="mt-6">
+          <template #header>
+            <div class="flex justify-between items-center">
+              <h2 class="text-lg font-semibold">Your Habitat Assessments (Primary Sampler or Creator)</h2>
+              <UButton
+                icon="i-heroicons-plus"
+                @click="navigateTo('/portal/habitat')"
+              >
+                New Habitat Assessment
+              </UButton>
+            </div>
+          </template>
+
+          <div v-if="habSamples.primary.length === 0" class="text-center py-4 text-gray-500">
+            You haven't created any habitat assessments or been a primary sampler for this site yet.
+          </div>
+
+          <div v-else class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+              <thead>
+                <tr>
+                  <th class="px-4 py-2 text-left">ID</th>
+                  <th class="px-4 py-2 text-left">Date</th>
+                  <th class="px-4 py-2 text-left">Habitat Score</th>
+                  <th class="px-4 py-2 text-left">Quality Rating</th>
+                  <th class="px-4 py-2 text-left">Location Description</th>
+                  <th class="px-4 py-2 text-center">Details</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-200">
+                <tr v-for="sample in habSamples.primary" :key="sample.id" 
+                    :class="{'hover:bg-gray-50': true, 'bg-yellow-50': sample.isEnteredForOther}">
+                  <td class="px-4 py-2">{{ sample.id }}</td>
+                  <td class="px-4 py-2">
+                    {{ formatDate(sample.date) }}
+                    <div v-if="sample.isEnteredForOther" 
+                        class="text-xs text-orange-600 font-medium">
+                      You entered this assessment for {{ sample.volunteer_id.first_name }} {{ sample.volunteer_id.last_name }}
+                    </div>
+                  </td>
+                  <td class="px-4 py-2">{{ sample.physical_assessment_score || 'Not calculated' }}</td>
+                  <td class="px-4 py-2">
+                    <span v-if="sample.physical_assessment_score" :class="{
+                      'text-red-600': sample.physical_assessment_score <= 15,
+                      'text-orange-600': sample.physical_assessment_score >= 16 && sample.physical_assessment_score <= 22,
+                      'text-yellow-600': sample.physical_assessment_score >= 23 && sample.physical_assessment_score <= 29,
+                      'text-green-600': sample.physical_assessment_score >= 30
+                    }">
+                      {{ sample.physical_assessment_score <= 15 ? 'Poor' : 
+                         sample.physical_assessment_score >= 16 && sample.physical_assessment_score <= 22 ? 'Marginal' :
+                         sample.physical_assessment_score >= 23 && sample.physical_assessment_score <= 29 ? 'Fair' : 'Good' }}
+                    </span>
+                  </td>
+                  <td class="px-4 py-2">{{ sample.stream_location_description || 'Not provided' }}</td>
+                  <td class="px-4 py-2 text-center">
+                    <div class="flex justify-center space-x-2">
+                      <UButton size="sm" variant="soft" @click="navigateTo(`/portal/habitat/${sample.id}`)" 
+                              icon="i-heroicons-eye">View</UButton>
+                      <UButton size="sm" variant="soft" color="blue" 
+                              @click="navigateTo(`/portal/habitat?edit=${sample.id}`)" 
+                              icon="i-heroicons-pencil-square">Edit</UButton>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </UCard>
+
+        <!-- Other Habitat Samples -->
+        <UCard class="mt-6">
+          <template #header>
+            <h2 class="text-lg font-semibold">Other Habitat Assessments at This Site</h2>
+          </template>
+          
+          <div v-if="habSamples.other.length === 0" class="text-center py-4 text-gray-500">
+            There are no other habitat assessments recorded for this site.
+          </div>
+
+          <div v-else class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+              <thead>
+                <tr>
+                  <th class="px-4 py-2 text-left">ID</th>
+                  <th class="px-4 py-2 text-left">Date</th>
+                  <th class="px-4 py-2 text-left">Primary Sampler</th>
+                  <th class="px-4 py-2 text-left">Habitat Score</th>
+                  <th class="px-4 py-2 text-left">Quality Rating</th>
+                  <th class="px-4 py-2 text-center">Details</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-200">
+                <tr v-for="sample in habSamples.other" :key="sample.id" class="hover:bg-gray-50">
+                  <td class="px-4 py-2">{{ sample.id }}</td>
+                  <td class="px-4 py-2">{{ formatDate(sample.date) }}</td>
+                  <td class="px-4 py-2">{{ sample.volunteer_id?.first_name }} {{ sample.volunteer_id?.last_name }}</td>
+                  <td class="px-4 py-2">{{ sample.physical_assessment_score || 'Not calculated' }}</td>
+                  <td class="px-4 py-2">
+                    <span v-if="sample.physical_assessment_score" :class="{
+                      'text-red-600': sample.physical_assessment_score <= 15,
+                      'text-orange-600': sample.physical_assessment_score >= 16 && sample.physical_assessment_score <= 22,
+                      'text-yellow-600': sample.physical_assessment_score >= 23 && sample.physical_assessment_score <= 29,
+                      'text-green-600': sample.physical_assessment_score >= 30
+                    }">
+                      {{ sample.physical_assessment_score <= 15 ? 'Poor' : 
+                         sample.physical_assessment_score >= 16 && sample.physical_assessment_score <= 22 ? 'Marginal' :
+                         sample.physical_assessment_score >= 23 && sample.physical_assessment_score <= 29 ? 'Fair' : 'Good' }}
+                    </span>
+                  </td>
+                  <td class="px-4 py-2 text-center">
+                    <div class="flex justify-center space-x-2">
+                      <UButton size="sm" variant="soft" @click="navigateTo(`/portal/habitat/${sample.id}`)" 
+                              icon="i-heroicons-eye">View</UButton>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </UCard>
+      </div>
 
     </template>
   </PageContainer>
 </template>
+
+// Add activeTab reactive variable
+const activeTab = ref('stream');
 
 <style scoped>
   @import "https://js.arcgis.com/4.28/@arcgis/core/assets/esri/themes/light/main.css";

@@ -35,6 +35,7 @@ const formData = reactive({
   interpret_findings: false,
   coordinate_community: false,
   host_outreach_materials: false,
+  provide_sampler_training: false,
   latitude: null,
   longitude: null,
 });
@@ -117,6 +118,7 @@ async function loadHubData(hubId) {
     formData.interpret_findings = hubData.Interpret_findings;
     formData.coordinate_community = hubData.Coordinate_community;
     formData.host_outreach_materials = hubData.Host_outreach_materials;
+    formData.provide_sampler_training = hubData.Provide_sampler_training;
     formData.latitude = hubData.latitude;
     formData.longitude = hubData.longitude;
   } catch (err) {
@@ -383,6 +385,7 @@ async function resetForm() {
   formData.interpret_findings = false;
   formData.coordinate_community = false;
   formData.host_outreach_materials = false;
+  formData.provide_sampler_training = false;
   formData.latitude = null;
   formData.longitude = null;
   
@@ -417,6 +420,7 @@ async function submitData() {
       Interpret_findings: formData.interpret_findings,
       Coordinate_community: formData.coordinate_community,
       Host_outreach_materials: formData.host_outreach_materials,
+      Provide_sampler_training: formData.provide_sampler_training,
       latitude: formData.latitude,
       longitude: formData.longitude,
       user_updated: user.value?.id
@@ -740,7 +744,8 @@ const viewHubList = () => {
 				<UCheckbox v-model="formData.sampling_kits" label="Host sampling kits for check-out" />
 				<UCheckbox v-model="formData.incubator" label="Incubator for E. coli analysis" />
 				<UCheckbox v-model="formData.biological_kit" label="Host biological sampling kits" />
-			</UFormGroup>
+        <UCheckbox v-model="formData.provide_sampler_training" label="Provide Sampler Training" />
+      </UFormGroup>
 			<UFormGroup class="p-2 basis-1/3">
 				<UCheckbox v-model="formData.events_and_meetings" label="Host sampler training events and meetings" />
 				<UCheckbox v-model="formData.site_selection_assist" label="Assist with sampling site selection" />
@@ -862,6 +867,7 @@ const viewHubList = () => {
                     <li v-if="formData.interpret_findings">Help interpret water quality findings</li>
                     <li v-if="formData.coordinate_community">Help coordinate community water projects</li>
                     <li v-if="formData.host_outreach_materials">Host outreach materials</li>
+                    <li v-if="formData.provide_sampler_training">Provide Sampler Training</li>
                   </ul>
                 </dd>
               </div>            

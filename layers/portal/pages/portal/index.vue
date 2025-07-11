@@ -1,4 +1,7 @@
 <script setup lang="ts">
+//this is the main portal page for KYWW
+// This page displays the user's sampling information, map, and greeting messages
+
 import { useGreetings } from '~/composables/useGreetings';
 import { useKYWWMap } from '~/composables/useKYWWMap';
 

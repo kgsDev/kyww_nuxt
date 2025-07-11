@@ -1,5 +1,5 @@
 <script setup lang="ts">
-//this is the main page for the KYWW Sites and Hubs portal sites/index.vue
+//this is the main page for the KYWW Sites and Hubs portal sites/index.vue - UPDATED
 import { useKYWWMap } from '~/composables/useKYWWMap';
 
 const mapContainer = ref(null);
@@ -11,9 +11,16 @@ const {
   error,
   hubs,
   sites,
+  biologicalSites,
+  habitatSites,
   fetchData,
   initializeMap,
-  zoomTo
+  zoomTo,
+  sitesVisible,
+  biologicalVisible,
+  habitatVisible,
+  hubsVisible,
+  toggleLayerVisibility
 } = useKYWWMap();
 
 // Handle zooming to hub
@@ -23,12 +30,31 @@ function zoomToHub(hub) {
   }
 }
 
+// Layer toggle functions
+function toggleStreamSites() {
+  toggleLayerVisibility('sites');
+}
+
+function toggleBiologicalSites() {
+  toggleLayerVisibility('biological');
+}
+
+function toggleHabitatSites() {
+  toggleLayerVisibility('habitat');
+}
+
+function toggleHubs() {
+  toggleLayerVisibility('hubs');
+}
+
 watch(mapContainer, async (newValue) => {
   if (newValue && !loading.value) {
     containerReady.value = true;
     await initializeMap(newValue, {
       showSites: true,
-      showHubs: true
+      showHubs: true,
+      showBiological: true,
+      showHabitat: true
     });
   }
 });
@@ -70,22 +96,59 @@ onMounted(async () => {
           <template #header>
             <div class="flex justify-between items-center">
               <h2 class="text-xl font-semibold">Kentucky Sampling Sites and Hubs</h2>
-              <UButton
-                v-if="legendVisible"
-                icon="i-heroicons-map"
-                variant="ghost"
-                @click="legendVisible = !legendVisible"
-              >
-                Hide Legend
-              </UButton>
-              <UButton
-                v-else
-                icon="i-heroicons-map"
-                variant="ghost"
-                @click="legendVisible = !legendVisible"
-              >
-                Show Legend
-              </UButton>
+              <div class="flex items-center space-x-4">
+                <!-- Layer toggle buttons -->
+                <div class="flex items-center space-x-2">
+                  <UButton
+                    size="sm"
+                    :variant="sitesVisible ? 'solid' : 'outline'"
+                    :color="sitesVisible ? 'purple' : 'gray'"
+                    @click="toggleStreamSites"
+                  >
+                    Stream Samples
+                  </UButton>
+                  <UButton
+                    size="sm"
+                    :variant="biologicalVisible ? 'solid' : 'outline'"
+                    :color="biologicalVisible ? 'green' : 'gray'"
+                    @click="toggleBiologicalSites"
+                  >
+                    Biological
+                  </UButton>
+                  <UButton
+                    size="sm"
+                    :variant="habitatVisible ? 'solid' : 'outline'"
+                    :color="habitatVisible ? 'orange' : 'gray'"
+                    @click="toggleHabitatSites"
+                  >
+                    Habitat
+                  </UButton>
+                  <UButton
+                    size="sm"
+                    :variant="hubsVisible ? 'solid' : 'outline'"
+                    :color="hubsVisible ? 'emerald' : 'gray'"
+                    @click="toggleHubs"
+                  >
+                    Hubs
+                  </UButton>
+                </div>
+                <UButton
+                  v-if="legendVisible"
+                  icon="i-heroicons-map"
+                  variant="ghost"
+                  @click="legendVisible = !legendVisible"
+                >
+                  Hide Legend
+                </UButton>
+                <UButton
+                  v-else
+                  icon="i-heroicons-map"
+                  variant="ghost"
+                  @click="legendVisible = !legendVisible"
+                >
+                  Show Legend
+                </UButton>
+              </div>
             </div>
           </template>
 
@@ -104,29 +167,102 @@ onMounted(async () => {
               </div>
             </div>
 
-            <!-- Legend -->
+            <!-- Enhanced Legend -->
             <div 
               v-if="legendVisible && containerReady"
-              class="absolute top-4 right-4 bg-white p-4 rounded-lg shadow-lg z-10 min-w-[200px]"
+              class="absolute top-4 right-4 bg-white p-4 rounded-lg shadow-lg z-10 min-w-[220px]"
             >
-              <h3 class="font-semibold mb-2">Map Legend</h3>
+              <h3 class="font-semibold mb-3">Map Legend</h3>
               <div class="space-y-2">
-                <div class="flex items-center">
-                  <div class="w-4 h-4 rounded-full bg-[#FFA500] opacity-70 mr-2"></div>
-                  <span>Sampling Sites</span>
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center">
+                    <div class="w-4 h-4 rounded-full bg-[#A8326F] opacity-70 mr-2"></div>
+                    <span class="text-sm">Stream Samples</span>
+                  </div>
+                  <span class="text-xs text-gray-500">{{ sites?.length || 0 }}</span>
                 </div>
-                <div class="flex items-center">
-                  <div class="w-4 h-4 rounded-full bg-[#2ECC71] opacity-70 mr-2"></div>
-                  <span>Support Hubs</span>
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center">
+                    <div class="w-3 h-3 rounded-full bg-[#228B22] opacity-70 mr-2"></div>
+                    <span class="text-sm">Biological Assessments</span>
+                  </div>
+                  <span class="text-xs text-gray-500">{{ biologicalSites?.length || 0 }}</span>
+                </div>
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center">
+                    <div class="w-3 h-3 rounded-full bg-[#FF8C00] opacity-70 mr-2"></div>
+                    <span class="text-sm">Habitat Assessments</span>
+                  </div>
+                  <span class="text-xs text-gray-500">{{ habitatSites?.length || 0 }}</span>
+                </div>
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center">
+                    <div class="w-4 h-4 rounded-full bg-[#2ECC71] opacity-70 mr-2"></div>
+                    <span class="text-sm">Support Hubs</span>
+                  </div>
+                  <span class="text-xs text-gray-500">{{ hubs?.length || 0 }}</span>
                 </div>
               </div>
-              <div class="mt-4 text-xs text-gray-500">
-                <div>Sites: {{ sites?.length || 0 }}</div>
-                <div>Hubs: {{ hubs?.length || 0 }}</div>
+              <div class="mt-4 pt-3 border-t border-gray-200">
+                <div class="text-xs text-gray-500">
+                  <div>Total Sites: {{ (sites?.length || 0) + (biologicalSites?.length || 0) + (habitatSites?.length || 0) }}</div>
+                  <div>Support Hubs: {{ hubs?.length || 0 }}</div>
+                </div>
+              </div>
+              <div class="mt-3 text-xs text-gray-400">
+                <p>Click site icons to view details</p>
+                <p>Use layer buttons to toggle visibility</p>
               </div>
             </div>
           </div>
         </UCard>
+
+        <!-- Sample Type Summary Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <UCard>
+            <template #header>
+              <div class="flex items-center">
+                <div class="w-4 h-4 rounded-full bg-[#A8326F] opacity-70 mr-2"></div>
+                <h3 class="font-semibold">Stream Samples</h3>
+              </div>
+            </template>
+            <div class="text-2xl font-bold text-purple-600">{{ sites?.length || 0 }}</div>
+            <p class="text-sm text-gray-500">Sites with water quality samples</p>
+          </UCard>
+
+          <UCard>
+            <template #header>
+              <div class="flex items-center">
+                <div class="w-3 h-3 rounded-full bg-[#228B22] opacity-70 mr-2"></div>
+                <h3 class="font-semibold">Biological</h3>
+              </div>
+            </template>
+            <div class="text-2xl font-bold text-green-600">{{ biologicalSites?.length || 0 }}</div>
+            <p class="text-sm text-gray-500">Sites with biological assessments</p>
+          </UCard>
+
+          <UCard>
+            <template #header>
+              <div class="flex items-center">
+                <div class="w-3 h-3 rounded-full bg-[#FF8C00] opacity-70 mr-2"></div>
+                <h3 class="font-semibold">Habitat</h3>
+              </div>
+            </template>
+            <div class="text-2xl font-bold text-orange-600">{{ habitatSites?.length || 0 }}</div>
+            <p class="text-sm text-gray-500">Sites with habitat assessments</p>
+          </UCard>
+
+          <UCard>
+            <template #header>
+              <div class="flex items-center">
+                <div class="w-4 h-4 rounded-full bg-[#2ECC71] opacity-70 mr-2"></div>
+                <h3 class="font-semibold">Support Hubs</h3>
+              </div>
+            </template>
+            <div class="text-2xl font-bold text-emerald-600">{{ hubs?.length || 0 }}</div>
+            <p class="text-sm text-gray-500">Available support locations</p>
+          </UCard>
+        </div>
 
         <!-- Hub List Section -->
         <UCard class="w-full">
