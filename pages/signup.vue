@@ -668,12 +668,7 @@ const validatePasswordMatch = () => {
       if (!response.ok) throw new Error('Failed to fetch hubs');
       
       const data = await response.json();
-      hubs.value = data.data.sort((a, b) => {
-        if (a.Basin === b.Basin) {
-          return a.Description.localeCompare(b.Description);
-        }
-        return a.Basin.localeCompare(b.Basin);
-      });
+      hubs.value = data.data.sort((a, b) => a.Description.localeCompare(b.Description));
     } catch (error) {
       console.error('Error fetching hubs:', error);
     }

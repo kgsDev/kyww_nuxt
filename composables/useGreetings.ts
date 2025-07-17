@@ -54,7 +54,8 @@ interface DashboardMessage {
               }
             ]
           },
-          sort: ['sort_order']
+          sort: ['sort_order'],
+          limit: -1
         }));
         
         messages.value = fetchedMessages;

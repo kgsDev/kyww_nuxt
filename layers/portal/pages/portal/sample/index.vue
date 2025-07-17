@@ -551,7 +551,8 @@ const fetchSampleData = async (id: string) => {
 			fetchRelatedData('base_samples_lu_water_color', id),
 			useDirectus(readItems('base_samples_directus_users', {
 				filter: { base_samples_id: { _eq: id } },
-				fields: ['directus_users_id.*']
+				fields: ['directus_users_id.*'],
+				limit: -1 // Fetch all related samplers
 			}))
 		]);
 
@@ -1161,8 +1162,6 @@ const prepareSampleData = () => {
 	} else if (typeof averageEcoli.value === 'string' && !averageEcoli.value.includes('Please enter')) {
 		avgEcoli = toNullableNumber(averageEcoli.value, 0, 2147483647);
 	}
- 
-console.log('other sampler', otherSamplers.value);
 
 	// Prepare sample data with range validations
 	const baseData = {

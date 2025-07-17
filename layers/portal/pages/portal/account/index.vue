@@ -175,7 +175,8 @@ const fetchHubs = async () => {
   try {
     const response = await useDirectus(readItems('wwky_hubs', {
       sort: ['sort','Description'],
-      fields: ['hub_id', 'Basin', 'Description', 'City']
+      fields: ['hub_id', 'Basin', 'Description', 'City'],
+      limit: -1 // Fetch all hubs without limit
     }));
     hubs.value = response.map(hub => ({
       ...hub,

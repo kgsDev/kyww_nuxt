@@ -28,25 +28,24 @@ export const useFaq = () => {
   // Get all FAQ categories with their items
   const getFaqData = async () => {
     try {
-      console.log('Fetching FAQ data...')
       
       // First get categories
       const categoriesResponse = await useDirectus(readItems('faq_categories', {
         filter: { status: { _eq: 'published' } },
         sort: ['sort', 'name'],
+        limit: -1
       }))
       
-      console.log('Categories response:', categoriesResponse)
-      
+     
       // Then get items
       const itemsResponse = await useDirectus(readItems('faq_items', {
         filter: { status: { _eq: 'published' } },
         sort: ['category', 'sort', 'question'],
         fields: ['*', 'category.name', 'category.icon'],
+        limit: -1,
       }))
       
-      console.log('Items response:', itemsResponse)
-      
+     
       // Group items by category
       const categoriesWithItems = categoriesResponse.map(category => ({
         ...category,
@@ -91,9 +90,9 @@ export const useFaq = () => {
         },
         fields: ['*', 'category.name', 'category.icon'],
         sort: ['category', 'sort', 'question'],
+        limit: -1
       }))
-      
-      console.log('Search results from question/answer/tags:', searchResponse)
+
       return searchResponse
       
     } catch (error) {
@@ -101,7 +100,6 @@ export const useFaq = () => {
       
       // Fallback search - try simpler queries one by one
       try {
-        console.log('Trying fallback searches...')
         
         // Try searching just questions
         const questionResults = await useDirectus(readItems('faq_items', {
@@ -112,9 +110,9 @@ export const useFaq = () => {
             ],
           },
           fields: ['*', 'category.name', 'category.icon'],
+          limit: -1,
         }))
         
-        console.log('Question search results:', questionResults)
         
         // Try searching just answers
         const answerResults = await useDirectus(readItems('faq_items', {
@@ -125,9 +123,9 @@ export const useFaq = () => {
             ],
           },
           fields: ['*', 'category.name', 'category.icon'],
+          limit: -1,
         }))
         
-        console.log('Answer search results:', answerResults)
         
         // Combine and deduplicate results
         const combinedResults = [...questionResults, ...answerResults]
@@ -135,7 +133,7 @@ export const useFaq = () => {
           index === self.findIndex(t => t.id === item.id)
         )
         
-        console.log('Combined unique results:', uniqueResults)
+
         return uniqueResults
         
       } catch (fallbackError) {

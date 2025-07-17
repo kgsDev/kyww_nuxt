@@ -20,8 +20,9 @@ const searchQuery = ref('')
 const selectedStatus = ref('all')
 const selectedHub = ref('all')
 const selectedTraining = ref('all')
-const selectedSamplingActivity = ref('all') // NEW
-const siteSearchQuery = ref('') // NEW
+const selectedRole = ref('all') // NEW: Role/Group filter
+const selectedSamplingActivity = ref('all')
+const siteSearchQuery = ref('')
 const sortBy = ref('name')
 const sortDirection = ref('asc')
 
@@ -47,6 +48,49 @@ const trainingOptions = [
   { value: 'habitat', label: 'Habitat' },
   { value: 'biological', label: 'Biological' }
 ]
+
+// Group definitions with icons and descriptions
+const userGroups = {
+  wwkyadmin: {
+    title: 'WWKY Administrators',
+    icon: 'i-heroicons-building-library',
+    description: 'Manage all users and activities',
+    policyId: config.public.WWKYADMIN_POLICY_ID
+  },
+  leader: {
+    title: 'Basin Leaders',
+    icon: 'i-heroicons-user-group',
+    description: 'Manage basin-specific activities and users',
+    policyId: config.public.LEADER_POLICY_ID
+  },
+  hubmanager: {
+    title: 'Hub Managers',
+    icon: 'material-symbols:hub-outline',
+    description: 'Manage hub-specific activities and users',
+    policyId: config.public.HUB_POLICY_ID
+  },
+  trainer: {
+    title: 'Trainers',
+    icon: 'i-heroicons-academic-cap',
+    description: 'Can manage training sessions and invite new users',
+    policyId: config.public.TRAINER_POLICY_ID
+  },
+  sampler: {
+    title: 'Samplers',
+    icon: 'i-heroicons-beaker',
+    description: 'Collect and submit water samples',
+    policyId: config.public.SAMPLER_POLICY_ID
+  }
+}
+
+// NEW: Role options based on userGroups
+const roleOptions = computed(() => [
+  { value: 'all', label: 'All Roles' },
+  ...Object.entries(userGroups).map(([key, group]) => ({
+    value: key,
+    label: group.title
+  }))
+])
 
 // Sorting functions
 const getSortValue = (user, field) => {
@@ -80,7 +124,11 @@ const filteredAndSortedUsers = computed(() => {
     const matchesTraining = selectedTraining.value === 'all' || 
       user.sampler_data?.[`training_${selectedTraining.value}`]
 
-    // NEW: Sampling activity filter
+    // NEW: Role/Group filter
+    const matchesRole = selectedRole.value === 'all' || 
+      user.policies?.some(p => p.policy?.id === userGroups[selectedRole.value]?.policyId)
+
+    // Sampling activity filter
     const userSampleCount = getUserSamplingCount(user.id)
     const userSiteCount = getUserUniqueSites(user.id).length
     
@@ -103,14 +151,14 @@ const filteredAndSortedUsers = computed(() => {
         matchesSamplingActivity = true
     }
 
-    // NEW: Site search filter
+    // Site search filter
     const matchesSiteSearch = siteSearchQuery.value === '' || 
       getUserUniqueSites(user.id).some(site => 
         site.toLowerCase().includes(siteSearchQuery.value.toLowerCase())
       )
     
     return matchesSearch && matchesStatus && matchesHub && matchesTraining && 
-           matchesSamplingActivity && matchesSiteSearch
+           matchesRole && matchesSamplingActivity && matchesSiteSearch
   }).sort((a, b) => {
     const aValue = getSortValue(a, sortBy.value)
     const bValue = getSortValue(b, sortBy.value)
@@ -141,12 +189,12 @@ const filteredUserIds = computed(() => {
   return filteredAndSortedUsers.value.map(user => user.id);
 });
 
-
 const clearAllFilters = () => {
   searchQuery.value = ''
   selectedStatus.value = 'all'
   selectedHub.value = 'all'
   selectedTraining.value = 'all'
+  selectedRole.value = 'all' // NEW: Clear role filter
   selectedSamplingActivity.value = 'all'
   siteSearchQuery.value = ''
   sortBy.value = 'name'
@@ -157,8 +205,6 @@ const clearAllFilters = () => {
 const updateSamplersCount = (count) => {
   samplersWithPlans.value = count;
 };
-
-
 
 // Function to fetch samplers with plans count
 const fetchSamplersWithPlansCount = async () => {
@@ -280,6 +326,7 @@ const exportToCSV = async () => {
     'Phone',
     'Status',
     'Hub',
+    'Roles', // NEW: Add roles column
     'Street',
     'City',
     'State',
@@ -323,6 +370,17 @@ const exportToCSV = async () => {
     intentByUserId[intent.user_id] = intent;
   });
 
+  // NEW: Helper function to get user roles
+  const getUserRoles = (user) => {
+    const userRoles = [];
+    Object.entries(userGroups).forEach(([key, group]) => {
+      if (user.policies?.some(p => p.policy?.id === group.policyId)) {
+        userRoles.push(group.title);
+      }
+    });
+    return userRoles.join(' | ');
+  };
+
   // Process user data and combine with sampling intent and actual sampling
   const csvData = filteredAndSortedUsers.value.map(user => {
     // Basic user data
@@ -333,6 +391,7 @@ const exportToCSV = async () => {
       formatPhoneNumber(user.phone),
       user.status,
       user.sampler_data?.hub_id?.Description,
+      getUserRoles(user), // NEW: Add user roles
       user.street,
       user.city,
       user.state,
@@ -374,40 +433,6 @@ const exportToCSV = async () => {
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
-};
-
-// Group definitions with icons and descriptions
-const userGroups = {
-  wwkyadmin: {
-    title: 'WWKY Administrators',
-    icon: 'i-heroicons-building-library',
-    description: 'Manage all users and activities',
-    policyId: config.public.WWKYADMIN_POLICY_ID
-  },
-  leader: {
-    title: 'Basin Leaders',
-    icon: 'i-heroicons-user-group',
-    description: 'Manage basin-specific activities and users',
-    policyId: config.public.LEADER_POLICY_ID
-  },
-  hubmanager: {
-    title: 'Hub Managers',
-    icon: 'material-symbols:hub-outline',
-    description: 'Manage hub-specific activities and users',
-    policyId: config.public.HUB_POLICY_ID
-  },
-  trainer: {
-    title: 'Trainers',
-    icon: 'i-heroicons-academic-cap',
-    description: 'Can manage training sessions and invite new users',
-    policyId: config.public.TRAINER_POLICY_ID
-  },
-  sampler: {
-    title: 'Samplers',
-    icon: 'i-heroicons-beaker',
-    description: 'Collect and submit water samples',
-    policyId: config.public.SAMPLER_POLICY_ID
-  }
 };
 
 const visibleGroups = ref(Object.keys(userGroups).reduce((acc, key) => {
@@ -624,7 +649,7 @@ onMounted(() => {
             </div>
 
             <!-- Main Filters - First Row -->
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
               <!-- Search -->
               <UInput
                 v-model="searchQuery"
@@ -651,6 +676,18 @@ onMounted(() => {
                 }))"
               />
 
+              <!-- NEW: Role/Group Filter -->
+              <USelect
+                v-model="selectedRole"
+                :options="roleOptions"
+                placeholder="Filter by role"
+              >
+                <template #label>
+                  <UIcon name="i-heroicons-user-group" class="w-4 h-4 mr-1" />
+                  Role
+                </template>
+              </USelect>
+
               <!-- Training Filter -->
               <USelect
                 v-model="selectedTraining"
@@ -658,7 +695,7 @@ onMounted(() => {
               />
             </div>
 
-            <!-- Second Row - New Sampling Filters -->
+            <!-- Second Row - Sampling Filters -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
               <!-- Sampling Activity Filter -->
               <USelect
@@ -731,7 +768,7 @@ onMounted(() => {
             </div>
 
             <!-- Active Filters Display -->
-            <div v-if="searchQuery || selectedStatus !== 'all' || selectedHub !== 'all' || selectedTraining !== 'all' || selectedSamplingActivity !== 'all' || siteSearchQuery" class="flex flex-wrap gap-2">
+            <div v-if="searchQuery || selectedStatus !== 'all' || selectedHub !== 'all' || selectedTraining !== 'all' || selectedRole !== 'all' || selectedSamplingActivity !== 'all' || siteSearchQuery" class="flex flex-wrap gap-2">
               <span class="text-sm text-gray-600">Active filters:</span>
               
               <UBadge v-if="searchQuery" color="blue" variant="soft" @click="searchQuery = ''" class="cursor-pointer">
@@ -744,6 +781,10 @@ onMounted(() => {
               
               <UBadge v-if="selectedHub !== 'all'" color="purple" variant="soft" @click="selectedHub = 'all'" class="cursor-pointer">
                 Hub: {{ selectedHub }} ×
+              </UBadge>
+              
+              <UBadge v-if="selectedRole !== 'all'" color="indigo" variant="soft" @click="selectedRole = 'all'" class="cursor-pointer">
+                Role: {{ userGroups[selectedRole]?.title }} ×
               </UBadge>
               
               <UBadge v-if="selectedTraining !== 'all'" color="orange" variant="soft" @click="selectedTraining = 'all'" class="cursor-pointer">

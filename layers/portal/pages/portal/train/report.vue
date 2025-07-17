@@ -583,7 +583,8 @@ onMounted(async () => {
         'training_date',
         'training_location',
         'invite_token'
-      ]
+      ],
+      limit: -1 // Fetch all invites without limit
     }));
     
     invites.value = invitesResponse;

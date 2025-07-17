@@ -547,11 +547,6 @@ const updateJoinTable = async (tableName, sampleId, relatedIds) => {
 
 // Prepare habitat sample data
 const prepareHabitatData = () => {
-  // Combine date and time for proper DateTime format
-  let combinedDateTime = null;
-  if (date.value && startTime.value) {
-    combinedDateTime = `${date.value}T${startTime.value}:00.000Z`;
-  }
 
   const baseData = {
     status: 'finalized',
@@ -562,7 +557,7 @@ const prepareHabitatData = () => {
     total_volunteer_minutes: totalVolunteerMinutes.value === 0 ? 0 : toNullableInteger(totalVolunteerMinutes.value),
     miles_driven: milesDriven.value === 0 ? 0 : toNullableInteger(milesDriven.value),
     date: date.value,
-    start_time: combinedDateTime,
+    start_time: startTime.value || null,
     other_samplers: otherSamplers.value || null,
     other_observations: otherObs.value || null,
     stream_location_description: streamLocationDescription.value || null,
@@ -664,17 +659,7 @@ const fetchHabitatData = async (id: string) => {
     wwkyid_pk.value = sampleData.wwky_id ? parseInt(sampleData.wwky_id) : null;
     directSiteId.value = wwkyid_pk.value ? wwkyid_pk.value.toString() : '';
     date.value = sampleData.date?.split('T')[0] || null;
-    
-    // Handle start_time - extract time from DateTime or use as-is if it's just time
-    if (sampleData.start_time) {
-      if (sampleData.start_time.includes('T')) {
-        startTime.value = sampleData.start_time.split('T')[1].substring(0, 5);
-      } else {
-        startTime.value = sampleData.start_time.substring(0, 5);
-      }
-    } else {
-      startTime.value = null;
-    }
+    startTime.value = sampleData.start_time || null;
     
     adults.value = sampleData.participants_adults !== null ? parseInt(sampleData.participants_adults) : null;
     youths.value = sampleData.participants_youth !== null ? parseInt(sampleData.participants_youth) : null;

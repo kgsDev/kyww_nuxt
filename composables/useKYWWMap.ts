@@ -121,21 +121,24 @@ export function useKYWWMap() {
         fetch(API_SAMPLED_SITES).then(res => res.json()),
         useDirectus(readItems('wwky_hubs', {
           sort: ['Description'],
-          fields: ['*']
+          fields: ['*'],
+          limit: -1
         })),
         useDirectus(readItems('biological_samples', {
           fields: [
             'id', 'wwky_id', 'date', 'biological_water_quality_score',
             'volunteer_id.first_name', 'volunteer_id.last_name'
           ],
-          sort: ['-date']
+          sort: ['-date'],
+          limit: -1
         })),
         useDirectus(readItems('habitat_samples', {
           fields: [
             'id', 'wwky_id', 'date', 'physical_assessment_score',
             'volunteer_id.first_name', 'volunteer_id.last_name'
           ],
-          sort: ['-date']
+          sort: ['-date'],
+          limit: -1
         }))
       ]);
 
@@ -222,7 +225,8 @@ export function useKYWWMap() {
           filter: {
             wwkyid_pk: { _in: Array.from(allSampleSiteIds) }
           },
-          fields: ['wwkyid_pk', 'stream_name', 'wwkybasin', 'description', 'latitude', 'longitude']
+          fields: ['wwkyid_pk', 'stream_name', 'wwkybasin', 'description', 'latitude', 'longitude'],
+          limit: -1
         }));
 
         // Process biological sites with location data

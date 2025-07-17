@@ -168,7 +168,8 @@ onMounted(async () => {
           'bacteria_sample_a_ecoli',
           'bacteria_sample_b_ecoli',
           'bacteria_sample_c_ecoli'
-        ]
+        ],
+        limit: -1 // Fetch all samples without limit
       }));
 
       if (samples?.length > 0) {
@@ -202,7 +203,8 @@ onMounted(async () => {
             'description',
             'latitude',
             'longitude'
-          ]
+          ],
+          limit: -1 // Fetch all sites without limit
         }));
 
         samplingStats.value.siteDetails = sites;

@@ -131,7 +131,8 @@ export function usePublicKYWWMap() {
         fetch(API_SAMPLED_SITES).then(res => res.json()),
         useDirectus(readItems('wwky_hubs', {
           sort: ['Description'],
-          fields: ['*']
+          fields: ['*'],
+          limit: -1
         }))
       ]);
          

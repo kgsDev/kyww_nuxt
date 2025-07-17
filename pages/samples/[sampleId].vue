@@ -188,19 +188,23 @@ const fetchSampleData = async () => {
       const [odors, waterSurfaces, bacterialSources, waterColors] = await Promise.all([
         useDirectus(readItems('base_samples_lu_odor', {
           filter: { base_samples_id: { _eq: sampleId.value } },
-          fields: ['lu_odor_id']
+          fields: ['lu_odor_id'],
+          limit: -1 // Fetch all related odors
         })),
         useDirectus(readItems('base_samples_lu_water_surface', {
           filter: { base_samples_id: { _eq: sampleId.value } },
-          fields: ['lu_water_surface_id']
+          fields: ['lu_water_surface_id'],
+          limit: -1 // Fetch all related water surfaces
         })),
         useDirectus(readItems('base_samples_lu_bacterial_sources', {
           filter: { base_samples_id: { _eq: sampleId.value } },
-          fields: ['lu_bacterial_sources_id']
+          fields: ['lu_bacterial_sources_id'],
+          limit: -1 // Fetch all related bacterial sources
         })),
         useDirectus(readItems('base_samples_lu_water_color', {
           filter: { base_samples_id: { _eq: sampleId.value } },
-          fields: ['lu_water_color_id']
+          fields: ['lu_water_color_id'],
+          limit: -1 // Fetch all related water colors
         }))
       ]);
 

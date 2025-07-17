@@ -125,7 +125,8 @@ const fetchSamplingData = async () => {
       filter,
       fields: ['*', {
         user_id: ['id', 'first_name', 'last_name']
-      }]
+      }],
+      limit: -1// Fetch all records without limit
     }));
     
     samplingData.value = response;
