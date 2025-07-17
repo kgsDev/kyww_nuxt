@@ -1,4 +1,4 @@
-// server/api/other-trainer-invites.js
+// server/api/other-trainer-invites.ts
 import { getApiConfig, getDirectusHeaders } from '../utils/config';
 
 export default defineEventHandler(async (event) => {
@@ -17,9 +17,12 @@ export default defineEventHandler(async (event) => {
     }
     
     try {
-      // Fetch invites from other trainers
+      // Fetch invites from other trainers with training type fields
       const invitesResponse = await fetch(
-        `${config.public.directusUrl}/items/user_invites?filter[trainer_id][_neq]=${userId}&fields=id,email,invite_sent_at,training_date,training_location,invite_token,trainer_id&sort=-invite_sent_at`,
+        `${config.public.directusUrl}/items/user_invites?` +
+        `filter[trainer_id][_neq]=${userId}&` +
+        `fields=id,email,invite_sent_at,training_date,training_location,invite_token,trainer_id,training_field_chemistry,training_r_card,training_habitat,training_biological&` +
+        `sort=-invite_sent_at`,
         {
           headers: getDirectusHeaders(config),
         }

@@ -10,7 +10,7 @@ export default defineEventHandler(async (event) => {
   const method = event.method;
   
   if (method === 'GET') {
-    const { trainerId } = getQuery(event);
+    const { trainerId, includeOtherTrainers } = getQuery(event);
     
     if (!trainerId) {
       throw createError({
@@ -33,9 +33,35 @@ export default defineEventHandler(async (event) => {
       }
     
       const usersData = await usersResponse.json();
+      
+      let otherTrainersUsers = [];
+      
+      // NEW: If includeOtherTrainers is requested, fetch users trained by other trainers
+      if (includeOtherTrainers === 'true') {
+        try {
+          // Fetch users where trainer_id is NOT the current trainer and not null
+          const otherUsersResponse = await fetch(
+            `${config.public.directusUrl}/users?filter[_and][0][trainer_id][_neq]=${trainerId}&filter[_and][1][trainer_id][_nnull]=true&limit=-1&fields=id,first_name,last_name,email,trainer_id,trainer_name`,
+            {
+              headers: getDirectusHeaders(config),
+            }
+          );
+          
+          if (otherUsersResponse.ok) {
+            const otherUsersData = await otherUsersResponse.json();
+            otherTrainersUsers = otherUsersData.data || [];
+          } else {
+            console.warn('Failed to fetch other trainers users:', otherUsersResponse.status);
+          }
+        } catch (error) {
+          console.warn('Error fetching other trainers users:', error);
+          // Continue without other trainers' data rather than failing completely
+        }
+      }
     
       return {
-        users: usersData.data
+        users: usersData.data,
+        otherTrainersUsers: otherTrainersUsers
       };
     } catch (error) {
       console.error('Trainer report error:', error);

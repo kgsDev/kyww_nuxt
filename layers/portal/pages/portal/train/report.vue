@@ -10,7 +10,7 @@
       ]"
     />
 
-    <div class="space-y-6 p-6">
+    <div class="space-y-4 p-4 max-w-full overflow-hidden">
       <!-- Loading State -->
       <div v-if="loading" class="text-center py-8">
         <ULoadingIcon />
@@ -26,117 +26,336 @@
       />
 
       <template v-else>
-        <!-- Summary Stats Card -->
+        <!-- Compact Summary Stats Card -->
         <UCard>
           <template #header>
-            <h2 class="text-lg font-semibold">Training Summary</h2>
+            <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
+              <h2 class="text-lg font-semibold">Training Summary</h2>
+              <div class="flex flex-wrap gap-2">
+                <UButton
+                  @click="clearAllFilters"
+                  color="gray"
+                  variant="outline"
+                  size="sm"
+                  icon="i-heroicons-x-mark"
+                >
+                  Clear Filters
+                </UButton>
+                
+                <UButton
+                  @click="exportToCSV"
+                  icon="i-heroicons-arrow-down-tray"
+                  color="primary"
+                  size="sm"
+                >
+                  Export CSV
+                </UButton>
+              </div>
+            </div>
           </template>
           
-          <div class="grid md:grid-cols-4 gap-6">
-            <div>
-              <label class="text-sm text-gray-500">My Total Invites Sent</label>
-              <p class="text-2xl font-bold">{{ stats.totalInvites }}</p>
+          <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+            <div class="text-center p-2 bg-gray-50 rounded">
+              <p class="text-lg font-bold">{{ stats.totalInvites }}</p>
+              <label class="text-xs text-gray-500">My Total</label>
             </div>
-            <div>
-              <label class="text-sm text-gray-500">My Completed Signups</label>
-              <p class="text-2xl font-bold text-green-600">{{ stats.completedSignups }}</p>
+            <div class="text-center p-2 bg-green-50 rounded">
+              <p class="text-lg font-bold text-green-600">{{ stats.completedSignups }}</p>
+              <label class="text-xs text-gray-500">My Completed</label>
             </div>
-            <div>
-              <label class="text-sm text-gray-500">My Pending Invites</label>
-              <p class="text-2xl font-bold text-yellow-600">{{ stats.pendingInvites }}</p>
+            <div class="text-center p-2 bg-yellow-50 rounded">
+              <p class="text-lg font-bold text-yellow-600">{{ stats.pendingInvites }}</p>
+              <label class="text-xs text-gray-500">My Pending</label>
             </div>
-            <div>
-              <label class="text-sm text-gray-500">Other Trainers' Invites</label>
-              <p class="text-2xl font-bold text-blue-600">{{ otherTraineesInvites.length }}</p>
+            <div class="text-center p-2 bg-blue-50 rounded">
+              <p class="text-lg font-bold text-blue-600">{{ otherTraineesInvites.length }}</p>
+              <label class="text-xs text-gray-500">Others' Pending</label>
+            </div>
+            <div class="text-center p-2 bg-purple-50 rounded">
+              <p class="text-lg font-bold text-purple-600">{{ otherTrainersCompleted.length }}</p>
+              <label class="text-xs text-gray-500">Others' Completed</label>
             </div>
           </div>
         </UCard>
 
-        <!-- Pending Invites Card -->
+        <!-- Responsive Filter Controls -->
         <UCard>
           <template #header>
-            <div class="flex justify-between items-center gap-4">
-              <h2 class="text-lg font-semibold flex-shrink-0">My Pending Invites</h2>
-              <div class="relative flex-grow max-w-64">
-                <UInput
-                  v-model="inviteSearch"
-                  icon="i-heroicons-magnifying-glass"
-                  placeholder="Search invites..."
-                  class="w-full"
-                />
-              </div>
+            <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
+              <h3 class="text-lg font-semibold">Filters</h3>
+              <UBadge color="blue" variant="soft">
+                {{ totalFilteredRecords }} total records
+              </UBadge>
             </div>
           </template>
+          
+          <div class="space-y-3">
+            <!-- Responsive filter grid -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
+              <UInput
+                v-model="globalSearch"
+                icon="i-heroicons-magnifying-glass"
+                placeholder="Search..."
+                size="sm"
+                class="col-span-1 sm:col-span-2 lg:col-span-1"
+              />
+              
+              <USelect
+                v-model="selectedDateRange"
+                :options="dateRangeOptions"
+                size="sm"
+                placeholder="Date Range"
+              />
 
-          <UTable :columns="inviteColumns" :rows="filteredInvites" :loading="loading">
-            <template #invite_sent_at-data="{ row }">
-              {{ formatDateTime(row.invite_sent_at) }}
-            </template>
-            <template #training_date-data="{ row }">
-              {{ formatDateTime(row.training_date) }}
-            </template>
-            <template #actions-data="{ row }">
-              <div class="flex space-x-2">
-                <UButton
-                  size="xs"
-                  color="primary"
-                  :loading="processingId === `resend-${row.id}`"
-                  :disabled="!!processingId"
-                  @click="resendInvite(row)"
-                  icon="i-heroicons-envelope"
-                >
-                  Resend
-                </UButton>
-                <UButton
-                  size="xs"
-                  color="red"
-                  :loading="processingId === `delete-${row.id}`"
-                  :disabled="!!processingId"
-                  @click="confirmDeleteInvite(row)"
-                  icon="i-heroicons-trash"
-                >
-                  Delete
-                </UButton>
+              <USelect
+                v-model="selectedLocation"
+                :options="locationOptions"
+                size="sm"
+                placeholder="Location"
+              />
+
+              <USelect
+                v-model="selectedTrainingType"
+                :options="trainingTypeOptions"
+                size="sm"
+                placeholder="Training Type"
+              />
+
+              <USelect
+                v-model="selectedStatus"
+                :options="statusOptions"
+                size="sm"
+                placeholder="Status"
+              />
+
+              <div class="flex items-center justify-center">
+                <UBadge v-if="hasActiveFilters" color="orange" variant="soft" size="sm">
+                  {{ activeFilterCount }} active
+                </UBadge>
+                <span v-else class="text-sm text-gray-500">No filters</span>
               </div>
-            </template>
-          </UTable>
+            </div>
+
+            <!-- Active filters display - more compact -->
+            <div v-if="hasActiveFilters" class="flex flex-wrap gap-1">
+              <UBadge v-if="globalSearch" color="blue" variant="soft" @click="globalSearch = ''" class="cursor-pointer text-xs">
+                "{{ globalSearch }}" ×
+              </UBadge>
+              
+              <UBadge v-if="selectedDateRange !== 'all'" color="green" variant="soft" @click="selectedDateRange = 'all'" class="cursor-pointer text-xs">
+                {{ dateRangeOptions.find(d => d.value === selectedDateRange)?.label }} ×
+              </UBadge>
+              
+              <UBadge v-if="selectedLocation !== 'all'" color="purple" variant="soft" @click="selectedLocation = 'all'" class="cursor-pointer text-xs">
+                {{ selectedLocation }} ×
+              </UBadge>
+              
+              <UBadge v-if="selectedTrainingType !== 'all'" color="orange" variant="soft" @click="selectedTrainingType = 'all'" class="cursor-pointer text-xs">
+                {{ trainingTypeOptions.find(t => t.value === selectedTrainingType)?.label }} ×
+              </UBadge>
+              
+              <UBadge v-if="selectedStatus !== 'all'" color="red" variant="soft" @click="selectedStatus = 'all'" class="cursor-pointer text-xs">
+                {{ statusOptions.find(s => s.value === selectedStatus)?.label }} ×
+              </UBadge>
+            </div>
+          </div>
         </UCard>
 
-        <!-- Other Trainers' Invites Card -->
-        <UCard class="mt-6">
+        <!-- My Pending Invites Card -->
+        <UCard>
           <template #header>
-            <div class="flex justify-between items-center gap-4">
-              <h2 class="text-lg font-semibold flex-shrink-0">Other Trainers' Pending Invites</h2>
-              <div class="relative flex-grow max-w-64">
-                <UInput
-                  v-model="otherInviteSearch"
-                  icon="i-heroicons-magnifying-glass"
-                  placeholder="Search other invites..."
-                  class="w-full"
-                />
-              </div>
+            <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
+              <h2 class="text-lg font-semibold">My Pending Invites</h2>
+              <UBadge color="yellow" variant="soft">
+                {{ filteredInvites.length }} records
+              </UBadge>
             </div>
           </template>
 
-          <UTable :columns="otherInviteColumns" :rows="filteredOtherInvites" :loading="loadingOtherInvites">
-            <template #invite_sent_at-data="{ row }">
-              {{ formatDateTime(row.invite_sent_at) }}
-            </template>
-            <template #training_date-data="{ row }">
-              {{ formatDateTime(row.training_date) }}
-            </template>
-            <template #trainer-data="{ row }">
-              <span v-if="row.trainer">
-                {{ row.trainer.first_name }} {{ row.trainer.last_name }}
-              </span>
-              <span v-else class="text-gray-500 italic">
-                Unknown
-              </span>
-            </template>
-            <template #actions-data="{ row }">
-              <div class="flex space-x-2">
+          <!-- Responsive table wrapper -->
+          <div class="overflow-x-auto">
+            <UTable 
+              :columns="responsiveInviteColumns" 
+              :rows="sortedFilteredInvites" 
+              :loading="loading" 
+              @select="onRowSelect"
+              class="min-w-full"
+            >
+              <template #email-data="{ row }">
+                <div class="truncate max-w-[200px]" :title="row.email">
+                  {{ row.email }}
+                </div>
+              </template>
+              
+              <template #training_date-data="{ row }">
+                <span class="text-xs whitespace-nowrap">{{ formatCompactDate(row.training_date) }}</span>
+              </template>
+              
+              <template #training_location-data="{ row }">
+                <div class="truncate max-w-[150px]" :title="row.training_location">
+                  {{ row.training_location }}
+                </div>
+              </template>
+              
+              <template #training_types-data="{ row }">
+                <div class="flex flex-wrap gap-1">
+                  <UBadge v-if="row.training_field_chemistry" size="xs" color="blue">FC</UBadge>
+                  <UBadge v-if="row.training_r_card" size="xs" color="green">RC</UBadge>
+                  <UBadge v-if="row.training_habitat" size="xs" color="purple">H</UBadge>
+                  <UBadge v-if="row.training_biological" size="xs" color="orange">B</UBadge>
+                </div>
+              </template>
+              
+              <template #invite_sent_at-data="{ row }">
+                <span class="text-xs whitespace-nowrap">{{ formatCompactDate(row.invite_sent_at) }}</span>
+              </template>
+              
+              <template #actions-data="{ row }">
+                <div class="flex space-x-1">
+                  <UButton
+                    size="2xs"
+                    color="primary"
+                    :loading="processingId === `resend-${row.id}`"
+                    :disabled="!!processingId"
+                    @click="resendInvite(row)"
+                    icon="i-heroicons-envelope"
+                  >
+                    Resend
+                  </UButton>
+                  <UButton
+                    size="2xs"
+                    color="red"
+                    :loading="processingId === `delete-${row.id}`"
+                    :disabled="!!processingId"
+                    @click="confirmDeleteInvite(row)"
+                    icon="i-heroicons-trash"
+                  >
+                    Delete
+                  </UButton>
+                </div>
+              </template>
+            </UTable>
+          </div>
+
+          <!-- No Data State -->
+          <div v-if="!loading && filteredInvites.length === 0" class="text-center text-gray-500 py-8">
+            {{ hasActiveFilters ? 'No matching pending invites found.' : 'No pending invites found.' }}
+          </div>
+        </UCard>
+
+        <!-- My Completed Signups Card -->
+        <UCard>
+          <template #header>
+            <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
+              <h2 class="text-lg font-semibold">My Completed Signups</h2>
+              <UBadge color="green" variant="soft">
+                {{ filteredUsers.length }} records
+              </UBadge>
+            </div>
+          </template>
+
+          <div class="overflow-x-auto">
+            <UTable 
+              :columns="responsiveRegisteredColumns" 
+              :rows="sortedFilteredUsers" 
+              :loading="loading"
+              class="min-w-full"
+            >
+              <template #display_name-data="{ row }">
+                <div class="truncate max-w-[200px]" :title="`${row.first_name} ${row.last_name}`">
+                  {{ row.first_name }} {{ row.last_name }}
+                </div>
+              </template>
+              
+              <template #email-data="{ row }">
+                <div class="truncate max-w-[200px]" :title="row.email">
+                  {{ row.email }}
+                </div>
+              </template>
+              
+              <template #training_date-data="{ row }">
+                <span class="text-xs whitespace-nowrap">{{ formatCompactDate(row.training_date) }}</span>
+              </template>
+              
+              <template #training_location-data="{ row }">
+                <div class="truncate max-w-[150px]" :title="row.training_location">
+                  {{ row.training_location }}
+                </div>
+              </template>
+              
+              <template #training_types-data="{ row }">
+                <div class="flex flex-wrap gap-1">
+                  <UBadge v-if="row.training_field_chemistry" size="xs" color="blue">FC</UBadge>
+                  <UBadge v-if="row.training_r_card" size="xs" color="green">RC</UBadge>
+                  <UBadge v-if="row.training_habitat" size="xs" color="purple">H</UBadge>
+                  <UBadge v-if="row.training_biological" size="xs" color="orange">B</UBadge>
+                </div>
+              </template>
+            </UTable>
+          </div>
+
+          <div v-if="!loading && filteredUsers.length === 0" class="text-center text-gray-500 py-8">
+            {{ hasActiveFilters ? 'No matching completed signups found.' : 'No completed signups found.' }}
+          </div>
+        </UCard>
+
+        <!-- Other Trainers' Pending Invites Card -->
+        <UCard>
+          <template #header>
+            <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
+              <h2 class="text-lg font-semibold">Other Trainers' Pending Invites</h2>
+              <UBadge color="blue" variant="soft">
+                {{ filteredOtherInvites.length }} records
+              </UBadge>
+            </div>
+          </template>
+
+          <div class="overflow-x-auto">
+            <UTable 
+              :columns="responsiveOtherInviteColumns" 
+              :rows="sortedFilteredOtherInvites" 
+              :loading="loadingOtherInvites"
+              class="min-w-full"
+            >
+              <template #email-data="{ row }">
+                <div class="truncate max-w-[200px]" :title="row.email">
+                  {{ row.email }}
+                </div>
+              </template>
+              
+              <template #training_date-data="{ row }">
+                <span class="text-xs whitespace-nowrap">{{ formatCompactDate(row.training_date) }}</span>
+              </template>
+              
+              <template #training_location-data="{ row }">
+                <div class="truncate max-w-[120px]" :title="row.training_location">
+                  {{ row.training_location }}
+                </div>
+              </template>
+              
+              <template #trainer-data="{ row }">
+                <div class="truncate max-w-[120px]" v-if="row.trainer" :title="`${row.trainer.first_name} ${row.trainer.last_name}`">
+                  <span class="text-xs">{{ row.trainer.first_name }} {{ row.trainer.last_name }}</span>
+                </div>
+                <span v-else class="text-gray-500 italic text-xs">Unknown</span>
+              </template>
+              
+              <template #training_types-data="{ row }">
+                <div class="flex flex-wrap gap-1">
+                  <UBadge v-if="row.training_field_chemistry" size="xs" color="blue">FC</UBadge>
+                  <UBadge v-if="row.training_r_card" size="xs" color="green">RC</UBadge>
+                  <UBadge v-if="row.training_habitat" size="xs" color="purple">H</UBadge>
+                  <UBadge v-if="row.training_biological" size="xs" color="orange">B</UBadge>
+                </div>
+              </template>
+              
+              <template #invite_sent_at-data="{ row }">
+                <span class="text-xs whitespace-nowrap">{{ formatCompactDate(row.invite_sent_at) }}</span>
+              </template>
+              
+              <template #actions-data="{ row }">
                 <UButton
-                  size="xs"
+                  size="2xs"
                   color="primary"
                   :loading="processingId === `resend-other-${row.id}`"
                   :disabled="!!processingId"
@@ -145,47 +364,77 @@
                 >
                   Resend
                 </UButton>
-              </div>
-            </template>
-          </UTable>
+              </template>
+            </UTable>
+          </div>
+
+          <div v-if="!loadingOtherInvites && filteredOtherInvites.length === 0" class="text-center text-gray-500 py-8">
+            {{ hasActiveFilters ? 'No matching other trainers\' invites found.' : 'No other trainers\' invites found.' }}
+          </div>
         </UCard>
 
-        <!-- Registered Users Card -->
-        <UCard class="mt-6">
+        <!-- Other Trainers' Completed Signups Card -->
+        <UCard>
           <template #header>
-            <div class="flex justify-between items-center gap-4">
-              <h2 class="text-lg font-semibold flex-shrink-0">My Completed Signups (These Are Now Registered Users)</h2>
-              <div class="relative flex-grow max-w-64">
-                <UInput
-                  v-model="userSearch"
-                  icon="i-heroicons-magnifying-glass"
-                  placeholder="Search users..."
-                  class="w-full"
-                />
-              </div>
+            <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
+              <h2 class="text-lg font-semibold">Other Trainers' Completed Signups</h2>
+              <UBadge color="purple" variant="soft">
+                {{ filteredOtherCompleted.length }} records
+              </UBadge>
             </div>
           </template>
 
-          <UTable :columns="registeredColumns" :rows="filteredUsers" :loading="loading">
-            <template #display_name-data="{ row }">
-              {{ row.first_name }} {{ row.last_name }}
-            </template>
-            <template #training_date-data="{ row }">
-              {{ formatDateTime(row.training_date) }}
-            </template>
-          </UTable>
-        </UCard>
+          <div class="overflow-x-auto">
+            <UTable 
+              :columns="responsiveOtherCompletedColumns" 
+              :rows="sortedFilteredOtherCompleted" 
+              :loading="loadingOtherCompleted"
+              class="min-w-full"
+            >
+              <template #display_name-data="{ row }">
+                <div class="truncate max-w-[180px]" :title="`${row.first_name} ${row.last_name}`">
+                  {{ row.first_name }} {{ row.last_name }}
+                </div>
+              </template>
+              
+              <template #email-data="{ row }">
+                <div class="truncate max-w-[180px]" :title="row.email">
+                  {{ row.email }}
+                </div>
+              </template>
+              
+              <template #training_date-data="{ row }">
+                <span class="text-xs whitespace-nowrap">{{ formatCompactDate(row.training_date) }}</span>
+              </template>
+              
+              <template #training_location-data="{ row }">
+                <div class="truncate max-w-[120px]" :title="row.training_location">
+                  {{ row.training_location }}
+                </div>
+              </template>
+              
+              <template #trainer-data="{ row }">
+                <div class="truncate max-w-[120px]" v-if="row.trainer_name" :title="row.trainer_name">
+                  <span class="text-xs">{{ row.trainer_name }}</span>
+                </div>
+                <span v-else class="text-gray-500 italic text-xs">Unknown</span>
+              </template>
+              
+              <template #training_types-data="{ row }">
+                <div class="flex flex-wrap gap-1">
+                  <UBadge v-if="row.training_field_chemistry" size="xs" color="blue">FC</UBadge>
+                  <UBadge v-if="row.training_r_card" size="xs" color="green">RC</UBadge>
+                  <UBadge v-if="row.training_habitat" size="xs" color="purple">H</UBadge>
+                  <UBadge v-if="row.training_biological" size="xs" color="orange">B</UBadge>
+                </div>
+              </template>
+            </UTable>
+          </div>
 
-      <!-- No Data States -->
-      <div v-if="!loading && filteredInvites.length === 0" class="text-center text-gray-500 my-4">
-        {{ inviteSearch ? 'No matching invites found.' : 'No pending invites found.' }}
-      </div>
-      <div v-if="!loadingOtherInvites && filteredOtherInvites.length === 0" class="text-center text-gray-500 my-4">
-        {{ otherInviteSearch ? 'No matching invites found.' : 'No other trainers\' invites found.' }}
-      </div>
-      <div v-if="!loading && filteredUsers.length === 0" class="text-center text-gray-500 my-4">
-        {{ userSearch ? 'No matching users found.' : 'No registered users found.' }}
-      </div>
+          <div v-if="!loadingOtherCompleted && filteredOtherCompleted.length === 0" class="text-center text-gray-500 py-8">
+            {{ hasActiveFilters ? 'No matching other trainers\' completed signups found.' : 'No other trainers\' completed signups found.' }}
+          </div>
+        </UCard>
       </template>
     </div>
     
@@ -314,13 +563,25 @@ import PolicyGuard from '../../components/PolicyGuard.vue';
 
 const loading = ref(true);
 const loadingOtherInvites = ref(true);
+const loadingOtherCompleted = ref(true);
 const error = ref(null);
-const inviteSearch = ref('');
-const otherInviteSearch = ref('');
-const userSearch = ref('');
+
+// Data arrays
 const invites = ref([]);
 const registeredUsers = ref([]);
 const otherTraineesInvites = ref([]);
+const otherTrainersCompleted = ref([]);
+
+// Sorting states
+const sortBy = ref('');
+const sortDirection = ref('asc');
+
+// Filter states
+const globalSearch = ref('');
+const selectedDateRange = ref('all');
+const selectedLocation = ref('all');
+const selectedTrainingType = ref('all');
+const selectedStatus = ref('all');
 
 // Modal states
 const processingId = ref(null);
@@ -331,46 +592,241 @@ const selectedInvite = ref(null);
 const emailStatus = ref({ success: false, message: '' });
 
 // Format functions
-const formatDateTime = (dateString) => {
+const formatCompactDate = (dateString) => {
   if (!dateString) return '';
   return new Date(dateString).toLocaleDateString('en-US', {
-    year: 'numeric',
     month: 'short',
     day: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-    hour12: true
+    year: '2-digit'
   });
 };
 
-// Column definitions
-const inviteColumns = [
-  { key: 'email', label: 'Email' },
-  { key: 'training_date', label: 'Training Date' },
-  { key: 'training_location', label: 'Location' },
-  { key: 'invite_sent_at', label: 'Invited On' },
+// Filter options
+const dateRangeOptions = [
+  { value: 'all', label: 'All Dates' },
+  { value: 'last_30', label: 'Last 30 Days' },
+  { value: 'last_90', label: 'Last 90 Days' },
+  { value: 'last_year', label: 'Last Year' },
+  { value: 'this_year', label: 'This Year' }
+];
+
+const statusOptions = [
+  { value: 'all', label: 'All Statuses' },
+  { value: 'pending', label: 'Pending Invites' },
+  { value: 'completed', label: 'Completed Signups' }
+];
+
+const trainingTypeOptions = [
+  { value: 'all', label: 'All Training Types' },
+  { value: 'field_chemistry', label: 'Field Chemistry' },
+  { value: 'r_card', label: 'R-Card' },
+  { value: 'habitat', label: 'Habitat' },
+  { value: 'biological', label: 'Biological' }
+];
+
+// Dynamic filter options based on data
+const locationOptions = computed(() => {
+  const locations = new Set();
+  locations.add('all');
+  
+  [...invites.value, ...registeredUsers.value, ...otherTraineesInvites.value, ...otherTrainersCompleted.value]
+    .forEach(item => {
+      if (item.training_location) {
+        locations.add(item.training_location);
+      }
+    });
+  
+  return Array.from(locations).map(loc => ({
+    value: loc,
+    label: loc === 'all' ? 'All Locations' : loc
+  }));
+});
+
+// Responsive column definitions with sorting
+const responsiveInviteColumns = [
+  { key: 'email', label: 'Email', sortable: true },
+  { key: 'training_date', label: 'Date', sortable: true },
+  { key: 'training_location', label: 'Location', sortable: true },
+  { key: 'training_types', label: 'Types' },
+  { key: 'invite_sent_at', label: 'Sent', sortable: true },
   { key: 'actions', label: 'Actions' }
 ];
 
-const otherInviteColumns = [
-  { key: 'email', label: 'Email' },
-  { key: 'training_date', label: 'Training Date' },
-  { key: 'training_location', label: 'Location' },
-  { key: 'trainer', label: 'Trainer' },
-  { key: 'invite_sent_at', label: 'Invited On' },
+const responsiveOtherInviteColumns = [
+  { key: 'email', label: 'Email', sortable: true },
+  { key: 'training_date', label: 'Date', sortable: true },
+  { key: 'training_location', label: 'Location', sortable: true },
+  { key: 'trainer', label: 'Trainer', sortable: true },
+  { key: 'training_types', label: 'Types' },
+  { key: 'invite_sent_at', label: 'Sent', sortable: true },
   { key: 'actions', label: 'Actions' }
 ];
 
-const registeredColumns = [
-  { 
-    key: 'display_name', 
-    label: 'Name',
-    render: (row) => `${row.first_name} ${row.last_name}`
-  },
-  { key: 'email', label: 'Email' },
-  { key: 'training_date', label: 'Training Date' },
-  { key: 'training_location', label: 'Training Location' }
+const responsiveRegisteredColumns = [
+  { key: 'display_name', label: 'Name', sortable: true },
+  { key: 'email', label: 'Email', sortable: true },
+  { key: 'training_date', label: 'Date', sortable: true },
+  { key: 'training_location', label: 'Location', sortable: true },
+  { key: 'training_types', label: 'Types' }
 ];
+
+const responsiveOtherCompletedColumns = [
+  { key: 'display_name', label: 'Name', sortable: true },
+  { key: 'email', label: 'Email', sortable: true },
+  { key: 'training_date', label: 'Date', sortable: true },
+  { key: 'training_location', label: 'Location', sortable: true },
+  { key: 'trainer', label: 'Trainer', sortable: true },
+  { key: 'training_types', label: 'Types' }
+];
+
+// Sorting function
+const sortData = (data, key) => {
+  if (!key) return data;
+  
+  return [...data].sort((a, b) => {
+    let aValue, bValue;
+    
+    switch (key) {
+      case 'email':
+        aValue = a.email || '';
+        bValue = b.email || '';
+        break;
+      case 'training_date':
+        aValue = new Date(a.training_date || 0);
+        bValue = new Date(b.training_date || 0);
+        break;
+      case 'training_location':
+        aValue = a.training_location || '';
+        bValue = b.training_location || '';
+        break;
+      case 'trainer':
+        aValue = a.trainer ? `${a.trainer.first_name} ${a.trainer.last_name}` : a.trainer_name || '';
+        bValue = b.trainer ? `${b.trainer.first_name} ${b.trainer.last_name}` : b.trainer_name || '';
+        break;
+      case 'display_name':
+        aValue = `${a.first_name} ${a.last_name}`;
+        bValue = `${b.first_name} ${b.last_name}`;
+        break;
+      case 'invite_sent_at':
+        aValue = new Date(a.invite_sent_at || 0);
+        bValue = new Date(b.invite_sent_at || 0);
+        break;
+      default:
+        aValue = a[key] || '';
+        bValue = b[key] || '';
+    }
+    
+    if (aValue instanceof Date && bValue instanceof Date) {
+      return sortDirection.value === 'asc' ? aValue - bValue : bValue - aValue;
+    }
+    
+    const aStr = String(aValue).toLowerCase();
+    const bStr = String(bValue).toLowerCase();
+    
+    if (sortDirection.value === 'asc') {
+      return aStr.localeCompare(bStr);
+    } else {
+      return bStr.localeCompare(aStr);
+    }
+  });
+};
+
+// Handle row selection for sorting
+const onRowSelect = (row) => {
+  // This function can be used if needed for row selection
+};
+
+// Helper functions for filtering
+const matchesDateRange = (date) => {
+  if (selectedDateRange.value === 'all') return true;
+  if (!date) return false;
+  
+  const itemDate = new Date(date);
+  const now = new Date();
+  
+  switch (selectedDateRange.value) {
+    case 'last_30':
+      return itemDate >= new Date(now.setDate(now.getDate() - 30));
+    case 'last_90':
+      return itemDate >= new Date(now.setDate(now.getDate() - 90));
+    case 'last_year':
+      return itemDate >= new Date(now.setFullYear(now.getFullYear() - 1));
+    case 'this_year':
+      return itemDate.getFullYear() === new Date().getFullYear();
+    default:
+      return true;
+  }
+};
+
+const matchesTrainingType = (item) => {
+  if (selectedTrainingType.value === 'all') return true;
+  return item[`training_${selectedTrainingType.value}`] === true;
+};
+
+const matchesGlobalSearch = (item) => {
+  if (!globalSearch.value) return true;
+  const search = globalSearch.value.toLowerCase();
+  
+  return (
+    item.email?.toLowerCase().includes(search) ||
+    item.training_location?.toLowerCase().includes(search) ||
+    item.first_name?.toLowerCase().includes(search) ||
+    item.last_name?.toLowerCase().includes(search) ||
+    item.trainer_name?.toLowerCase().includes(search) ||
+    (item.trainer && `${item.trainer.first_name} ${item.trainer.last_name}`.toLowerCase().includes(search))
+  );
+};
+
+// Filtering logic
+const filteredInvites = computed(() => {
+  return invites.value.filter(invite => {
+    if (selectedStatus.value === 'completed') return false;
+    
+    return matchesDateRange(invite.training_date) &&
+           (selectedLocation.value === 'all' || invite.training_location === selectedLocation.value) &&
+           matchesTrainingType(invite) &&
+           matchesGlobalSearch(invite);
+  });
+});
+
+const filteredUsers = computed(() => {
+  return registeredUsers.value.filter(user => {
+    if (selectedStatus.value === 'pending') return false;
+    
+    return matchesDateRange(user.training_date) &&
+           (selectedLocation.value === 'all' || user.training_location === selectedLocation.value) &&
+           matchesTrainingType(user) &&
+           matchesGlobalSearch(user);
+  });
+});
+
+const filteredOtherInvites = computed(() => {
+  return otherTraineesInvites.value.filter(invite => {
+    if (selectedStatus.value === 'completed') return false;
+    
+    return matchesDateRange(invite.training_date) &&
+           (selectedLocation.value === 'all' || invite.training_location === selectedLocation.value) &&
+           matchesTrainingType(invite) &&
+           matchesGlobalSearch(invite);
+  });
+});
+
+const filteredOtherCompleted = computed(() => {
+  return otherTrainersCompleted.value.filter(user => {
+    if (selectedStatus.value === 'pending') return false;
+    
+    return matchesDateRange(user.training_date) &&
+           (selectedLocation.value === 'all' || user.training_location === selectedLocation.value) &&
+           matchesTrainingType(user) &&
+           matchesGlobalSearch(user);
+  });
+});
+
+// Sorted filtered data
+const sortedFilteredInvites = computed(() => sortData(filteredInvites.value, sortBy.value));
+const sortedFilteredUsers = computed(() => sortData(filteredUsers.value, sortBy.value));
+const sortedFilteredOtherInvites = computed(() => sortData(filteredOtherInvites.value, sortBy.value));
+const sortedFilteredOtherCompleted = computed(() => sortData(filteredOtherCompleted.value, sortBy.value));
 
 // Stats computations
 const stats = computed(() => ({
@@ -379,34 +835,110 @@ const stats = computed(() => ({
   completedSignups: registeredUsers.value.length
 }));
 
-// Filtering
-const filteredInvites = computed(() => {
-  if (!inviteSearch.value) return invites.value;
-  const searchTerm = inviteSearch.value.toLowerCase();
-  return invites.value.filter(invite => 
-    invite.email.toLowerCase().includes(searchTerm) ||
-    invite.training_location?.toLowerCase().includes(searchTerm)
-  );
+// Total filtered records
+const totalFilteredRecords = computed(() => {
+  return filteredInvites.value.length + 
+         filteredUsers.value.length + 
+         filteredOtherInvites.value.length + 
+         filteredOtherCompleted.value.length;
 });
 
-const filteredOtherInvites = computed(() => {
-  if (!otherInviteSearch.value) return otherTraineesInvites.value;
-  const searchTerm = otherInviteSearch.value.toLowerCase();
-  return otherTraineesInvites.value.filter(invite => 
-    invite.email.toLowerCase().includes(searchTerm) ||
-    invite.training_location?.toLowerCase().includes(searchTerm) ||
-    (invite.trainer && `${invite.trainer.first_name} ${invite.trainer.last_name}`.toLowerCase().includes(searchTerm))
-  );
+// Check if any filters are active
+const hasActiveFilters = computed(() => {
+  return globalSearch.value !== '' ||
+         selectedDateRange.value !== 'all' ||
+         selectedLocation.value !== 'all' ||
+         selectedTrainingType.value !== 'all' ||
+         selectedStatus.value !== 'all';
 });
 
-const filteredUsers = computed(() => {
-  if (!userSearch.value) return registeredUsers.value;
-  const searchTerm = userSearch.value.toLowerCase();
-  return registeredUsers.value.filter(user => 
-    user.email.toLowerCase().includes(searchTerm) ||
-    `${user.first_name} ${user.last_name}`.toLowerCase().includes(searchTerm)
-  );
+// Count active filters
+const activeFilterCount = computed(() => {
+  let count = 0;
+  if (globalSearch.value !== '') count++;
+  if (selectedDateRange.value !== 'all') count++;
+  if (selectedLocation.value !== 'all') count++;
+  if (selectedTrainingType.value !== 'all') count++;
+  if (selectedStatus.value !== 'all') count++;
+  return count;
 });
+
+// Clear all filters
+const clearAllFilters = () => {
+  globalSearch.value = '';
+  selectedDateRange.value = 'all';
+  selectedLocation.value = 'all';
+  selectedTrainingType.value = 'all';
+  selectedStatus.value = 'all';
+  sortBy.value = '';
+  sortDirection.value = 'asc';
+};
+
+// Export to CSV function
+const exportToCSV = () => {
+  const headers = [
+    'Type', 'Name', 'Email', 'Training Date', 'Training Location', 'Trainer', 'Status',
+    'Field Chemistry', 'R-Card', 'Habitat', 'Biological', 'Invite Sent'
+  ];
+  
+  const allData = [
+    ...filteredInvites.value.map(item => ({
+      ...item,
+      type: 'My Pending Invite',
+      name: item.email,
+      trainer: 'Me',
+      status: 'Pending'
+    })),
+    ...filteredUsers.value.map(item => ({
+      ...item,
+      type: 'My Completed Signup',
+      name: `${item.first_name} ${item.last_name}`,
+      trainer: 'Me',
+      status: 'Completed'
+    })),
+    ...filteredOtherInvites.value.map(item => ({
+      ...item,
+      type: 'Other Trainer Pending',
+      name: item.email,
+      trainer: item.trainer ? `${item.trainer.first_name} ${item.trainer.last_name}` : 'Unknown',
+      status: 'Pending'
+    })),
+    ...filteredOtherCompleted.value.map(item => ({
+      ...item,
+      type: 'Other Trainer Completed',
+      name: `${item.first_name} ${item.last_name}`,
+      trainer: item.trainer_name || 'Unknown',
+      status: 'Completed'
+    }))
+  ];
+  
+  const csvData = allData.map(row => [
+    row.type,
+    row.name,
+    row.email,
+    formatCompactDate(row.training_date),
+    row.training_location || '',
+    row.trainer,
+    row.status,
+    row.training_field_chemistry ? 'Yes' : 'No',
+    row.training_r_card ? 'Yes' : 'No',
+    row.training_habitat ? 'Yes' : 'No',
+    row.training_biological ? 'Yes' : 'No',
+    formatCompactDate(row.invite_sent_at)
+  ]);
+  
+  const csvContent = [headers, ...csvData]
+    .map(row => row.map(cell => `"${cell || ''}"`).join(','))
+    .join('\n');
+  
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.setAttribute('download', `training_report_${new Date().toISOString().split('T')[0]}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+};
 
 // Toast notifications
 const toast = useToast();
@@ -582,21 +1114,26 @@ onMounted(async () => {
         'invite_sent_at',
         'training_date',
         'training_location',
-        'invite_token'
+        'invite_token',
+        'training_field_chemistry',
+        'training_r_card',
+        'training_habitat',
+        'training_biological'
       ],
-      limit: -1 // Fetch all invites without limit
+      limit: -1
     }));
     
     invites.value = invitesResponse;
 
-    // Get users data
+    // Get users data - now including other trainers' completed signups
     const { data: reportData } = await useFetch('/api/trainer-report', {
       query: {
-        trainerId: user.value.id
+        trainerId: user.value.id,
+        includeOtherTrainers: 'true'
       }
     });
 
-    // Initialize empty array if no users found
+    // Process my completed signups
     if (!reportData.value?.users || reportData.value.users.length === 0) {
       registeredUsers.value = [];
     } else {
@@ -612,7 +1149,11 @@ onMounted(async () => {
             'original_training_date',
             'training_location_original',
             'training_date_latest',
-            'training_location_latest'
+            'training_location_latest',
+            'training_field_chemistry',
+            'training_r_card',
+            'training_habitat',
+            'training_biological'
           ],
           limit: -1
         }));
@@ -627,12 +1168,64 @@ onMounted(async () => {
             last_name: user.last_name,
             display_name: user.display_name || `${user.first_name} ${user.last_name}`,
             training_date: samplerInfo.original_training_date || samplerInfo.training_date_latest,
-            training_location: samplerInfo.training_location_original || samplerInfo.training_location_latest
+            training_location: samplerInfo.training_location_original || samplerInfo.training_location_latest,
+            training_field_chemistry: samplerInfo.training_field_chemistry,
+            training_r_card: samplerInfo.training_r_card,
+            training_habitat: samplerInfo.training_habitat,
+            training_biological: samplerInfo.training_biological
           };
         });
       } else {
         registeredUsers.value = [];
       }
+    }
+
+    // NEW: Process other trainers' completed signups
+    if (reportData.value?.otherTrainersUsers && reportData.value.otherTrainersUsers.length > 0) {
+      const otherUserIds = reportData.value.otherTrainersUsers.map(user => user.id);
+      
+      try {
+        const otherSamplerDataResponse = await useDirectus(readItems('sampler_data', {
+          filter: {
+            user_id: { _in: otherUserIds }
+          },
+          fields: [
+            'user_id',
+            'original_training_date',
+            'training_location_original',
+            'training_date_latest',
+            'training_location_latest',
+            'training_field_chemistry',
+            'training_r_card',
+            'training_habitat',
+            'training_biological'
+          ],
+          limit: -1
+        }));
+
+        // Combine other trainers' user data with sampler data
+        otherTrainersCompleted.value = reportData.value.otherTrainersUsers.map(user => {
+          const samplerInfo = otherSamplerDataResponse.find(s => s.user_id === user.id) || {};
+          return {
+            id: user.id,
+            email: user.email,
+            first_name: user.first_name,
+            last_name: user.last_name,
+            training_date: samplerInfo.original_training_date || samplerInfo.training_date_latest,
+            training_location: samplerInfo.training_location_original || samplerInfo.training_location_latest,
+            trainer_name: user.trainer_name,
+            training_field_chemistry: samplerInfo.training_field_chemistry,
+            training_r_card: samplerInfo.training_r_card,
+            training_habitat: samplerInfo.training_habitat,
+            training_biological: samplerInfo.training_biological
+          };
+        });
+      } catch (err) {
+        console.error('Error fetching other trainers\' sampler data:', err);
+        otherTrainersCompleted.value = [];
+      }
+    } else {
+      otherTrainersCompleted.value = [];
     }
 
     // Fetch other trainers' invites
@@ -651,6 +1244,7 @@ onMounted(async () => {
     }
     
     loadingOtherInvites.value = false;
+    loadingOtherCompleted.value = false;
 
   } catch (err) {
     error.value = 'Failed to load training data';
@@ -660,3 +1254,33 @@ onMounted(async () => {
   }
 });
 </script>
+
+<style scoped>
+/* Ensure no horizontal scrolling */
+.max-w-full {
+  max-width: 100%;
+}
+
+.overflow-hidden {
+  overflow: hidden;
+}
+
+.overflow-x-auto {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Ensure table cells don't grow too wide */
+.truncate {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Responsive table adjustments */
+@media (max-width: 768px) {
+  .min-w-full {
+    min-width: 600px;
+  }
+}
+</style>
