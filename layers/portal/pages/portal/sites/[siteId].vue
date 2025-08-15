@@ -483,9 +483,9 @@ onMounted(async () => {
 
     <!-- Edit Sample Modal -->
     <div v-if="showEditForm" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-      <div class="relative top-5 mx-auto p-5 border w-4/5 shadow-lg rounded-md bg-white">
+      <div class="relative top-5 mx-auto p-2 sm:p-5 border w-[95%] sm:w-4/5 shadow-lg rounded-md bg-white max-h-[90vh] overflow-y-auto">
         <div class="flex justify-between items-center mb-4">
-          <h2 class="text-xl font-bold">Edit Sample</h2>
+          <h2 class="text-lg sm:text-xl font-bold">Edit Sample</h2>
           <UButton
             icon="i-heroicons-x-mark"
             variant="ghost"
@@ -501,10 +501,10 @@ onMounted(async () => {
     </div>
 
     <!-- Contact Sampler Modal -->
-    <div v-if="showContactForm" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-      <div class="relative top-20 mx-auto p-5 border w-full max-w-xl shadow-lg rounded-md bg-white">
+    <div v-if="showContactForm" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 p-4">
+      <div class="relative top-4 sm:top-20 mx-auto p-4 sm:p-5 border w-full max-w-xl shadow-lg rounded-md bg-white">
         <div class="flex justify-between items-center mb-4">
-          <h2 class="text-xl font-bold">Contact Sampler</h2>
+          <h2 class="text-lg sm:text-xl font-bold">Contact Sampler</h2>
           <UButton
             icon="i-heroicons-x-mark"
             variant="ghost"
@@ -525,7 +525,7 @@ onMounted(async () => {
     </div>
 
     <!-- Success Modal -->
-    <div v-if="showSuccessToast" class="fixed inset-20 z-50 max-w-md animate-fade-in">
+    <div v-if="showSuccessToast" class="fixed top-4 right-4 sm:inset-20 z-50 max-w-md animate-fade-in">
       <UAlert
         variant="solid"
         color="green"
@@ -564,32 +564,33 @@ onMounted(async () => {
 
     <!-- Content -->
     <template v-else>
-      <!-- Site Header -->
-      <div class="flex justify-between items-start mb-6">
-        <div>
-          <h1 class="text-2xl font-bold mb-2">
+<!-- Site Header -->
+      <div class="flex flex-col sm:flex-row justify-between items-start gap-4 mb-6">
+        <div class="flex-1">
+          <h1 class="text-xl sm:text-2xl font-bold mb-2">
             {{ siteData.stream_name || 'Unnamed Stream' }}
-            <span class="text-gray-500 text-lg">(Site {{ siteData.wwkyid_pk }})</span>
+            <span class="text-gray-500 text-base sm:text-lg">(Site {{ siteData.wwkyid_pk }})</span>
           </h1>
-          <p class="text-gray-600">{{ siteData.description }}</p>
-          <p class="text-gray-600">Basin: {{ siteData.wwkybasin }}</p>
+          <p class="text-gray-600 text-sm sm:text-base">{{ siteData.description }}</p>
+          <p class="text-gray-600 text-sm sm:text-base">Basin: {{ siteData.wwkybasin }}</p>
         </div>
         <UButton
           icon="i-heroicons-arrow-left"
           @click="navigateTo('/portal')"
+          class="w-full sm:w-auto"
         >
           Back to Dashboard
         </UButton>
       </div>
 
       <!-- Map and Stats Grid -->
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-6">
         <!-- Map -->
-        <UCard class="md:col-span-1">
+        <UCard class="lg:col-span-1">
           <template #header>
-            <h2 class="text-lg font-semibold">Site Location</h2>
+            <h2 class="text-base sm:text-lg font-semibold">Site Location</h2>
           </template>
-          <div class="relative w-full h-[300px]">
+          <div class="relative w-full h-[250px] sm:h-[300px]">
             <div 
               ref="mapContainer" 
               class="absolute inset-0 w-full h-full"
@@ -600,31 +601,31 @@ onMounted(async () => {
               class="absolute inset-0 flex items-center justify-center bg-gray-100 bg-opacity-75"
             >
               <ULoadingIcon />
-              <span class="ml-2">Loading map...</span>
+              <span class="ml-2 text-sm">Loading map...</span>
             </div>
           </div>
         </UCard>
 
         <!-- Site Statistics -->
-        <UCard class="md:col-span-1" v-if="siteStats">
+        <UCard class="lg:col-span-1" v-if="siteStats">
           <template #header>
-            <h2 class="text-lg font-semibold">Site Statistics</h2>
+            <h2 class="text-base sm:text-lg font-semibold">Site Statistics</h2>
           </template>
-          <div class="space-y-4">
+          <div class="space-y-3 sm:space-y-4 text-sm sm:text-base">
             <div>
-              <h3 class="font-medium text-gray-700">Sample Summary</h3>
-              <div class="grid grid-cols-2 gap-2 mt-2">
-                <div>Stream Samples: {{ siteStats.totalSamples.stream }}</div>
-                <div>Bio Assessments: {{ siteStats.totalSamples.biological }}</div>
-                <div>Habitat Assessments: {{ siteStats.totalSamples.habitat }}</div>
-                <div>Total: {{ siteStats.totalSamples.total }}</div>
+              <h3 class="font-medium text-gray-700 mb-2">Sample Summary</h3>
+              <div class="grid grid-cols-2 gap-1 sm:gap-2 text-xs sm:text-sm">
+                <div>Stream: {{ siteStats.totalSamples.stream }}</div>
+                <div>Bio: {{ siteStats.totalSamples.biological }}</div>
+                <div>Habitat: {{ siteStats.totalSamples.habitat }}</div>
+                <div class="font-semibold">Total: {{ siteStats.totalSamples.total }}</div>
               </div>
             </div>
             
             <div v-if="siteStats.totalSamples.stream > 0">
-              <h3 class="font-medium text-gray-700">Water Quality Averages</h3>
-              <div class="grid grid-cols-2 gap-2 mt-2">
-                <div>Temperature: {{ formatMeasurement(siteStats.waterQuality.avgTemp, '°C') }}</div>
+              <h3 class="font-medium text-gray-700 mb-2">Water Quality Averages</h3>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-1 text-xs sm:text-sm">
+                <div>Temp: {{ formatMeasurement(siteStats.waterQuality.avgTemp, '°C') }}</div>
                 <div>pH: {{ formatMeasurement(siteStats.waterQuality.avgPH, '') }}</div>
                 <div>DO: {{ formatMeasurement(siteStats.waterQuality.avgDO, 'mg/L') }}</div>
                 <div>Conductivity: {{ formatMeasurement(siteStats.waterQuality.avgConductivity, 'μS/cm') }}</div>
@@ -632,24 +633,24 @@ onMounted(async () => {
             </div>
             
             <div v-if="siteStats.biologicalScore.count > 0">
-              <h3 class="font-medium text-gray-700">Biological Assessment</h3>
-              <div class="mt-2">
-                Average Score: {{ formatMeasurement(siteStats.biologicalScore.avg, '') }} ({{ siteStats.biologicalScore.count }} assessments)
+              <h3 class="font-medium text-gray-700 mb-1">Biological Assessment</h3>
+              <div class="text-xs sm:text-sm">
+                Avg Score: {{ formatMeasurement(siteStats.biologicalScore.avg, '') }} ({{ siteStats.biologicalScore.count }} assessments)
               </div>
             </div>
             
             <div v-if="siteStats.habitatScore.count > 0">
-              <h3 class="font-medium text-gray-700">Habitat Assessment</h3>
-              <div class="mt-2">
-                Average Score: {{ formatMeasurement(siteStats.habitatScore.avg, '') }} ({{ siteStats.habitatScore.count }} assessments)
+              <h3 class="font-medium text-gray-700 mb-1">Habitat Assessment</h3>
+              <div class="text-xs sm:text-sm">
+                Avg Score: {{ formatMeasurement(siteStats.habitatScore.avg, '') }} ({{ siteStats.habitatScore.count }} assessments)
               </div>
             </div>
             
             <div>
-              <h3 class="font-medium text-gray-700">Volunteer Impact</h3>
-              <div class="grid grid-cols-2 gap-2 mt-2">
-                <div>Total Hours: {{ Math.round(siteStats.volunteerImpact.totalMinutes / 60) }}</div>
-                <div>Total Participants: {{ siteStats.volunteerImpact.totalAdults + siteStats.volunteerImpact.totalYouth }}</div>
+              <h3 class="font-medium text-gray-700 mb-2">Volunteer Impact</h3>
+              <div class="grid grid-cols-2 gap-1 sm:gap-2 text-xs sm:text-sm">
+                <div>Hours: {{ Math.round(siteStats.volunteerImpact.totalMinutes / 60) }}</div>
+                <div>Participants: {{ siteStats.volunteerImpact.totalAdults + siteStats.volunteerImpact.totalYouth }}</div>
               </div>
             </div>
           </div>
@@ -657,11 +658,11 @@ onMounted(async () => {
       </div>
 
       <!-- Sample Type Navigation -->
-      <div class="mb-6">
-        <div class="flex space-x-4 border-b">
+      <div class="mb-4 sm:mb-6">
+        <div class="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4 border-b overflow-x-auto">
           <button
             :class="[
-              'px-4 py-2 border-b-2 transition-colors',
+              'px-3 sm:px-4 py-2 border-b-2 transition-colors text-sm sm:text-base whitespace-nowrap flex-shrink-0',
               activeTab === 'stream' ? 'border-blue-500 text-blue-600' : 'border-transparent hover:border-gray-300'
             ]"
             @click="activeTab = 'stream'"
@@ -670,285 +671,392 @@ onMounted(async () => {
           </button>
           <button
             :class="[
-              'px-4 py-2 border-b-2 transition-colors',
+              'px-3 sm:px-4 py-2 border-b-2 transition-colors text-sm sm:text-base whitespace-nowrap flex-shrink-0',
               activeTab === 'biological' ? 'border-blue-500 text-blue-600' : 'border-transparent hover:border-gray-300'
             ]"
             @click="activeTab = 'biological'"
           >
-            Biological Assessments ({{ biologicalSamples.length }})
+            Biological ({{ biologicalSamples.length }})
           </button>
           <button
             :class="[
-              'px-4 py-2 border-b-2 transition-colors',
+              'px-3 sm:px-4 py-2 border-b-2 transition-colors text-sm sm:text-base whitespace-nowrap flex-shrink-0',
               activeTab === 'habitat' ? 'border-blue-500 text-blue-600' : 'border-transparent hover:border-gray-300'
             ]"
             @click="activeTab = 'habitat'"
           >
-            Habitat Assessments ({{ habitatSamples.length }})
+            Habitat ({{ habitatSamples.length }})
           </button>
         </div>
       </div>
 
-      <!-- Stream Samples Section -->
+    <!-- Stream Samples Section -->
       <div v-show="activeTab === 'stream'">
         <!-- Primary Stream Samples Table -->
-        <UCard class="mt-6">
+        <UCard class="mt-4 sm:mt-6">
           <template #header>
-            <div class="flex justify-between items-center">
-              <h2 class="text-lg font-semibold">Your Stream Samples (Primary Sampler or Creator)</h2>
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+              <h2 class="text-base sm:text-lg font-semibold">Your Stream Samples (Primary Sampler or Creator)</h2>
               <UButton
                 icon="i-heroicons-plus"
                 @click="navigateTo('/portal/sample')"
+                class="w-full sm:w-auto"
+                size="sm"
               >
                 New Stream Sample
               </UButton>
             </div>
           </template>
 
-          <!-- Message if no primary samples -->
-          <div v-if="streamSamples.primary.length === 0" class="text-center py-4 text-gray-500">
+          <div v-if="streamSamples.primary.length === 0" class="text-center py-6 sm:py-4 text-gray-500 text-sm sm:text-base">
             You haven't created any stream samples or been a primary sampler for this site yet.
           </div>
 
-          <div v-else class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200">
-              <thead>
-                <tr>
-                  <th class="px-4 py-2 text-left">ID</th>
-                  <th class="px-4 py-2 text-left">Date</th>
-                  <th class="px-4 py-2 text-left">Temp (°C)</th>
-                  <th class="px-4 py-2 text-left">pH</th>
-                  <th class="px-4 py-2 text-left">DO (mg/L)</th>
-                  <th class="px-4 py-2 text-left">Conduct (μS/cm)</th>
-                  <th class="px-4 py-2 text-left">Avg E. coli (CFU/100mL)</th>
-                  <th class="px-4 py-2 text-center">Details</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-gray-200">
-                <tr v-for="sample in streamSamples.primary" :key="sample.id" 
-                    :class="{'hover:bg-gray-50': true, 'bg-yellow-50': sample.isEnteredForOther}">
-                  <td class="px-4 py-2">{{ sample.id }}</td>
-                  <td class="px-4 py-2">
-                    {{ formatDate(sample.date) }}
+          <div v-else>
+            <!-- Desktop Table -->
+            <div class="desktop-table overflow-x-auto">
+              <table class="min-w-full divide-y divide-gray-200 text-sm">
+                <thead class="bg-gray-50">
+                  <tr>
+                    <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                    <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                    <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Temp (°C)</th>
+                    <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">pH</th>
+                    <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">DO (mg/L)</th>
+                    <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Conduct (μS/cm)</th>
+                    <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Avg E. coli (CFU/100mL)</th>
+                    <th class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                  </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                  <tr v-for="sample in streamSamples.primary" :key="sample.id" 
+                      :class="{'hover:bg-gray-50': true, 'bg-yellow-50': sample.isEnteredForOther}">
+                    <td class="px-3 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ sample.id }}</td>
+                    <td class="px-3 py-4 text-sm text-gray-900">
+                      {{ formatDate(sample.date) }}
+                      <div v-if="sample.isEnteredForOther" 
+                          class="text-xs text-orange-600 font-medium mt-1">
+                        You entered this sample for {{ sample.volunteer_id.first_name }} {{ sample.volunteer_id.last_name }}
+                      </div>
+                    </td>
+                    <td class="px-3 py-4 whitespace-nowrap text-sm text-gray-500">{{ formatMeasurement(sample.water_temperature, '') }}</td>
+                    <td class="px-3 py-4 whitespace-nowrap text-sm text-gray-500">{{ formatMeasurement(sample.pH, '') }}</td>
+                    <td class="px-3 py-4 whitespace-nowrap text-sm text-gray-500">{{ formatMeasurement(sample.dissolved_oxygen, '') }}</td>
+                    <td class="px-3 py-4 whitespace-nowrap text-sm text-gray-500">{{ formatMeasurement(sample.conductivity, '') }}</td>
+                    <td class="px-3 py-4 whitespace-nowrap text-sm text-gray-500">{{ formatMeasurement(sample.bacteria_avg_ecoli_cfu, '') }}</td>
+                    <td class="px-3 py-4 whitespace-nowrap text-center text-sm font-medium">
+                      <div class="flex justify-center space-x-1">
+                        <UButton size="xs" variant="soft" @click="navigateTo(`/portal/sample/${sample.id}`)" 
+                                icon="i-heroicons-eye">View</UButton>
+                        <UButton size="xs" variant="soft" color="blue" 
+                                @click="navigateTo(`/portal/sample?edit=${sample.id}`)" 
+                                icon="i-heroicons-pencil-square">Edit</UButton>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Mobile Cards -->
+            <div class="mobile-cards space-y-3">
+              <div v-for="sample in streamSamples.primary" :key="sample.id" 
+                  :class="[
+                    'border border-gray-200 rounded-lg p-3',
+                    sample.isEnteredForOther ? 'bg-yellow-50 border-yellow-200' : 'bg-white'
+                  ]">
+                <div class="flex justify-between items-start mb-2">
+                  <div>
+                    <div class="font-medium text-sm">Sample #{{ sample.id }}</div>
+                    <div class="text-xs text-gray-600">{{ formatDate(sample.date) }}</div>
                     <div v-if="sample.isEnteredForOther" 
-                        class="text-xs text-orange-600 font-medium">
-                      You entered this sample for {{ sample.volunteer_id.first_name }} {{ sample.volunteer_id.last_name }}
+                        class="text-xs text-orange-600 font-medium mt-1">
+                      You entered this for {{ sample.volunteer_id.first_name }} {{ sample.volunteer_id.last_name }}
                     </div>
-                  </td>
-                  <td class="px-4 py-2">{{ formatMeasurement(sample.water_temperature, '') }}</td>
-                  <td class="px-4 py-2">{{ formatMeasurement(sample.pH, '') }}</td>
-                  <td class="px-4 py-2">{{ formatMeasurement(sample.dissolved_oxygen, '') }}</td>
-                  <td class="px-4 py-2">{{ formatMeasurement(sample.conductivity, '') }}</td>
-                  <td class="px-4 py-2">{{ formatMeasurement(sample.bacteria_avg_ecoli_cfu, '') }}</td>
-                  <td class="px-4 py-2 text-center">
-                    <div class="flex justify-center space-x-2">
-                      <UButton size="sm" variant="soft" @click="navigateTo(`/portal/sample/${sample.id}`)" 
-                              icon="i-heroicons-eye">View</UButton>
-                      <UButton size="sm" variant="soft" color="blue" 
-                              @click="navigateTo(`/portal/sample?edit=${sample.id}`)" 
-                              icon="i-heroicons-pencil-square">Edit</UButton>
-                    </div>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+                  </div>
+                  <div class="flex space-x-1">
+                    <UButton size="xs" variant="soft" @click="navigateTo(`/portal/sample/${sample.id}`)" 
+                            icon="i-heroicons-eye">View</UButton>
+                    <UButton size="xs" variant="soft" color="blue" 
+                            @click="navigateTo(`/portal/sample?edit=${sample.id}`)" 
+                            icon="i-heroicons-pencil-square">Edit</UButton>
+                  </div>
+                </div>
+                <div class="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
+                  <div><span class="font-medium">Temp:</span> {{ formatMeasurement(sample.water_temperature, '°C') }}</div>
+                  <div><span class="font-medium">pH:</span> {{ formatMeasurement(sample.pH, '') }}</div>
+                  <div><span class="font-medium">DO:</span> {{ formatMeasurement(sample.dissolved_oxygen, 'mg/L') }}</div>
+                  <div><span class="font-medium">Conductivity:</span> {{ formatMeasurement(sample.conductivity, 'μS/cm') }}</div>
+                  <div class="col-span-2"><span class="font-medium">E. coli:</span> {{ formatMeasurement(sample.bacteria_avg_ecoli_cfu, 'CFU/100mL') }}</div>
+                </div>
+              </div>
+            </div>
           </div>
         </UCard>
 
         <!-- Additional Sampler Stream Samples Table -->
-        <UCard class="mt-6">
+        <UCard class="mt-4 sm:mt-6">
           <template #header>
-            <div class="flex justify-between items-center">
-              <h2 class="text-lg font-semibold">Stream Samples Where You're an Additional Sampler</h2>
-            </div>
+            <h2 class="text-base sm:text-lg font-semibold">Stream Samples Where You're an Additional Sampler</h2>
           </template>
 
-          <div v-if="streamSamples.additional.length === 0" class="text-center py-4 text-gray-500">
+          <div v-if="streamSamples.additional.length === 0" class="text-center py-6 sm:py-4 text-gray-500 text-sm sm:text-base">
             You haven't been an additional sampler for any stream samples at this site.
           </div>
 
-          <div v-else class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200">
-              <thead>
-                <tr>
-                  <th class="px-4 py-2 text-left">ID</th>
-                  <th class="px-4 py-2 text-left">Date</th>
-                  <th class="px-4 py-2 text-left">Temp (°C)</th>
-                  <th class="px-4 py-2 text-left">pH</th>
-                  <th class="px-4 py-2 text-left">DO (mg/L)</th>
-                  <th class="px-4 py-2 text-left">Conduct (μS/cm)</th>
-                  <th class="px-4 py-2 text-left">Avg E. coli (CFU/100mL)</th>
-                  <th class="px-4 py-2 text-center">Details</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-gray-200">
-                <tr v-for="sample in streamSamples.additional" :key="sample.id" class="hover:bg-gray-50">
-                  <td class="px-4 py-2">{{ sample.id }}</td>
-                  <td class="px-4 py-2">{{ formatDate(sample.date) }}</td>
-                  <td class="px-4 py-2">{{ formatMeasurement(sample.water_temperature, '') }}</td>
-                  <td class="px-4 py-2">{{ formatMeasurement(sample.pH, '') }}</td>
-                  <td class="px-4 py-2">{{ formatMeasurement(sample.dissolved_oxygen, '') }}</td>
-                  <td class="px-4 py-2">{{ formatMeasurement(sample.conductivity, '') }}</td>
-                  <td class="px-4 py-2">{{ formatMeasurement(sample.bacteria_avg_ecoli_cfu, '') }}</td>
-                  <td class="px-4 py-2 text-center">
-                    <div class="flex justify-center space-x-2">
-                      <UButton size="sm" variant="soft" @click="navigateTo(`/portal/sample/${sample.id}`)" 
+          <div v-else>
+            <!-- Desktop Table -->
+            <div class="desktop-table overflow-x-auto">
+              <table class="min-w-full divide-y divide-gray-200 text-sm">
+                <thead class="bg-gray-50">
+                  <tr>
+                    <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                    <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                    <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Temp (°C)</th>
+                    <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">pH</th>
+                    <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">DO (mg/L)</th>
+                    <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Conduct (μS/cm)</th>
+                    <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Avg E. coli (CFU/100mL)</th>
+                    <th class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                  </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                  <tr v-for="sample in streamSamples.additional" :key="sample.id" class="hover:bg-gray-50">
+                    <td class="px-3 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ sample.id }}</td>
+                    <td class="px-3 py-4 whitespace-nowrap text-sm text-gray-500">{{ formatDate(sample.date) }}</td>
+                    <td class="px-3 py-4 whitespace-nowrap text-sm text-gray-500">{{ formatMeasurement(sample.water_temperature, '') }}</td>
+                    <td class="px-3 py-4 whitespace-nowrap text-sm text-gray-500">{{ formatMeasurement(sample.pH, '') }}</td>
+                    <td class="px-3 py-4 whitespace-nowrap text-sm text-gray-500">{{ formatMeasurement(sample.dissolved_oxygen, '') }}</td>
+                    <td class="px-3 py-4 whitespace-nowrap text-sm text-gray-500">{{ formatMeasurement(sample.conductivity, '') }}</td>
+                    <td class="px-3 py-4 whitespace-nowrap text-sm text-gray-500">{{ formatMeasurement(sample.bacteria_avg_ecoli_cfu, '') }}</td>
+                    <td class="px-3 py-4 whitespace-nowrap text-center text-sm font-medium">
+                      <UButton size="xs" variant="soft" @click="navigateTo(`/portal/sample/${sample.id}`)" 
                               icon="i-heroicons-eye">View</UButton>
-                    </div>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Mobile Cards -->
+            <div class="mobile-cards space-y-3">
+              <div v-for="sample in streamSamples.additional" :key="sample.id" 
+                  class="border border-gray-200 rounded-lg p-3 bg-white">
+                <div class="flex justify-between items-start mb-2">
+                  <div>
+                    <div class="font-medium text-sm">Sample #{{ sample.id }}</div>
+                    <div class="text-xs text-gray-600">{{ formatDate(sample.date) }}</div>
+                  </div>
+                  <UButton size="xs" variant="soft" @click="navigateTo(`/portal/sample/${sample.id}`)" 
+                          icon="i-heroicons-eye">View</UButton>
+                </div>
+                <div class="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
+                  <div><span class="font-medium">Temp:</span> {{ formatMeasurement(sample.water_temperature, '°C') }}</div>
+                  <div><span class="font-medium">pH:</span> {{ formatMeasurement(sample.pH, '') }}</div>
+                  <div><span class="font-medium">DO:</span> {{ formatMeasurement(sample.dissolved_oxygen, 'mg/L') }}</div>
+                  <div><span class="font-medium">Conductivity:</span> {{ formatMeasurement(sample.conductivity, 'μS/cm') }}</div>
+                  <div class="col-span-2"><span class="font-medium">E. coli:</span> {{ formatMeasurement(sample.bacteria_avg_ecoli_cfu, 'CFU/100mL') }}</div>
+                </div>
+              </div>
+            </div>
           </div>
         </UCard>
 
-        <!-- Other Stream Samples Table -->
-        <UCard class="mt-6">
+          <!-- Other Stream Samples Table - Properly Formatted -->
+        <UCard class="mt-4 sm:mt-6">
           <template #header>
-            <div class="flex justify-between items-center">
-              <h2 class="text-lg font-semibold">Other Stream Samples at This Site</h2>
-            </div>
+            <h2 class="text-base sm:text-lg font-semibold">Other Stream Samples at This Site</h2>
           </template>
           
-          <div v-if="streamSamples.other.length === 0" class="text-center py-4 text-gray-500">
+          <div v-if="streamSamples.other.length === 0" class="text-center py-6 sm:py-4 text-gray-500 text-sm sm:text-base">
             There are no other stream samples recorded for this site.
           </div>
 
-          <div v-else class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200">
-              <thead>
-                <tr>
-                  <th class="px-4 py-2 text-left">ID</th>
-                  <th class="px-4 py-2 text-left">Date</th>
-                  <th class="px-4 py-2 text-left">Primary Sampler</th>
-                  <th class="px-4 py-2 text-left">Temp (°C)</th>
-                  <th class="px-4 py-2 text-left">pH</th>
-                  <th class="px-4 py-2 text-left">DO (mg/L)</th>
-                  <th class="px-4 py-2 text-left">Conduct (μS/cm)</th>
-                  <th class="px-4 py-2 text-left">Avg E. coli (CFU/100mL)</th>
-                  <th class="px-4 py-2 text-center">Details</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-gray-200">
-                <tr v-for="sample in streamSamples.other" :key="sample.id" class="hover:bg-gray-50">
-                  <td class="px-4 py-2">{{ sample.id }}</td>
-                  <td class="px-4 py-2">{{ formatDate(sample.date) }}</td>
-                  <td class="px-4 py-2 whitespace-nowrap">
-                    <div class="flex flex-col space-y-2">
-                      <div class="flex items-center">
-                        <span>{{ sample.volunteer_id?.first_name }} {{ sample.volunteer_id?.last_name }}</span>
+          <div v-else>
+            <!-- Desktop Table -->
+            <div class="desktop-table overflow-x-auto">
+              <table class="min-w-full divide-y divide-gray-200 text-sm">
+                <thead class="bg-gray-50">
+                  <tr>
+                    <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                    <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                    <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Primary Sampler</th>
+                    <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Temp (°C)</th>
+                    <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">pH</th>
+                    <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">DO (mg/L)</th>
+                    <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Conduct (μS/cm)</th>
+                    <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Avg E. coli (CFU/100mL)</th>
+                    <th class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                  </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                  <tr v-for="sample in streamSamples.other" :key="sample.id" class="hover:bg-gray-50">
+                    <td class="px-3 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ sample.id }}</td>
+                    <td class="px-3 py-4 whitespace-nowrap text-sm text-gray-500">{{ formatDate(sample.date) }}</td>
+                    <td class="px-3 py-4 text-sm text-gray-900">
+                      <div class="flex flex-col space-y-1">
+                        <div class="flex items-center">
+                          <span class="text-sm">{{ sample.volunteer_id?.first_name }} {{ sample.volunteer_id?.last_name }}</span>
+                          
+                          <template v-if="sample.volunteer_id && sample.volunteer_id.id !== user?.id">
+                            <UTooltip 
+                              v-if="!(sample.volunteer_id.sampler_data && sample.volunteer_id.sampler_data.allow_connections === true)" 
+                              text="This sampler is not accepting connection requests"
+                            >
+                              <UIcon 
+                                name="i-heroicons-lock-closed" 
+                                class="ml-2 text-gray-400 h-4 w-4" 
+                              />
+                            </UTooltip>
+                          </template>
+                        </div>
                         
-                        <template v-if="sample.volunteer_id && sample.volunteer_id.id !== user?.id">
-                          <UTooltip 
-                            v-if="!(sample.volunteer_id.sampler_data && sample.volunteer_id.sampler_data.allow_connections === true)" 
-                            text="This sampler is not accepting connection requests"
+                        <div v-if="sample.volunteer_id && sample.volunteer_id.id !== user?.id">
+                          <UButton 
+                            v-if="sample.volunteer_id.sampler_data && sample.volunteer_id.sampler_data.allow_connections === true"
+                            size="xs" 
+                            variant="soft" 
+                            color="blue"
+                            @click="openContactForm(sample)"
+                            title="Connect with this sampler"
                           >
-                            <UIcon 
-                              name="i-heroicons-lock-closed" 
-                              class="ml-2 text-gray-400 h-4 w-4" 
-                            />
-                          </UTooltip>
-                        </template>
+                            <div class="flex items-center space-x-1">
+                              <span class="i-heroicons-sparkles text-red-500 h-3 w-3"></span>
+                              <span class="font-medium text-xs">Connect</span>
+                            </div>
+                          </UButton>
+                        </div>
                       </div>
-                      
-                      <div v-if="sample.volunteer_id && sample.volunteer_id.id !== user?.id">
-                        <UButton 
-                          v-if="sample.volunteer_id.sampler_data && sample.volunteer_id.sampler_data.allow_connections === true"
-                          size="sm" 
-                          variant="soft" 
-                          color="blue"
-                          @click="openContactForm(sample)"
-                          title="Connect with this sampler"
-                          class="mt-1"
-                        >
-                          <div class="flex items-center space-x-1.5 px-0.5">
-                            <span class="i-heroicons-sparkles text-red-500 h-3 w-3"></span>
-                            <span class="font-medium">Connect</span>
-                          </div>
-                        </UButton>
-                      </div>
-                    </div>
-                  </td>
-                  <td class="px-4 py-2">{{ formatMeasurement(sample.water_temperature, '') }}</td>
-                  <td class="px-4 py-2">{{ formatMeasurement(sample.pH, '') }}</td>
-                  <td class="px-4 py-2">{{ formatMeasurement(sample.dissolved_oxygen, '') }}</td>
-                  <td class="px-4 py-2">{{ formatMeasurement(sample.conductivity, '') }}</td>
-                  <td class="px-4 py-2">{{ formatMeasurement(sample.bacteria_avg_ecoli_cfu, '') }}</td>
-                  <td class="px-4 py-2 text-center">
-                    <div class="flex justify-center space-x-2">
-                      <UButton size="sm" variant="soft" @click="navigateTo(`/portal/sample/${sample.id}`)" 
+                    </td>
+                    <td class="px-3 py-4 whitespace-nowrap text-sm text-gray-500">{{ formatMeasurement(sample.water_temperature, '') }}</td>
+                    <td class="px-3 py-4 whitespace-nowrap text-sm text-gray-500">{{ formatMeasurement(sample.pH, '') }}</td>
+                    <td class="px-3 py-4 whitespace-nowrap text-sm text-gray-500">{{ formatMeasurement(sample.dissolved_oxygen, '') }}</td>
+                    <td class="px-3 py-4 whitespace-nowrap text-sm text-gray-500">{{ formatMeasurement(sample.conductivity, '') }}</td>
+                    <td class="px-3 py-4 whitespace-nowrap text-sm text-gray-500">{{ formatMeasurement(sample.bacteria_avg_ecoli_cfu, '') }}</td>
+                    <td class="px-3 py-4 whitespace-nowrap text-center text-sm font-medium">
+                      <UButton size="xs" variant="soft" @click="navigateTo(`/portal/sample/${sample.id}`)" 
                               icon="i-heroicons-eye">View</UButton>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Mobile Cards -->
+            <div class="mobile-cards space-y-3">
+              <div v-for="sample in streamSamples.other" :key="sample.id" 
+                  class="border border-gray-200 rounded-lg p-3 bg-white">
+                <div class="flex justify-between items-start mb-2">
+                  <div class="flex-1">
+                    <div class="font-medium text-sm">Sample #{{ sample.id }}</div>
+                    <div class="text-xs text-gray-600">{{ formatDate(sample.date) }}</div>
+                    <div class="text-xs text-gray-700 mt-1">
+                      by {{ sample.volunteer_id?.first_name }} {{ sample.volunteer_id?.last_name }}
+                      <template v-if="sample.volunteer_id && sample.volunteer_id.id !== user?.id">
+                        <UIcon 
+                          v-if="!(sample.volunteer_id.sampler_data && sample.volunteer_id.sampler_data.allow_connections === true)" 
+                          name="i-heroicons-lock-closed" 
+                          class="ml-1 text-gray-400 h-3 w-3 inline" 
+                        />
+                      </template>
                     </div>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+                  </div>
+                  <div class="flex flex-col space-y-1">
+                    <UButton size="xs" variant="soft" @click="navigateTo(`/portal/sample/${sample.id}`)" 
+                            icon="i-heroicons-eye">View</UButton>
+                    <UButton 
+                      v-if="sample.volunteer_id && sample.volunteer_id.id !== user?.id && sample.volunteer_id.sampler_data && sample.volunteer_id.sampler_data.allow_connections === true"
+                      size="xs" 
+                      variant="soft" 
+                      color="blue"
+                      @click="openContactForm(sample)"
+                      class="w-full"
+                    >
+                      <div class="flex items-center space-x-1">
+                        <span class="i-heroicons-sparkles text-red-500 h-3 w-3"></span>
+                        <span class="font-medium text-xs">Connect</span>
+                      </div>
+                    </UButton>
+                  </div>
+                </div>
+                <div class="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
+                  <div><span class="font-medium">Temp:</span> {{ formatMeasurement(sample.water_temperature, '°C') }}</div>
+                  <div><span class="font-medium">pH:</span> {{ formatMeasurement(sample.pH, '') }}</div>
+                  <div><span class="font-medium">DO:</span> {{ formatMeasurement(sample.dissolved_oxygen, 'mg/L') }}</div>
+                  <div><span class="font-medium">Conductivity:</span> {{ formatMeasurement(sample.conductivity, 'μS/cm') }}</div>
+                  <div class="col-span-2"><span class="font-medium">E. coli:</span> {{ formatMeasurement(sample.bacteria_avg_ecoli_cfu, 'CFU/100mL') }}</div>
+                </div>
+              </div>
+            </div>
           </div>
         </UCard>
       </div>
 
-      <!-- Biological Samples Section -->
-      <div v-show="activeTab === 'biological'">
         <!-- Primary Biological Samples Table -->
-        <UCard class="mt-6">
-          <template #header>
-            <div class="flex justify-between items-center">
-              <h2 class="text-lg font-semibold">Your Biological Assessments (Primary Sampler or Creator)</h2>
-              <UButton
-                icon="i-heroicons-plus"
-                @click="navigateTo('/portal/biological')"
-              >
-                New Biological Assessment
-              </UButton>
-            </div>
-          </template>
-
-          <div v-if="bioSamples.primary.length === 0" class="text-center py-4 text-gray-500">
-            You haven't created any biological assessments or been a primary sampler for this site yet.
+      <UCard class="mt-4 sm:mt-6">
+        <template #header>
+          <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+            <h2 class="text-base sm:text-lg font-semibold">Your Biological Assessments (Primary Sampler or Creator)</h2>
+            <UButton
+              icon="i-heroicons-plus"
+              @click="navigateTo('/portal/biological')"
+              class="w-full sm:w-auto"
+              size="sm"
+            >
+              New Biological Assessment
+            </UButton>
           </div>
+        </template>
 
-          <div v-else class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200">
-              <thead>
+        <div v-if="bioSamples.primary.length === 0" class="text-center py-6 sm:py-4 text-gray-500 text-sm sm:text-base">
+          You haven't created any biological assessments or been a primary sampler for this site yet.
+        </div>
+
+        <div v-else>
+          <!-- Desktop Table -->
+          <div class="desktop-table overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200 text-sm">
+              <thead class="bg-gray-50">
                 <tr>
-                  <th class="px-4 py-2 text-left">ID</th>
-                  <th class="px-4 py-2 text-left">Date</th>
-                  <th class="px-4 py-2 text-left">Bio Score</th>
-                  <th class="px-4 py-2 text-left">Quality Rating</th>
-                  <th class="px-4 py-2 text-left">Weather/Flow</th>
-                  <th class="px-4 py-2 text-center">Details</th>
+                  <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                  <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                  <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bio Score</th>
+                  <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quality Rating</th>
+                  <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Weather/Flow</th>
+                  <th class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
-              <tbody class="divide-y divide-gray-200">
+              <tbody class="bg-white divide-y divide-gray-200">
                 <tr v-for="sample in bioSamples.primary" :key="sample.id" 
                     :class="{'hover:bg-gray-50': true, 'bg-yellow-50': sample.isEnteredForOther}">
-                  <td class="px-4 py-2">{{ sample.id }}</td>
-                  <td class="px-4 py-2">
+                  <td class="px-3 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ sample.id }}</td>
+                  <td class="px-3 py-4 text-sm text-gray-900">
                     {{ formatDate(sample.date) }}
                     <div v-if="sample.isEnteredForOther" 
-                        class="text-xs text-orange-600 font-medium">
+                        class="text-xs text-orange-600 font-medium mt-1">
                       You entered this assessment for {{ sample.volunteer_id.first_name }} {{ sample.volunteer_id.last_name }}
                     </div>
                   </td>
-                  <td class="px-4 py-2">{{ sample.biological_water_quality_score || 'Not calculated' }}</td>
-                  <td class="px-4 py-2">
+                  <td class="px-3 py-4 whitespace-nowrap text-sm text-gray-500">{{ sample.biological_water_quality_score || 'Not calculated' }}</td>
+                  <td class="px-3 py-4 whitespace-nowrap text-sm">
                     <span v-if="sample.biological_water_quality_score" :class="{
-                      'text-red-600': sample.biological_water_quality_score < 19,
-                      'text-orange-600': sample.biological_water_quality_score >= 19 && sample.biological_water_quality_score <= 32,
-                      'text-yellow-600': sample.biological_water_quality_score > 32 && sample.biological_water_quality_score <= 41,
-                      'text-green-600': sample.biological_water_quality_score > 41
+                      'text-red-600 font-medium': sample.biological_water_quality_score < 19,
+                      'text-orange-600 font-medium': sample.biological_water_quality_score >= 19 && sample.biological_water_quality_score <= 32,
+                      'text-yellow-600 font-medium': sample.biological_water_quality_score > 32 && sample.biological_water_quality_score <= 41,
+                      'text-green-600 font-medium': sample.biological_water_quality_score > 41
                     }">
                       {{ sample.biological_water_quality_score < 19 ? 'Poor' : 
-                         sample.biological_water_quality_score >= 19 && sample.biological_water_quality_score <= 32 ? 'Marginal' :
-                         sample.biological_water_quality_score > 32 && sample.biological_water_quality_score <= 41 ? 'Fair' : 'Good' }}
+                        sample.biological_water_quality_score >= 19 && sample.biological_water_quality_score <= 32 ? 'Marginal' :
+                        sample.biological_water_quality_score > 32 && sample.biological_water_quality_score <= 41 ? 'Fair' : 'Good' }}
                     </span>
+                    <span v-else class="text-gray-500">—</span>
                   </td>
-                  <td class="px-4 py-2">{{ sample.weather_flow || 'Not recorded' }}</td>
-                  <td class="px-4 py-2 text-center">
-                    <div class="flex justify-center space-x-2">
-                      <UButton size="sm" variant="soft" @click="navigateTo(`/portal/biological/${sample.id}`)" 
+                  <td class="px-3 py-4 text-sm text-gray-500">{{ sample.weather_flow || 'Not recorded' }}</td>
+                  <td class="px-3 py-4 whitespace-nowrap text-center text-sm font-medium">
+                    <div class="flex justify-center space-x-1">
+                      <UButton size="xs" variant="soft" @click="navigateTo(`/portal/biological/${sample.id}`)" 
                               icon="i-heroicons-eye">View</UButton>
-                      <UButton size="sm" variant="soft" color="blue" 
+                      <UButton size="xs" variant="soft" color="blue" 
                               @click="navigateTo(`/portal/biological?edit=${sample.id}`)" 
                               icon="i-heroicons-pencil-square">Edit</UButton>
                     </div>
@@ -957,123 +1065,210 @@ onMounted(async () => {
               </tbody>
             </table>
           </div>
-        </UCard>
 
-        <!-- Other Biological Samples -->
-        <UCard class="mt-6">
-          <template #header>
-            <h2 class="text-lg font-semibold">Other Biological Assessments at This Site</h2>
-          </template>
-          
-          <div v-if="bioSamples.other.length === 0" class="text-center py-4 text-gray-500">
-            There are no other biological assessments recorded for this site.
+          <!-- Mobile Cards -->
+          <div class="mobile-cards space-y-3">
+            <div v-for="sample in bioSamples.primary" :key="sample.id" 
+                :class="[
+                  'border border-gray-200 rounded-lg p-3',
+                  sample.isEnteredForOther ? 'bg-yellow-50 border-yellow-200' : 'bg-white'
+                ]">
+              <div class="flex justify-between items-start mb-2">
+                <div>
+                  <div class="font-medium text-sm">Assessment #{{ sample.id }}</div>
+                  <div class="text-xs text-gray-600">{{ formatDate(sample.date) }}</div>
+                  <div v-if="sample.isEnteredForOther" 
+                      class="text-xs text-orange-600 font-medium mt-1">
+                    You entered this for {{ sample.volunteer_id.first_name }} {{ sample.volunteer_id.last_name }}
+                  </div>
+                </div>
+                <div class="flex space-x-1">
+                  <UButton size="xs" variant="soft" @click="navigateTo(`/portal/biological/${sample.id}`)" 
+                          icon="i-heroicons-eye">View</UButton>
+                  <UButton size="xs" variant="soft" color="blue" 
+                          @click="navigateTo(`/portal/biological?edit=${sample.id}`)" 
+                          icon="i-heroicons-pencil-square">Edit</UButton>
+                </div>
+              </div>
+              <div class="grid grid-cols-1 gap-y-1 text-xs">
+                <div><span class="font-medium">Bio Score:</span> {{ sample.biological_water_quality_score || 'Not calculated' }}</div>
+                <div v-if="sample.biological_water_quality_score">
+                  <span class="font-medium">Quality:</span> 
+                  <span :class="{
+                    'text-red-600': sample.biological_water_quality_score < 19,
+                    'text-orange-600': sample.biological_water_quality_score >= 19 && sample.biological_water_quality_score <= 32,
+                    'text-yellow-600': sample.biological_water_quality_score > 32 && sample.biological_water_quality_score <= 41,
+                    'text-green-600': sample.biological_water_quality_score > 41
+                  }">
+                    {{ sample.biological_water_quality_score < 19 ? 'Poor' : 
+                      sample.biological_water_quality_score >= 19 && sample.biological_water_quality_score <= 32 ? 'Marginal' :
+                      sample.biological_water_quality_score > 32 && sample.biological_water_quality_score <= 41 ? 'Fair' : 'Good' }}
+                  </span>
+                </div>
+                <div><span class="font-medium">Weather/Flow:</span> {{ sample.weather_flow || 'Not recorded' }}</div>
+              </div>
+            </div>
           </div>
+        </div>
+      </UCard>
 
-          <div v-else class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200">
-              <thead>
+      <!-- Other Biological Samples -->
+      <UCard class="mt-4 sm:mt-6">
+        <template #header>
+          <h2 class="text-base sm:text-lg font-semibold">Other Biological Assessments at This Site</h2>
+        </template>
+        
+        <div v-if="bioSamples.other.length === 0" class="text-center py-6 sm:py-4 text-gray-500 text-sm sm:text-base">
+          There are no other biological assessments recorded for this site.
+        </div>
+
+        <div v-else>
+          <!-- Desktop Table -->
+          <div class="desktop-table overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200 text-sm">
+              <thead class="bg-gray-50">
                 <tr>
-                  <th class="px-4 py-2 text-left">ID</th>
-                  <th class="px-4 py-2 text-left">Date</th>
-                  <th class="px-4 py-2 text-left">Primary Sampler</th>
-                  <th class="px-4 py-2 text-left">Bio Score</th>
-                  <th class="px-4 py-2 text-left">Quality Rating</th>
-                  <th class="px-4 py-2 text-center">Details</th>
+                  <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                  <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                  <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Primary Sampler</th>
+                  <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bio Score</th>
+                  <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quality Rating</th>
+                  <th class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
-              <tbody class="divide-y divide-gray-200">
+              <tbody class="bg-white divide-y divide-gray-200">
                 <tr v-for="sample in bioSamples.other" :key="sample.id" class="hover:bg-gray-50">
-                  <td class="px-4 py-2">{{ sample.id }}</td>
-                  <td class="px-4 py-2">{{ formatDate(sample.date) }}</td>
-                  <td class="px-4 py-2">{{ sample.volunteer_id?.first_name }} {{ sample.volunteer_id?.last_name }}</td>
-                  <td class="px-4 py-2">{{ sample.biological_water_quality_score || 'Not calculated' }}</td>
-                  <td class="px-4 py-2">
+                  <td class="px-3 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ sample.id }}</td>
+                  <td class="px-3 py-4 whitespace-nowrap text-sm text-gray-500">{{ formatDate(sample.date) }}</td>
+                  <td class="px-3 py-4 whitespace-nowrap text-sm text-gray-900">{{ sample.volunteer_id?.first_name }} {{ sample.volunteer_id?.last_name }}</td>
+                  <td class="px-3 py-4 whitespace-nowrap text-sm text-gray-500">{{ sample.biological_water_quality_score || 'Not calculated' }}</td>
+                  <td class="px-3 py-4 whitespace-nowrap text-sm">
                     <span v-if="sample.biological_water_quality_score" :class="{
-                      'text-red-600': sample.biological_water_quality_score < 19,
-                      'text-orange-600': sample.biological_water_quality_score >= 19 && sample.biological_water_quality_score <= 32,
-                      'text-yellow-600': sample.biological_water_quality_score > 32 && sample.biological_water_quality_score <= 41,
-                      'text-green-600': sample.biological_water_quality_score > 41
+                      'text-red-600 font-medium': sample.biological_water_quality_score < 19,
+                      'text-orange-600 font-medium': sample.biological_water_quality_score >= 19 && sample.biological_water_quality_score <= 32,
+                      'text-yellow-600 font-medium': sample.biological_water_quality_score > 32 && sample.biological_water_quality_score <= 41,
+                      'text-green-600 font-medium': sample.biological_water_quality_score > 41
                     }">
                       {{ sample.biological_water_quality_score < 19 ? 'Poor' : 
-                         sample.biological_water_quality_score >= 19 && sample.biological_water_quality_score <= 32 ? 'Marginal' :
-                         sample.biological_water_quality_score > 32 && sample.biological_water_quality_score <= 41 ? 'Fair' : 'Good' }}
+                        sample.biological_water_quality_score >= 19 && sample.biological_water_quality_score <= 32 ? 'Marginal' :
+                        sample.biological_water_quality_score > 32 && sample.biological_water_quality_score <= 41 ? 'Fair' : 'Good' }}
                     </span>
+                    <span v-else class="text-gray-500">—</span>
                   </td>
-                  <td class="px-4 py-2 text-center">
-                    <div class="flex justify-center space-x-2">
-                      <UButton size="sm" variant="soft" @click="navigateTo(`/portal/biological/${sample.id}`)" 
-                              icon="i-heroicons-eye">View</UButton>
-                    </div>
+                  <td class="px-3 py-4 whitespace-nowrap text-center text-sm font-medium">
+                    <UButton size="xs" variant="soft" @click="navigateTo(`/portal/biological/${sample.id}`)" 
+                            icon="i-heroicons-eye">View</UButton>
                   </td>
                 </tr>
               </tbody>
             </table>
           </div>
-        </UCard>
-      </div>
 
-      <!-- Habitat Samples Section -->
-      <div v-show="activeTab === 'habitat'">
-        <!-- Primary Habitat Samples Table -->
-        <UCard class="mt-6">
-          <template #header>
-            <div class="flex justify-between items-center">
-              <h2 class="text-lg font-semibold">Your Habitat Assessments (Primary Sampler or Creator)</h2>
-              <UButton
-                icon="i-heroicons-plus"
-                @click="navigateTo('/portal/habitat')"
-              >
-                New Habitat Assessment
-              </UButton>
+          <!-- Mobile Cards -->
+          <div class="mobile-cards space-y-3">
+            <div v-for="sample in bioSamples.other" :key="sample.id" 
+                class="border border-gray-200 rounded-lg p-3 bg-white">
+              <div class="flex justify-between items-start mb-2">
+                <div>
+                  <div class="font-medium text-sm">Assessment #{{ sample.id }}</div>
+                  <div class="text-xs text-gray-600">{{ formatDate(sample.date) }}</div>
+                  <div class="text-xs text-gray-700 mt-1">
+                    by {{ sample.volunteer_id?.first_name }} {{ sample.volunteer_id?.last_name }}
+                  </div>
+                </div>
+                <UButton size="xs" variant="soft" @click="navigateTo(`/portal/biological/${sample.id}`)" 
+                        icon="i-heroicons-eye">View</UButton>
+              </div>
+              <div class="grid grid-cols-1 gap-y-1 text-xs">
+                <div><span class="font-medium">Bio Score:</span> {{ sample.biological_water_quality_score || 'Not calculated' }}</div>
+                <div v-if="sample.biological_water_quality_score">
+                  <span class="font-medium">Quality:</span> 
+                  <span :class="{
+                    'text-red-600': sample.biological_water_quality_score < 19,
+                    'text-orange-600': sample.biological_water_quality_score >= 19 && sample.biological_water_quality_score <= 32,
+                    'text-yellow-600': sample.biological_water_quality_score > 32 && sample.biological_water_quality_score <= 41,
+                    'text-green-600': sample.biological_water_quality_score > 41
+                  }">
+                    {{ sample.biological_water_quality_score < 19 ? 'Poor' : 
+                      sample.biological_water_quality_score >= 19 && sample.biological_water_quality_score <= 32 ? 'Marginal' :
+                      sample.biological_water_quality_score > 32 && sample.biological_water_quality_score <= 41 ? 'Fair' : 'Good' }}
+                  </span>
+                </div>
+              </div>
             </div>
-          </template>
-
-          <div v-if="habSamples.primary.length === 0" class="text-center py-4 text-gray-500">
-            You haven't created any habitat assessments or been a primary sampler for this site yet.
           </div>
+        </div>
+      </UCard>
+  
+      <!-- Primary Habitat Samples Table -->
+      <UCard class="mt-4 sm:mt-6">
+        <template #header>
+          <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+            <h2 class="text-base sm:text-lg font-semibold">Your Habitat Assessments (Primary Sampler or Creator)</h2>
+            <UButton
+              icon="i-heroicons-plus"
+              @click="navigateTo('/portal/habitat')"
+              class="w-full sm:w-auto"
+              size="sm"
+            >
+              New Habitat Assessment
+            </UButton>
+          </div>
+        </template>
 
-          <div v-else class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200">
-              <thead>
+        <div v-if="habSamples.primary.length === 0" class="text-center py-6 sm:py-4 text-gray-500 text-sm sm:text-base">
+          You haven't created any habitat assessments or been a primary sampler for this site yet.
+        </div>
+
+        <div v-else>
+          <!-- Desktop Table -->
+          <div class="desktop-table overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200 text-sm">
+              <thead class="bg-gray-50">
                 <tr>
-                  <th class="px-4 py-2 text-left">ID</th>
-                  <th class="px-4 py-2 text-left">Date</th>
-                  <th class="px-4 py-2 text-left">Habitat Score</th>
-                  <th class="px-4 py-2 text-left">Quality Rating</th>
-                  <th class="px-4 py-2 text-left">Location Description</th>
-                  <th class="px-4 py-2 text-center">Details</th>
+                  <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                  <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                  <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Habitat Score</th>
+                  <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quality Rating</th>
+                  <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location Description</th>
+                  <th class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
-              <tbody class="divide-y divide-gray-200">
+              <tbody class="bg-white divide-y divide-gray-200">
                 <tr v-for="sample in habSamples.primary" :key="sample.id" 
                     :class="{'hover:bg-gray-50': true, 'bg-yellow-50': sample.isEnteredForOther}">
-                  <td class="px-4 py-2">{{ sample.id }}</td>
-                  <td class="px-4 py-2">
+                  <td class="px-3 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ sample.id }}</td>
+                  <td class="px-3 py-4 text-sm text-gray-900">
                     {{ formatDate(sample.date) }}
                     <div v-if="sample.isEnteredForOther" 
-                        class="text-xs text-orange-600 font-medium">
+                        class="text-xs text-orange-600 font-medium mt-1">
                       You entered this assessment for {{ sample.volunteer_id.first_name }} {{ sample.volunteer_id.last_name }}
                     </div>
                   </td>
-                  <td class="px-4 py-2">{{ sample.physical_assessment_score || 'Not calculated' }}</td>
-                  <td class="px-4 py-2">
+                  <td class="px-3 py-4 whitespace-nowrap text-sm text-gray-500">{{ sample.physical_assessment_score || 'Not calculated' }}</td>
+                  <td class="px-3 py-4 whitespace-nowrap text-sm">
                     <span v-if="sample.physical_assessment_score" :class="{
-                      'text-red-600': sample.physical_assessment_score <= 15,
-                      'text-orange-600': sample.physical_assessment_score >= 16 && sample.physical_assessment_score <= 22,
-                      'text-yellow-600': sample.physical_assessment_score >= 23 && sample.physical_assessment_score <= 29,
-                      'text-green-600': sample.physical_assessment_score >= 30
+                      'text-red-600 font-medium': sample.physical_assessment_score <= 15,
+                      'text-orange-600 font-medium': sample.physical_assessment_score >= 16 && sample.physical_assessment_score <= 22,
+                      'text-yellow-600 font-medium': sample.physical_assessment_score >= 23 && sample.physical_assessment_score <= 29,
+                      'text-green-600 font-medium': sample.physical_assessment_score >= 30
                     }">
                       {{ sample.physical_assessment_score <= 15 ? 'Poor' : 
-                         sample.physical_assessment_score >= 16 && sample.physical_assessment_score <= 22 ? 'Marginal' :
-                         sample.physical_assessment_score >= 23 && sample.physical_assessment_score <= 29 ? 'Fair' : 'Good' }}
+                        sample.physical_assessment_score >= 16 && sample.physical_assessment_score <= 22 ? 'Marginal' :
+                        sample.physical_assessment_score >= 23 && sample.physical_assessment_score <= 29 ? 'Fair' : 'Good' }}
                     </span>
+                    <span v-else class="text-gray-500">—</span>
                   </td>
-                  <td class="px-4 py-2">{{ sample.stream_location_description || 'Not provided' }}</td>
-                  <td class="px-4 py-2 text-center">
-                    <div class="flex justify-center space-x-2">
-                      <UButton size="sm" variant="soft" @click="navigateTo(`/portal/habitat/${sample.id}`)" 
+                  <td class="px-3 py-4 text-sm text-gray-500 max-w-xs">
+                    <div class="truncate" :title="sample.stream_location_description">
+                      {{ sample.stream_location_description || 'Not provided' }}
+                    </div>
+                  </td>
+                  <td class="px-3 py-4 whitespace-nowrap text-center text-sm font-medium">
+                    <div class="flex justify-center space-x-1">
+                      <UButton size="xs" variant="soft" @click="navigateTo(`/portal/habitat/${sample.id}`)" 
                               icon="i-heroicons-eye">View</UButton>
-                      <UButton size="sm" variant="soft" color="blue" 
+                      <UButton size="xs" variant="soft" color="blue" 
                               @click="navigateTo(`/portal/habitat?edit=${sample.id}`)" 
                               icon="i-heroicons-pencil-square">Edit</UButton>
                     </div>
@@ -1082,67 +1277,143 @@ onMounted(async () => {
               </tbody>
             </table>
           </div>
-        </UCard>
 
-        <!-- Other Habitat Samples -->
-        <UCard class="mt-6">
-          <template #header>
-            <h2 class="text-lg font-semibold">Other Habitat Assessments at This Site</h2>
-          </template>
-          
-          <div v-if="habSamples.other.length === 0" class="text-center py-4 text-gray-500">
-            There are no other habitat assessments recorded for this site.
+          <!-- Mobile Cards -->
+          <div class="mobile-cards space-y-3">
+            <div v-for="sample in habSamples.primary" :key="sample.id" 
+                :class="[
+                  'border border-gray-200 rounded-lg p-3',
+                  sample.isEnteredForOther ? 'bg-yellow-50 border-yellow-200' : 'bg-white'
+                ]">
+              <div class="flex justify-between items-start mb-2">
+                <div>
+                  <div class="font-medium text-sm">Assessment #{{ sample.id }}</div>
+                  <div class="text-xs text-gray-600">{{ formatDate(sample.date) }}</div>
+                  <div v-if="sample.isEnteredForOther" 
+                      class="text-xs text-orange-600 font-medium mt-1">
+                    You entered this for {{ sample.volunteer_id.first_name }} {{ sample.volunteer_id.last_name }}
+                  </div>
+                </div>
+                <div class="flex space-x-1">
+                  <UButton size="xs" variant="soft" @click="navigateTo(`/portal/habitat/${sample.id}`)" 
+                          icon="i-heroicons-eye">View</UButton>
+                  <UButton size="xs" variant="soft" color="blue" 
+                          @click="navigateTo(`/portal/habitat?edit=${sample.id}`)" 
+                          icon="i-heroicons-pencil-square">Edit</UButton>
+                </div>
+              </div>
+              <div class="space-y-1 text-xs">
+                <div><span class="font-medium">Habitat Score:</span> {{ sample.physical_assessment_score || 'Not calculated' }}</div>
+                <div v-if="sample.physical_assessment_score">
+                  <span class="font-medium">Quality:</span> 
+                  <span :class="{
+                    'text-red-600': sample.physical_assessment_score <= 15,
+                    'text-orange-600': sample.physical_assessment_score >= 16 && sample.physical_assessment_score <= 22,
+                    'text-yellow-600': sample.physical_assessment_score >= 23 && sample.physical_assessment_score <= 29,
+                    'text-green-600': sample.physical_assessment_score >= 30
+                  }">
+                    {{ sample.physical_assessment_score <= 15 ? 'Poor' : 
+                      sample.physical_assessment_score >= 16 && sample.physical_assessment_score <= 22 ? 'Marginal' :
+                      sample.physical_assessment_score >= 23 && sample.physical_assessment_score <= 29 ? 'Fair' : 'Good' }}
+                  </span>
+                </div>
+                <div><span class="font-medium">Location:</span> {{ sample.stream_location_description || 'Not provided' }}</div>
+              </div>
+            </div>
           </div>
+        </div>
+      </UCard>
 
-          <div v-else class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200">
-              <thead>
+      <!-- Other Habitat Samples -->
+      <UCard class="mt-4 sm:mt-6">
+        <template #header>
+          <h2 class="text-base sm:text-lg font-semibold">Other Habitat Assessments at This Site</h2>
+        </template>
+        
+        <div v-if="habSamples.other.length === 0" class="text-center py-6 sm:py-4 text-gray-500 text-sm sm:text-base">
+          There are no other habitat assessments recorded for this site.
+        </div>
+
+        <div v-else>
+          <!-- Desktop Table -->
+          <div class="desktop-table overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200 text-sm">
+              <thead class="bg-gray-50">
                 <tr>
-                  <th class="px-4 py-2 text-left">ID</th>
-                  <th class="px-4 py-2 text-left">Date</th>
-                  <th class="px-4 py-2 text-left">Primary Sampler</th>
-                  <th class="px-4 py-2 text-left">Habitat Score</th>
-                  <th class="px-4 py-2 text-left">Quality Rating</th>
-                  <th class="px-4 py-2 text-center">Details</th>
+                  <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                  <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                  <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Primary Sampler</th>
+                  <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Habitat Score</th>
+                  <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quality Rating</th>
+                  <th class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
-              <tbody class="divide-y divide-gray-200">
+              <tbody class="bg-white divide-y divide-gray-200">
                 <tr v-for="sample in habSamples.other" :key="sample.id" class="hover:bg-gray-50">
-                  <td class="px-4 py-2">{{ sample.id }}</td>
-                  <td class="px-4 py-2">{{ formatDate(sample.date) }}</td>
-                  <td class="px-4 py-2">{{ sample.volunteer_id?.first_name }} {{ sample.volunteer_id?.last_name }}</td>
-                  <td class="px-4 py-2">{{ sample.physical_assessment_score || 'Not calculated' }}</td>
-                  <td class="px-4 py-2">
+                  <td class="px-3 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ sample.id }}</td>
+                  <td class="px-3 py-4 whitespace-nowrap text-sm text-gray-500">{{ formatDate(sample.date) }}</td>
+                  <td class="px-3 py-4 whitespace-nowrap text-sm text-gray-900">{{ sample.volunteer_id?.first_name }} {{ sample.volunteer_id?.last_name }}</td>
+                  <td class="px-3 py-4 whitespace-nowrap text-sm text-gray-500">{{ sample.physical_assessment_score || 'Not calculated' }}</td>
+                  <td class="px-3 py-4 whitespace-nowrap text-sm">
                     <span v-if="sample.physical_assessment_score" :class="{
-                      'text-red-600': sample.physical_assessment_score <= 15,
-                      'text-orange-600': sample.physical_assessment_score >= 16 && sample.physical_assessment_score <= 22,
-                      'text-yellow-600': sample.physical_assessment_score >= 23 && sample.physical_assessment_score <= 29,
-                      'text-green-600': sample.physical_assessment_score >= 30
+                      'text-red-600 font-medium': sample.physical_assessment_score <= 15,
+                      'text-orange-600 font-medium': sample.physical_assessment_score >= 16 && sample.physical_assessment_score <= 22,
+                      'text-yellow-600 font-medium': sample.physical_assessment_score >= 23 && sample.physical_assessment_score <= 29,
+                      'text-green-600 font-medium': sample.physical_assessment_score >= 30
                     }">
                       {{ sample.physical_assessment_score <= 15 ? 'Poor' : 
-                         sample.physical_assessment_score >= 16 && sample.physical_assessment_score <= 22 ? 'Marginal' :
-                         sample.physical_assessment_score >= 23 && sample.physical_assessment_score <= 29 ? 'Fair' : 'Good' }}
+                        sample.physical_assessment_score >= 16 && sample.physical_assessment_score <= 22 ? 'Marginal' :
+                        sample.physical_assessment_score >= 23 && sample.physical_assessment_score <= 29 ? 'Fair' : 'Good' }}
                     </span>
+                    <span v-else class="text-gray-500">—</span>
                   </td>
-                  <td class="px-4 py-2 text-center">
-                    <div class="flex justify-center space-x-2">
-                      <UButton size="sm" variant="soft" @click="navigateTo(`/portal/habitat/${sample.id}`)" 
-                              icon="i-heroicons-eye">View</UButton>
-                    </div>
+                  <td class="px-3 py-4 whitespace-nowrap text-center text-sm font-medium">
+                    <UButton size="xs" variant="soft" @click="navigateTo(`/portal/habitat/${sample.id}`)" 
+                            icon="i-heroicons-eye">View</UButton>
                   </td>
                 </tr>
               </tbody>
             </table>
           </div>
-        </UCard>
-      </div>
 
-    </template>
+          <!-- Mobile Cards -->
+          <div class="mobile-cards space-y-3">
+            <div v-for="sample in habSamples.other" :key="sample.id" 
+                class="border border-gray-200 rounded-lg p-3 bg-white">
+              <div class="flex justify-between items-start mb-2">
+                <div>
+                  <div class="font-medium text-sm">Assessment #{{ sample.id }}</div>
+                  <div class="text-xs text-gray-600">{{ formatDate(sample.date) }}</div>
+                  <div class="text-xs text-gray-700 mt-1">
+                    by {{ sample.volunteer_id?.first_name }} {{ sample.volunteer_id?.last_name }}
+                  </div>
+                </div>
+                <UButton size="xs" variant="soft" @click="navigateTo(`/portal/habitat/${sample.id}`)" 
+                        icon="i-heroicons-eye">View</UButton>
+              </div>
+              <div class="space-y-1 text-xs">
+                <div><span class="font-medium">Habitat Score:</span> {{ sample.physical_assessment_score || 'Not calculated' }}</div>
+                <div v-if="sample.physical_assessment_score">
+                  <span class="font-medium">Quality:</span> 
+                  <span :class="{
+                    'text-red-600': sample.physical_assessment_score <= 15,
+                    'text-orange-600': sample.physical_assessment_score >= 16 && sample.physical_assessment_score <= 22,
+                    'text-yellow-600': sample.physical_assessment_score >= 23 && sample.physical_assessment_score <= 29,
+                    'text-green-600': sample.physical_assessment_score >= 30
+                  }">
+                    {{ sample.physical_assessment_score <= 15 ? 'Poor' : 
+                      sample.physical_assessment_score >= 16 && sample.physical_assessment_score <= 22 ? 'Marginal' :
+                      sample.physical_assessment_score >= 23 && sample.physical_assessment_score <= 29 ? 'Fair' : 'Good' }}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </UCard>
+   </template>
   </PageContainer>
 </template>
-
-// Add activeTab reactive variable
-const activeTab = ref('stream');
 
 <style scoped>
   @import "https://js.arcgis.com/4.28/@arcgis/core/assets/esri/themes/light/main.css";
@@ -1178,5 +1449,112 @@ const activeTab = ref('stream');
 
   .animate-fade-in {
     animation: fadeIn 0.3s ease-out forwards;
+  }
+
+  /* Mobile responsive improvements */
+  @media (max-width: 640px) {
+    /* Better spacing for mobile cards */
+    .space-y-3 > * + * {
+      margin-top: 0.75rem;
+    }
+    
+    /* Ensure text doesn't overflow on very small screens */
+    .truncate {
+      max-width: 100%;
+    }
+    
+    /* Better touch targets */
+    .flex.space-x-1 > * {
+      min-height: 32px;
+    }
+  }
+
+  /* Tablet improvements */
+  @media (min-width: 641px) and (max-width: 1024px) {
+    /* Better table spacing on tablets */
+    .overflow-x-auto table {
+      font-size: 0.875rem;
+    }
+    
+    /* Improved button spacing */
+    .flex.space-x-1 {
+      gap: 0.375rem;
+    }
+  }
+
+  /* Desktop improvements */
+  @media (min-width: 1025px) {
+    /* Ensure tables don't get too cramped */
+    .px-3 {
+      padding-left: 0.875rem;
+      padding-right: 0.875rem;
+    }
+  }
+
+  /* Custom scrollbar for horizontal overflow */
+  .overflow-x-auto::-webkit-scrollbar {
+    height: 6px;
+  }
+
+  .overflow-x-auto::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 3px;
+  }
+
+  .overflow-x-auto::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 3px;
+  }
+
+  .overflow-x-auto::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+  }
+
+  /* Force desktop tables to show and mobile cards to hide on large screens */
+  @media (min-width: 1024px) {
+    .desktop-table {
+      display: block !important;
+      width: 100% !important;
+      overflow-x: auto;
+    }
+    
+    .mobile-cards {
+      display: none !important;
+    }
+  }
+
+  /* Force mobile cards to show and desktop tables to hide on small screens */
+  @media (max-width: 1023px) {
+    .desktop-table {
+      display: none !important;
+    }
+    
+    .mobile-cards {
+      display: block !important;
+    }
+  }
+
+  /* Ensure table elements are visible */
+  .desktop-table table {
+    display: table !important;
+    width: 100% !important;
+    min-width: 100% !important;
+  }
+
+  .desktop-table thead {
+    display: table-header-group !important;
+  }
+
+  .desktop-table tbody {
+    display: table-row-group !important;
+  }
+
+  .desktop-table tr {
+    display: table-row !important;
+  }
+
+  .desktop-table th,
+  .desktop-table td {
+    display: table-cell !important;
   }
 </style>

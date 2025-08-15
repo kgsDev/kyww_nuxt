@@ -1797,65 +1797,71 @@ const confirmCancel = () => {
 		/>
 
 		<!-- Submission Confirmation Screen -->
-		<div v-if="isSubmitted" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
-			<div class="bg-white p-8 rounded-lg shadow-xl text-center">
-				<h2 class="text-2xl font-bold mb-4">Thank You!</h2>
-				<p class="mb-4">
+		<div v-if="isSubmitted" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50 p-4">
+			<div class="bg-white p-4 sm:p-8 rounded-lg shadow-xl text-center max-w-md w-full">
+				<h2 class="text-xl sm:text-2xl font-bold mb-4">Thank You!</h2>
+				<p class="mb-4 text-sm sm:text-base">
 				{{ isEditMode 
 					? `Sample ${sampleId} has been successfully updated.`
 					: `Your sample (number: ${submittedSampleId}) has been successfully submitted.`
 				}}
 				</p>
-				<p v-if="uploadedFileTypes.length > 0" class="mb-4">Photos have also been uploaded.</p>
-				<div class="space-x-4">
+				<p v-if="uploadedFileTypes.length > 0" class="mb-4 text-sm sm:text-base">Photos have also been uploaded.</p>
+				<div class="flex flex-col sm:flex-row gap-2 sm:space-x-4 sm:space-y-0">
 				<UButton 
 					variant="solid" 
 					@click="viewDashboard" 
-					label="View Dashboard" 
+					label="View Dashboard"
+					class="w-full sm:w-auto"
 				/>
 				<UButton 
 					v-if="!isEditMode"
 					variant="outline" 
 					@click="handleNewSample" 
-					label="Submit Another Sample" 
+					label="Submit Another Sample"
+					class="w-full sm:w-auto"
 				/>
 				<UButton
 					v-if="wwkyid_pk"
 					variant="outline"
 					@click="viewSite"
 					:label="`View Site ${wwkyid_pk}`"
+					class="w-full sm:w-auto"
 				/>
 				</div>
 			</div>
 		</div>
 
 		<!-- Main Form -->
-		<div v-else>
-			<h3 class="text-3xl text-center text-gray-900">Kentucky Watershed Watch Monitoring Data Form</h3>
+		<div v-else class="max-w-7xl mx-auto p-2 sm:p-4">
+			<h3 class="text-2xl sm:text-3xl text-center text-gray-900 mb-4">Kentucky Watershed Watch Monitoring Data Form</h3>
 			<div class="my-4 text-center">
 				<a 
 					href="https://drive.google.com/file/d/1KPgdTTckYaXQmQsySBg3_WyEsrovBRqk/view" 
 					target="_blank" 
 					rel="noopener noreferrer" 
-					class="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors shadow-sm"
+					class="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors shadow-sm text-sm sm:text-base"
 				>
 					<UIcon name="i-heroicons-document-text" class="mr-2" />
 					Download PDF Version of Form
 				</a>
-				<p class="mt-2 text-sm text-gray-600">Access the printable version of this form for field use</p>
+				<p class="mt-2 text-xs sm:text-sm text-gray-600">Access the printable version of this form for field use</p>
 			</div>
 
 			<Form @submit.prevent="submitData">
-				<div class="relative items-start">
-				<div class="border-4 p-1 border-gray-900">
-					<div class="p-2">
-						<h1 class="text-xl text-center bact-msg">IF USING <strong>R-CARD METHOD</strong> FOR E. COLI ANALYSIS, IT SHOULD BE COMPLETED BEFORE FILLING OUT AND SUBMITTING THIS FORM.</h1>
+				<div class="space-y-4">
+				<!-- Personal Information Section -->
+				<div class="border-4 p-2 sm:p-4 border-gray-900">
+					<div class="p-2 mb-4">
+						<h1 class="text-lg sm:text-xl text-center bact-msg">IF USING <strong>R-CARD METHOD</strong> FOR E. COLI ANALYSIS, IT SHOULD BE COMPLETED BEFORE FILLING OUT AND SUBMITTING THIS FORM.</h1>
 					</div>
-					<div class="p-2">
-						<h1 class="text-1xl font-bold text-left text-gray-900 required-field">Required Fields</h1>
+					<div class="p-2 mb-4">
+						<h1 class="text-lg sm:text-xl font-bold text-left text-gray-900 required-field">Required Fields</h1>
 					</div>
-					<div class="flex">
-						<UFormGroup class="p-2 basis-1/3" required>
+					
+					<!-- Responsive grid for form fields -->
+					<div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+						<UFormGroup class="lg:col-span-1" required>
 							<label class="block mb-1 required-field">Primary Sampler:</label>
 							<USelect
 								v-model="volunteer_id"
@@ -1885,7 +1891,8 @@ const confirmCancel = () => {
 								</p>
 							</template>
 						</UFormGroup>
-						<UFormGroup class="p-2 basis-2/3">
+						
+						<UFormGroup class="lg:col-span-2">
 							<label class="block mb-1">Additional Samplers</label>
 							<div class="space-y-2">
 								<USelectMenu
@@ -1915,7 +1922,7 @@ const confirmCancel = () => {
 								<div 
 								v-for="selectedId in selectedSamplerIds" 
 								:key="selectedId"
-								class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full flex items-center gap-2"
+								class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full flex items-center gap-2 text-sm"
 								>
 								<span>{{ getSelectedSamplerName(selectedId) }}</span>
 								<button
@@ -1928,8 +1935,10 @@ const confirmCancel = () => {
 							</div>
 							</div>
 						</UFormGroup>
+					</div>
 
-						<UFormGroup class="p-2 basis-1/3" required>
+					<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-4">
+						<UFormGroup required>
 							<label class="block mb-1 required-field"># Adult Participants:</label>
 							<UInput
 								v-model="adults"
@@ -1940,7 +1949,7 @@ const confirmCancel = () => {
 								required
 							/>
 						</UFormGroup>
-						<UFormGroup class="p-2 basis-1/3" required>
+						<UFormGroup required>
 							<label class="block mb-1 required-field"># Youth Participants:</label>
 							<UInput
 								v-model="youths"
@@ -1951,61 +1960,7 @@ const confirmCancel = () => {
 								required
 							/>
 						</UFormGroup>
-					</div>
-					<div class="w-full px-2">
-						<UFormGroup>
-							<label class="block mb-1">Other non-KYWW Samplers:</label>
-							<UTextarea 
-								v-model="otherSamplers" 
-								rows="2"
-								class="w-full min-h-[60px] resize-y"
-								placeholder="List any non-KYWW samplers here"
-							/>
-						</UFormGroup>
-					</div>
-					<div class="flex">
-						<UFormGroup class="p-2 basis-1/4">
-							<label class="block mb-1">Enter Site ID:</label>
-							<UInput
-							:model-value="directSiteId"
-							@input="handleSiteIdInput"
-							@blur="validateSiteId"
-							@change="validateSiteId"
-							icon="bxs:been-here"
-							placeholder="Enter Site ID"
-							:loading="isCheckingSiteId"
-							/>
-							<p v-if="isSiteIdValid === false" class="text-red-500 mt-1">Invalid Site ID</p>
-							<p v-if="isSiteIdValid === true" class="text-green-500 mt-1">Valid Site ID</p>
-							<label class="block mb-1 text-sm">(click or tab out to check)</label>
-						</UFormGroup>
-						<UFormGroup class="p-2 basis-1/4">
-							<label class="block mb-1">or Select/Create a Site:</label>
-							<UButton label="Open Map" @click="openMap" />
-						</UFormGroup>
-						<UFormGroup class="p-2 basis-1/4" required>
-							<label class="block mb-1 required-field">Site ID:</label>
-							<UInput :model-value="wwkyid_pk !== null ? wwkyid_pk.toString() : ''" icon="bxs:been-here" :disabled="true" required/>
-						</UFormGroup>
-						<UFormGroup class="p-2 basis-1/4">
-							<label class="block mb-1">Stream Name:</label>
-							<UInput v-model="stream_name" icon="mdi:water" :disabled="true"/>
-						</UFormGroup>
-						<UFormGroup class="p-2 basis-1/4">
-							<label class="block mb-1">Basin:</label>
-							<UInput v-model="wwkybasin" icon="mdi:terrain" :disabled="true"/>
-						</UFormGroup>
-					</div>
-					<div class="flex">
-						<UFormGroup class="p-2 basis-1/4" required>
-							<label class="block mb-1 required-field">Date:</label>
-							<UInput v-model="date" icon="solar:calendar-bold" type="date" required />
-						</UFormGroup>
-						<UFormGroup class="p-2 basis-1/4" required>
-							<label class="block mb-1 required-field">Start Time:</label>
-							<UInput v-model="startTime" icon="mdi:clock-outline" type="time" required />
-						</UFormGroup>
-						<UFormGroup class="p-2 basis-1/4" required>
+						<UFormGroup required>
 							<label class="block mb-1 required-field">Total Volunteer Minutes:</label>
 							<UInput
 								v-model="totalVolunteerMinutes"
@@ -2015,7 +1970,7 @@ const confirmCancel = () => {
 								required
 							/>
 						</UFormGroup>
-						<UFormGroup class="p-2 basis-1/4">
+						<UFormGroup required>
 							<label class="block mb-1 required-field">Miles Driven:</label>
 							<UInput
 								v-model="milesDriven"
@@ -2027,363 +1982,550 @@ const confirmCancel = () => {
 							/>
 						</UFormGroup>
 					</div>
-					<div class="p-2 text-sm text-right">
+					
+					<div class="w-full mt-4">
+						<UFormGroup>
+							<label class="block mb-1">Other non-KYWW Samplers:</label>
+							<UTextarea 
+								v-model="otherSamplers" 
+								rows="2"
+								class="w-full min-h-[60px] resize-y"
+								placeholder="List any non-KYWW samplers here"
+							/>
+						</UFormGroup>
+					</div>
+
+					<!-- Site Information -->
+					<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mt-4">
+						<UFormGroup>
+							<label class="block mb-1">Enter Site ID:</label>
+							<UInput
+							:model-value="directSiteId"
+							@input="handleSiteIdInput"
+							@blur="validateSiteId"
+							@change="validateSiteId"
+							icon="bxs:been-here"
+							placeholder="Enter Site ID"
+							:loading="isCheckingSiteId"
+							/>
+							<p v-if="isSiteIdValid === false" class="text-red-500 mt-1 text-sm">Invalid Site ID</p>
+							<p v-if="isSiteIdValid === true" class="text-green-500 mt-1 text-sm">Valid Site ID</p>
+							<label class="block mb-1 text-xs sm:text-sm">(click or tab out to check)</label>
+						</UFormGroup>
+						<UFormGroup>
+							<label class="block mb-1">or Select/Create a Site:</label>
+							<UButton label="Open Map" @click="openMap" class="w-full sm:w-auto" />
+						</UFormGroup>
+						<UFormGroup required>
+							<label class="block mb-1 required-field">Site ID:</label>
+							<UInput :model-value="wwkyid_pk !== null ? wwkyid_pk.toString() : ''" icon="bxs:been-here" :disabled="true" required/>
+						</UFormGroup>
+						<UFormGroup>
+							<label class="block mb-1">Stream Name:</label>
+							<UInput v-model="stream_name" icon="mdi:water" :disabled="true"/>
+						</UFormGroup>
+						<UFormGroup>
+							<label class="block mb-1">Basin:</label>
+							<UInput v-model="wwkybasin" icon="mdi:terrain" :disabled="true"/>
+						</UFormGroup>
+					</div>
+
+					<!-- Date/Time Information -->
+					<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-4">
+						<UFormGroup required>
+							<label class="block mb-1 required-field">Date:</label>
+							<UInput v-model="date" icon="solar:calendar-bold" type="date" required />
+						</UFormGroup>
+						<UFormGroup required>
+							<label class="block mb-1 required-field">Start Time:</label>
+							<UInput v-model="startTime" icon="mdi:clock-outline" type="time" required />
+						</UFormGroup>
+					</div>
+					
+					<div class="p-2 text-xs sm:text-sm text-right mt-2">
 						<h1>Total time spent sampling at multiple sites should only be entered once.</h1>
 						<h1>Total miles driven to sample at multiple sites should only be entered once.</h1>
 					</div>
 				</div>
-				<div class="border-4 p-1 border-gray-900">
-					<div class="flex">
-						<UFormGroup class="p-2 basis-1/3">
-						<label class="block mb-1 required-field">Current Weather:</label>
-							<URadioGroup v-model="currentWeather" :options="currentWeatherOptions" name="currentWeather">
+
+				<!-- Environmental Conditions Section -->
+				<div class="border-4 p-2 sm:p-4 border-gray-900">
+					<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 divide-y md:divide-y-0 md:divide-x divide-gray-300">
+						<UFormGroup class="py-4 md:py-0 md:px-4 first:pt-0 md:first:pl-0 last:pb-0 md:last:pr-0">
+						<label class="block mb-2 sm:mb-1 required-field text-sm sm:text-base">Current Weather:</label>
+							<URadioGroup v-model="currentWeather" :options="currentWeatherOptions" name="currentWeather" class="space-y-1">
 								<template #option="{ option }">
-								<div class="flex items-center">
-									<i :class="[option.icon, 'mr-2']"></i>
+								<div class="flex items-center text-sm">
+									<i :class="[option.icon, 'mr-2 text-base']"></i>
 									{{ option.label }}
 								</div>
 								</template>
 							</URadioGroup>
 						</UFormGroup>
-						<UFormGroup class="p-2 basis-1/3 border-l border-gray-500">
-							<label class="block mb-1 required-field">Rainfall in last 48 hours (round up):</label>
-							<URadioGroup v-model="rainfall" :options="rainfallOptions" name="rainfall" />
+						
+						<UFormGroup class="py-4 md:py-0 md:px-4">
+							<label class="block mb-2 sm:mb-1 required-field text-sm sm:text-base">Rainfall in last 48 hours (round up):</label>
+							<URadioGroup v-model="rainfall" :options="rainfallOptions" name="rainfall" class="space-y-1" />
 						</UFormGroup>
-						<UFormGroup class="p-2 basis-1/3 border-l border-gray-500">
-							<label class="block mb-1">Water Color:</label>
-							<URadioGroup v-model="waterColor" :options="waterColorOptions" name="waterColor" />
+						
+						<UFormGroup class="py-4 md:py-0 md:px-4">
+							<label class="block mb-2 sm:mb-1 text-sm sm:text-base">Water Color:</label>
+							<URadioGroup v-model="waterColor" :options="waterColorOptions" name="waterColor" class="space-y-1" />
 						</UFormGroup>
-						<UFormGroup class="p-2 basis-1/3 border-l border-gray-500">
-							<label class="block mb-1">Odor:</label>
-							<UCheckbox v-model="odorNone" name="odorNone" label="None" value="1"/>
-							<UCheckbox v-model="odorRottenEggs" name="odorRottenEggs" label="Rotten Eggs" value="2"/>
-							<UCheckbox v-model="odorChlorine" name="odorChlorine" label="Chlorine" value="3"/>
-							<UCheckbox v-model="odorRancidSour" name="odorRancidSour" label="Rancid/Sour" value="4"/>
-							<UCheckbox v-model="odorGasPetro" name="odorGasPetro" label="Gas/Petro" value="6"/>
-							<UCheckbox v-model="odorMusty" name="odorMusty" label="Musty" value="7"/>
-							<UCheckbox v-model="odorSweetFruity" name="odorSweetFruity" label="Sweet/Fruity" value="8"/>
-							<UCheckbox v-model="odorSharpPungent" name="odorSharpPungent" label="Sharp/Pungent" value="9"/>
+						
+						<UFormGroup class="py-4 md:py-0 md:px-4">
+							<label class="block mb-2 sm:mb-1 text-sm sm:text-base">Odor:</label>
+							<div class="space-y-1 text-sm">
+								<UCheckbox v-model="odorNone" name="odorNone" label="None" value="1"/>
+								<UCheckbox v-model="odorRottenEggs" name="odorRottenEggs" label="Rotten Eggs" value="2"/>
+								<UCheckbox v-model="odorChlorine" name="odorChlorine" label="Chlorine" value="3"/>
+								<UCheckbox v-model="odorRancidSour" name="odorRancidSour" label="Rancid/Sour" value="4"/>
+								<UCheckbox v-model="odorGasPetro" name="odorGasPetro" label="Gas/Petro" value="6"/>
+								<UCheckbox v-model="odorMusty" name="odorMusty" label="Musty" value="7"/>
+								<UCheckbox v-model="odorSweetFruity" name="odorSweetFruity" label="Sweet/Fruity" value="8"/>
+								<UCheckbox v-model="odorSharpPungent" name="odorSharpPungent" label="Sharp/Pungent" value="9"/>
+							</div>
 						</UFormGroup>
-						<UFormGroup class="p-2 basis-1/3 border-l border-gray-500">
-							<label class="block mb-1">Water Surface/Other:</label>
-							<UCheckbox v-model="waterSurfaceNone" name="waterSurfaceNone" label="None" value="1" />
-							<UCheckbox v-model="waterSurfaceOilSheen" name="waterSurfaceOilSheen" label="Oil Sheen" value="2" />
-							<UCheckbox v-model="waterSurfaceAlgae" name="waterSurfaceAlgae" label="Algae" value="3" />
-							<UCheckbox v-model="waterSurfaceSoapSuds" name="waterSurfaceSoapSuds" label="Soap Suds" value="4" />
-							<UCheckbox v-model="waterSurfaceSewage" name="waterSurfaceSewage" label="Sewage" value="5" />
-							<UCheckbox v-model="waterSurfaceErosion" name="waterSurfaceErosion" label="Erosion" value="6" />
+					</div>
+					
+					<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 divide-y md:divide-y-0 md:divide-x divide-gray-300">
+						<UFormGroup class="py-4 md:py-0 md:pr-4 first:pt-0">
+							<label class="block mb-2 sm:mb-1 text-sm sm:text-base">Water Surface/Other:</label>
+							<div class="space-y-1 text-sm">
+								<UCheckbox v-model="waterSurfaceNone" name="waterSurfaceNone" label="None" value="1" />
+								<UCheckbox v-model="waterSurfaceOilSheen" name="waterSurfaceOilSheen" label="Oil Sheen" value="2" />
+								<UCheckbox v-model="waterSurfaceAlgae" name="waterSurfaceAlgae" label="Algae" value="3" />
+								<UCheckbox v-model="waterSurfaceSoapSuds" name="waterSurfaceSoapSuds" label="Soap Suds" value="4" />
+								<UCheckbox v-model="waterSurfaceSewage" name="waterSurfaceSewage" label="Sewage" value="5" />
+								<UCheckbox v-model="waterSurfaceErosion" name="waterSurfaceErosion" label="Erosion" value="6" />
+							</div>
 						</UFormGroup>
 					</div>
 				</div>
-				<div class="flex">
-					<div class="border-4 p-1 border-gray-900 w-1/2">
-						<UFormGroup class="p-2 basis-1/2">
-							<label class="block mb-1 required-field">Stream Flow (Visual):</label>
-							<URadioGroup v-model="streamFlowVisual" :options="streamFlowVisualOptions" name="streamFlowVisual" />
+
+				<!-- Stream Flow Section -->
+				<div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+					<div class="border-4 p-2 sm:p-4 border-gray-900">
+						<UFormGroup class="mb-4">
+							<label class="block mb-2 sm:mb-1 required-field text-sm sm:text-base">Stream Flow (Visual):</label>
+							<URadioGroup v-model="streamFlowVisual" :options="streamFlowVisualOptions" name="streamFlowVisual" class="space-y-1" />
 						</UFormGroup>
-						<UFormGroup class="p-2 basis-1/2">
+						<UFormGroup class="mb-4">
 							<UCheckbox
 								v-model="negsample"
 								:true-value="true"
 								:false-value="false"
 								label="Unable to sample due to flow conditions (flooded, ponded or dry)"
+								class="text-sm"
 							/>
 						</UFormGroup>
-						<UFormGroup class="p-2 basis-1/2">
+						<UFormGroup>
 							<UCheckbox
 								v-model="streamMeter"
 								label="Check here if using a stream flow meter? (optional)"
 								icon="mdi:water"
 								@click="!streamMeter"
+								class="text-sm mb-2"
 							/>
 							<UInput v-if="streamMeter" v-model="streamFlowMeasured" icon="mdi:water" placeholder="CuFt/Sec" />
 						</UFormGroup>
 					</div>
-					<div class="border-4 p-1 border-gray-900 w-1/2">
-						<img src="assets/form_icons/stream_flow.png" alt="Stream Flow" class="w-full" />
+					<div class="border-4 p-2 sm:p-4 border-gray-900 flex items-center justify-center">
+						<img src="assets/form_icons/stream_flow.png" alt="Stream Flow" class="max-w-full h-auto" />
 					</div>
 				</div>
 
-				<div class="flex">
-					<div class="border-4 p-1 border-gray-900 w-1/2">
-						<UFormGroup class="p-2">
-							<label class="block mb-1 required-field">Trash/Litter:</label>
-							<URadioGroup v-model="trash" :options="trashOptions" name="trash" />
+				<!-- Trash and Turbidity Section -->
+				<div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+					<div class="border-4 p-2 sm:p-4 border-gray-900">
+						<UFormGroup>
+							<label class="block mb-2 sm:mb-1 required-field text-sm sm:text-base">Trash/Litter:</label>
+							<URadioGroup v-model="trash" :options="trashOptions" name="trash" class="space-y-1" />
 						</UFormGroup>
 					</div>
-					<div class="border-4 p-1 border-gray-900 w-1/2">
-						<UFormGroup class="p-2">
-							<label class="block mb-1">Turbidity:</label>
-							<URadioGroup v-model="turbidity" :options="turbidityOptions" name="turbidity" />
+					<div class="border-4 p-2 sm:p-4 border-gray-900">
+						<UFormGroup class="mb-4">
+							<label class="block mb-2 sm:mb-1 text-sm sm:text-base">Turbidity:</label>
+							<URadioGroup v-model="turbidity" :options="turbidityOptions" name="turbidity" class="space-y-1" />
 						</UFormGroup>
-						<UFormGroup class="p-2 basis-1/2">
-							<UCheckbox
-							v-model="useTurbidMeter"
-							label="Use turbidity meter"
-							/>
-							<UCheckbox
-							v-model="useTransparencyTube"
-							label="Use transparency tube"
-							/>
-							<UInput
-							v-if="useTurbidMeter"
-							v-model="turbidMeterMeasured"
-							icon="i-mdi-water"
-							placeholder="NTU"
-							/>
-							<UInput
-							v-if="useTransparencyTube"
-							v-model="transparencyTubeMeasured"
-							icon="i-mdi-water"
-							placeholder="cm"
-							/>
+						<UFormGroup>
+							<div class="space-y-2">
+								<UCheckbox
+								v-model="useTurbidMeter"
+								label="Use turbidity meter"
+								class="text-sm"
+								/>
+								<UCheckbox
+								v-model="useTransparencyTube"
+								label="Use transparency tube"
+								class="text-sm"
+								/>
+								<UInput
+								v-if="useTurbidMeter"
+								v-model="turbidMeterMeasured"
+								icon="i-mdi-water"
+								placeholder="NTU"
+								class="mt-2"
+								/>
+								<UInput
+								v-if="useTransparencyTube"
+								v-model="transparencyTubeMeasured"
+								icon="i-mdi-water"
+								placeholder="cm"
+								class="mt-2"
+								/>
+							</div>
 						</UFormGroup>
 					</div>
 				</div>
 
-
-
-				<div class="flex">
-					<div class="border-4 p-1 border-gray-900 w-1/2">
-						<UFormGroup class="p-2">
-							<label class="block mb-1">Water Temperature:</label>
-							<UInput v-model="waterTemperature" icon="mdi:thermometer" placeholder="°C" />
-							<div v-if="waterTemperature && !isTemperatureValid" class="mt-2 p-2 bg-yellow-100 text-yellow-800 rounded">
-								Please ensure the temperature is between 0 and 40 degrees Celsius (and you're not using Farenheit).
-							</div>
+				<!-- Water Quality Section -->
+				<div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+					<div class="border-4 p-2 sm:p-4 border-gray-900">
+						<div class="space-y-4">
+							<UFormGroup>
+								<label class="block mb-1 text-sm sm:text-base">Water Temperature:</label>
+								<UInput v-model="waterTemperature" icon="mdi:thermometer" placeholder="°C" />
+								<div v-if="waterTemperature && !isTemperatureValid" class="mt-2 p-2 bg-yellow-100 text-yellow-800 rounded text-sm">
+									Please ensure the temperature is between 0 and 40 degrees Celsius (and you're not using Farenheit).
+								</div>
 							</UFormGroup>
 
-							<UFormGroup class="p-2">
-							<label class="block mb-1">pH:</label>
-							<UInput v-model="pH" icon="mdi:ph" placeholder="SU" />
-							<div v-if="pH && !isPHValid" class="mt-2 p-2 bg-red-100 text-red-800 rounded">
-								pH must be between 0 and 14.
-							</div>
+							<UFormGroup>
+								<label class="block mb-1 text-sm sm:text-base">pH:</label>
+								<UInput v-model="pH" icon="mdi:ph" placeholder="SU" />
+								<div v-if="pH && !isPHValid" class="mt-2 p-2 bg-red-100 text-red-800 rounded text-sm">
+									pH must be between 0 and 14.
+								</div>
 							</UFormGroup>
 
-							<UFormGroup class="p-2">
-							<label class="block mb-1">Dissolved Oxygen:</label>
-							<UInput v-model="dissolvedOxygen" icon="mdi:cloud" placeholder="mg/L" />
-							<div v-if="dissolvedOxygen && !isDissolvedOxygenValid && isDOValid" class="mt-2 p-2 bg-yellow-100 text-yellow-800 rounded">
-								Are you sure this value is correct? Expected DO values are 0 - 14 ppm.
-							</div>
-							<div v-if="dissolvedOxygen && !isDOValid" class="mt-2 p-2 bg-red-100 text-red-800 rounded">
-								This value is too high (>25) and outside of the possible range for dissolved oxygen.
-							</div>
+							<UFormGroup>
+								<label class="block mb-1 text-sm sm:text-base">Dissolved Oxygen:</label>
+								<UInput v-model="dissolvedOxygen" icon="mdi:cloud" placeholder="mg/L" />
+								<div v-if="dissolvedOxygen && !isDissolvedOxygenValid && isDOValid" class="mt-2 p-2 bg-yellow-100 text-yellow-800 rounded text-sm">
+									Are you sure this value is correct? Expected DO values are 0 - 14 ppm.
+								</div>
+								<div v-if="dissolvedOxygen && !isDOValid" class="mt-2 p-2 bg-red-100 text-red-800 rounded text-sm">
+									This value is too high (>25) and outside of the possible range for dissolved oxygen.
+								</div>
 							</UFormGroup>
 
-							<UFormGroup class="p-2">
-							<label class="block mb-1">Conductivity:</label>
-							<UInput v-model="conductivity" icon="ant-design:thunderbolt-outlined" placeholder="μS/cm" />
-							<div v-if="conductivity && isConductivityHigh" class="mt-2 p-2 bg-yellow-100 text-yellow-800 rounded">
-								This conductivity value seems high (> 2,000 μS/cm).
-							</div>
-						</UFormGroup>
+							<UFormGroup>
+								<label class="block mb-1 text-sm sm:text-base">Conductivity:</label>
+								<UInput v-model="conductivity" icon="ant-design:thunderbolt-outlined" placeholder="μS/cm" />
+								<div v-if="conductivity && isConductivityHigh" class="mt-2 p-2 bg-yellow-100 text-yellow-800 rounded text-sm">
+									This conductivity value seems high (> 2,000 μS/cm).
+								</div>
+							</UFormGroup>
+						</div>
 					</div>
-					<div class="border-4 p-1 border-gray-900 w-1/2">
-						Read thermometer in water or quickly after removing. Take reading in shade.
-						<br />
-						<br />
-						Use a white background or hold up to the sun. Don't wear sunglasses while reading.
-						<br />
-						<br />
-						Check bottle and syringes for air bubbles. Add drops slowly.
-						<br />
-						<br />
-						Calibrate meter within 24 hours of measurement.
+					
+					<div class="border-4 p-2 sm:p-4 border-gray-900">
+						<div class="text-sm">
+							Read thermometer in water or quickly after removing. Take reading in shade.
+							<br />
+							<br />
+							Use a white background or hold up to the sun. Don't wear sunglasses while reading.
+							<br />
+							<br />
+							Check bottle and syringes for air bubbles. Add drops slowly.
+							<br />
+							<br />
+							Calibrate meter within 24 hours of measurement.
+						</div>
 					</div>
-					<div class="border-4 p-1 border-gray-900 w-1/2">
-						<img src="assets/form_icons/field_multimeter.png" alt="Water Quality" class="w-10 inline" label="stuff" />
-						Meter Calibration
-						<br />
-						Conductivity Meter
-						<UFormGroup class="p-2" label="Calibration Date">
-							<UInput v-model="conductivityMeterCalibrationDate" type="date" />
-						</UFormGroup>
-						Other Meter
-						<UFormGroup class="p-2" label=" Calibration Date">
-							<UInput v-model="otherMeterCalibrationDate" type="date" />
-						</UFormGroup>
-						<UFormGroup class="p-2">
-							<UCheckbox
-								v-model="iCertifyCheckbox"
-								label="I certify that my instruments were successfully calibrated within 24 hours with unexpired reagents."
-							/>
-						</UFormGroup>
+					
+					<div class="border-4 p-2 sm:p-4 border-gray-900">
+						<div class="flex items-center mb-2">
+							<img src="assets/form_icons/field_multimeter.png" alt="Water Quality" class="w-8 sm:w-10 inline mr-2" />
+							<span class="text-sm sm:text-base font-medium">Meter Calibration</span>
+						</div>
+						
+						<div class="space-y-4">
+							<div>
+								<div class="text-sm font-medium mb-2">Conductivity Meter</div>
+								<UFormGroup label="Calibration Date">
+									<UInput v-model="conductivityMeterCalibrationDate" type="date" />
+								</UFormGroup>
+							</div>
+							
+							<div>
+								<div class="text-sm font-medium mb-2">Other Meter</div>
+								<UFormGroup label="Calibration Date">
+									<UInput v-model="otherMeterCalibrationDate" type="date" />
+								</UFormGroup>
+							</div>
+							
+							<UFormGroup>
+								<UCheckbox
+									v-model="iCertifyCheckbox"
+									label="I certify that my instruments were successfully calibrated within 24 hours with unexpired reagents."
+									class="text-sm"
+								/>
+							</UFormGroup>
+						</div>
 					</div>
 				</div>
-				<div class="border-4 p-5 border-gray-900">
+
+				<!-- R-Card Bacteria Analysis Section -->
+				<div class="border-4 p-2 sm:p-5 border-gray-900">
 					<div class="flex items-center mb-4">
-						<UCheckbox
-						v-model="useRCard"
-						/><label class="text-1x1 font-bold">&nbsp;Using R-Card Method for Bacteria Analysis</label>	
+						<UCheckbox v-model="useRCard" />
+						<label class="text-lg sm:text-xl font-bold ml-2">Using R-Card Method for Bacteria Analysis</label>	
 					</div>
 
 					<template v-if="useRCard">
-						<div class="flex items-center mb-4">
-						<div class="flex items-center">
-							<img
-							src="assets/form_icons/bacteria.png"
-							alt="Bacteria"
-							class="w-20 mr-4"
-							/>
+						<div class="flex flex-col sm:flex-row items-start sm:items-center mb-4 gap-2">
+							<div class="flex items-center flex-shrink-0">
+								<img
+								src="assets/form_icons/bacteria.png"
+								alt="Bacteria"
+								class="w-16 sm:w-20"
+								/>
+							</div>
+							<h2 class="text-lg sm:text-xl font-bold">Bacteria: R-Card Method</h2>
 						</div>
-						<h2 class="text-xl font-bold mr-4 flex-shrink-0">Bacteria: R-Card Method</h2>
-						</div>
-						<div class="flex items-center mb-4">
-						<p class="text-center bact-msg">Time Out should be between 20 and 24 hrs at 35-38°C after placing cards in incubator</p>
+						<div class="mb-4">
+							<p class="text-center bact-msg text-sm sm:text-base">Time Out should be between 20 and 24 hrs at 35-38°C after placing cards in incubator</p>
 						</div>
 						
-						<!-- New two-row layout -->
+						<!-- Responsive R-Card layout -->
 						<div class="space-y-6">
-						<!-- Top row with time inputs and calculations -->
-						<div class="grid grid-cols-[1fr_2fr] gap-6">
-							<!-- Left Column - Time inputs -->
-							<div class="space-y-4">
-								<div class="grid grid-cols-2 gap-4">
-									<UFormGroup>
-										<label class="text-sm required-field">Date In</label>
-										<UInput 
-										v-model="timeINIncDate"
-										type="date"
-										icon="solar:calendar-bold"
-										/>
-									</UFormGroup>
-									<UFormGroup>
-										<label class="text-sm required-field">Time In</label>
-										<UInput 
-										v-model="timeINIncTime"
-										type="time"
-										icon="mdi:clock-outline"
-										/>
-									</UFormGroup>
+							<div class="grid grid-cols-1 xl:grid-cols-[1fr_2fr] gap-6">
+								<!-- Left Column - Time inputs -->
+								<div class="space-y-4">
+									<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+										<UFormGroup>
+											<label class="text-sm required-field">Date In</label>
+											<UInput 
+											v-model="timeINIncDate"
+											type="date"
+											icon="solar:calendar-bold"
+											/>
+										</UFormGroup>
+										<UFormGroup>
+											<label class="text-sm required-field">Time In</label>
+											<UInput 
+											v-model="timeINIncTime"
+											type="time"
+											icon="mdi:clock-outline"
+											/>
+										</UFormGroup>
 									</div>
 
-									<div class="grid grid-cols-2 gap-4">
+									<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+										<UFormGroup>
+											<label class="text-sm required-field">Date Out</label>
+											<UInput 
+											v-model="timeOUTIncDate"
+											type="date"
+											icon="solar:calendar-bold"
+											/>
+										</UFormGroup>
+										<UFormGroup>
+											<label class="text-sm required-field">Time Out</label>
+											<UInput 
+											v-model="timeOUTIncTime"
+											type="time"
+											icon="mdi:clock-outline"
+											/>
+										</UFormGroup>
+									</div>
+									
+									<div v-if="fullTimeIN && fullTimeOUT && !isIncubationTimeValid" 
+										class="mt-2 p-2 bg-yellow-100 text-yellow-800 rounded text-sm">
+										Warning: Incubation time should be between 20 and 24 hours. 
+										{{ displayIncubationTime }}
+									</div>
+									<div v-if="fullTimeIN && fullTimeOUT && isIncubationTimeValid" 
+										class="mt-2 p-2 rounded text-sm">
+										<b>{{ displayIncubationTime }}</b>
+									</div>
+									
 									<UFormGroup>
-										<label class="text-sm required-field">Date Out</label>
-										<UInput 
-										v-model="timeOUTIncDate"
-										type="date"
-										icon="solar:calendar-bold"
-										/>
-									</UFormGroup>
-									<UFormGroup>
-										<label class="text-sm required-field">Time Out</label>
-										<UInput 
-										v-model="timeOUTIncTime"
-										type="time"
-										icon="mdi:clock-outline"
-										/>
+										<label class="text-sm required-field">Initials of R-Card Reader</label>
+										<UInput v-model="bacteriaRCardInitials" />
 									</UFormGroup>
 								</div>
-								<div v-if="fullTimeIN && fullTimeOUT && !isIncubationTimeValid" 
-									class="mt-2 p-2 bg-yellow-100 text-yellow-800 rounded">
-									Warning: Incubation time should be between 20 and 24 hours. 
-									{{ displayIncubationTime }}
+
+								<!-- Right Column - E.coli counts -->
+								<div class="border-t xl:border-t-0 xl:border-l border-gray-200 pt-4 xl:pt-0 xl:pl-6">
+									<!-- Desktop layout -->
+									<div class="hidden lg:block">
+										<div class="grid grid-cols-[auto_1fr_auto_1fr_auto_1fr] gap-2 items-center">
+											<!-- Headers -->
+											<div></div>
+											<label class="text-sm font-semibold whitespace-nowrap required-field"># E.coli/card</label>
+											<div></div>
+											<label class="text-sm font-semibold whitespace-nowrap required-field">Sample Vol (mL)</label>
+											<div></div>
+											<label class="text-sm font-semibold whitespace-nowrap required-field">E.coli/100mL</label>
+
+											<!-- Sample A -->
+											<label class="self-center text-sm whitespace-nowrap required-field">Sample A:</label>
+											<UInput v-model="ecoliA_count" type="number" required />
+											<span class="self-center text-sm font-semibold px-1">÷</span>
+											<USelect
+											v-model="sampleVolA"
+											:options="sampleVolOptions"
+											:default-value="defaultSampleVol"
+											/>
+											<span class="self-center text-sm font-semibold px-1 whitespace-nowrap">× 100 =</span>
+											<UInput v-model="ecoliA" type="number" disabled />
+
+											<!-- Sample B -->
+											<label class="self-center text-sm whitespace-nowrap required-field">Sample B:</label>
+											<UInput v-model="ecoliB_count" type="number" required/>
+											<span class="self-center text-sm font-semibold px-1">÷</span>
+											<USelect
+											v-model="sampleVolB"
+											:options="sampleVolOptions"
+											:default-value="defaultSampleVol"
+											/>
+											<span class="self-center text-sm font-semibold px-1 whitespace-nowrap">× 100 =</span>
+											<UInput v-model="ecoliB" type="number" disabled />
+
+											<!-- Sample C -->
+											<label class="self-center text-sm whitespace-nowrap required-field">Sample C:</label>
+											<UInput v-model="ecoliC_count" type="number" />
+											<span class="self-center text-sm font-semibold px-1">÷</span>
+											<USelect
+											v-model="sampleVolC"
+											:options="sampleVolOptions"
+											:default-value="defaultSampleVol"
+											/>          
+											<span class="self-center text-sm font-semibold px-1 whitespace-nowrap">× 100 =</span>
+											<UInput v-model="ecoliC" type="number" disabled />
+										</div>
+
+										<!-- Average -->
+										<div class="mt-4 grid grid-cols-2 gap-2">
+											<label class="text-sm font-semibold self-center required-field">Average E.&nbsp;coli/100mL:</label>
+											<UInput v-model="averageEcoli" disabled />
+										</div>
+									</div>
+
+									<!-- Mobile/Tablet layout -->
+									<div class="lg:hidden space-y-6">
+										<!-- Sample A Mobile -->
+										<div class="space-y-3 p-3 bg-gray-50 rounded">
+											<h4 class="font-semibold text-sm required-field">Sample A:</h4>
+											<div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+												<UFormGroup>
+													<label class="text-xs font-semibold required-field"># E.coli/card</label>
+													<UInput v-model="ecoliA_count" type="number" required />
+												</UFormGroup>
+												<UFormGroup>
+													<label class="text-xs font-semibold required-field">Sample Vol (mL)</label>
+													<USelect
+													v-model="sampleVolA"
+													:options="sampleVolOptions"
+													:default-value="defaultSampleVol"
+													/>
+												</UFormGroup>
+												<UFormGroup>
+													<label class="text-xs font-semibold required-field">E.coli/100mL</label>
+													<UInput v-model="ecoliA" type="number" disabled />
+												</UFormGroup>
+											</div>
+										</div>
+
+										<!-- Sample B Mobile -->
+										<div class="space-y-3 p-3 bg-gray-50 rounded">
+											<h4 class="font-semibold text-sm required-field">Sample B:</h4>
+											<div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+												<UFormGroup>
+													<label class="text-xs font-semibold required-field"># E.coli/card</label>
+													<UInput v-model="ecoliB_count" type="number" required />
+												</UFormGroup>
+												<UFormGroup>
+													<label class="text-xs font-semibold required-field">Sample Vol (mL)</label>
+													<USelect
+													v-model="sampleVolB"
+													:options="sampleVolOptions"
+													:default-value="defaultSampleVol"
+													/>
+												</UFormGroup>
+												<UFormGroup>
+													<label class="text-xs font-semibold required-field">E.coli/100mL</label>
+													<UInput v-model="ecoliB" type="number" disabled />
+												</UFormGroup>
+											</div>
+										</div>
+
+										<!-- Sample C Mobile -->
+										<div class="space-y-3 p-3 bg-gray-50 rounded">
+											<h4 class="font-semibold text-sm required-field">Sample C:</h4>
+											<div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+												<UFormGroup>
+													<label class="text-xs font-semibold required-field"># E.coli/card</label>
+													<UInput v-model="ecoliC_count" type="number" required />
+												</UFormGroup>
+												<UFormGroup>
+													<label class="text-xs font-semibold required-field">Sample Vol (mL)</label>
+													<USelect
+													v-model="sampleVolC"
+													:options="sampleVolOptions"
+													:default-value="defaultSampleVol"
+													/>
+												</UFormGroup>
+												<UFormGroup>
+													<label class="text-xs font-semibold required-field">E.coli/100mL</label>
+													<UInput v-model="ecoliC" type="number" disabled />
+												</UFormGroup>
+											</div>
+										</div>
+
+										<!-- Average Mobile -->
+										<div class="p-3 bg-blue-50 rounded">
+											<UFormGroup>
+												<label class="text-sm font-semibold required-field">Average E. coli/100mL:</label>
+												<UInput v-model="averageEcoli" disabled />
+											</UFormGroup>
+										</div>
+									</div>
+
+									<div v-if="isEcoliVariationHigh" class="mt-2 p-2 bg-yellow-100 text-yellow-800 rounded text-sm">
+										The variation between E. Coli samples is high ( > 1000).
+									</div>
 								</div>
-								<div v-if="fullTimeIN && fullTimeOUT && isIncubationTimeValid" 
-									class="mt-2 p-2 rounded">
-									<b>{{ displayIncubationTime }}</b>
+							</div>
+
+							<!-- Bottom row - Bacterial Sources -->
+							<div class="border-t border-gray-200 pt-4">
+								<h3 class="text-sm sm:text-base font-semibold mb-3 required-field">Possible Bacterial Sources:</h3>
+								<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 text-sm">
+									<UCheckbox v-model="bacterialSourceDuckGoose" label="Duck/Goose" value="1" />
+									<UCheckbox v-model="bacterialSourceHuman" label="Human" value="2" />
+									<UCheckbox v-model="bacterialSourceLivestock" label="Livestock" value="3" />
+									<UCheckbox v-model="bacterialSourcePetWaste" label="Pet Waste" value="4" />
+									<UCheckbox v-model="bacterialSourceWildlife" label="Wildlife" value="5" />
+									<UCheckbox v-model="bacterialSourceOther" label="Other" @click="!bacterialSourceOther" value="6" />
 								</div>
-								<UFormGroup>
-									<label class="text-sm required-field">Initials of R-Card Reader</label>
-									<UInput v-model="bacteriaRCardInitials" />
-								</UFormGroup>
+								<div v-if="bacterialSourceOther" class="mt-3">
+									<UInput v-model="bacterialSourceOtherData" class="w-full" placeholder="Specify other bacterial source..." />
+								</div>
 							</div>
-
-							<!-- Right Column - E.coli counts -->
-							<div class="border-l border-gray-200 pl-6">
-							<div class="grid grid-cols-[auto_1fr_auto_1fr_auto_1fr] gap-2">
-								<!-- Headers -->
-								<div></div>
-								<label class="text-sm font-semibold whitespace-nowrap required-field"># E.coli/card</label>
-								<div></div>
-								<label class="text-sm font-semibold whitespace-nowrap required-field">Sample Vol (mL)</label>
-								<div></div>
-								<label class="text-sm font-semibold whitespace-nowrap required-field">E.coli/100mL</label>
-
-								<!-- Sample A -->
-								<label class="self-center text-sm whitespace-nowrap required-field">Sample A:</label>
-								<UInput v-model="ecoliA_count" type="number" required />
-								<span class="self-center text-sm font-semibold px-1">÷</span>
-								<USelect
-								v-model="sampleVolA"
-								:options="sampleVolOptions"
-								:default-value="defaultSampleVol"
-								/>
-								<span class="self-center text-sm font-semibold px-1 whitespace-nowrap">× 100 =</span>
-								<UInput v-model="ecoliA" type="number" disabled />
-
-								<!-- Sample B -->
-								<label class="self-center text-sm whitespace-nowrap required-field">Sample B:</label>
-								<UInput v-model="ecoliB_count" type="number" required/>
-								<span class="self-center text-sm font-semibold px-1">÷</span>
-								<USelect
-								v-model="sampleVolB"
-								:options="sampleVolOptions"
-								:default-value="defaultSampleVol"
-								/>
-								<span class="self-center text-sm font-semibold px-1 whitespace-nowrap">× 100 =</span>
-								<UInput v-model="ecoliB" type="number" disabled />
-
-								<!-- Sample C -->
-								<label class="self-center text-sm whitespace-nowrap required-field">Sample C:</label>
-								<UInput v-model="ecoliC_count" type="number" />
-								<span class="self-center text-sm font-semibold px-1">÷</span>
-								<USelect
-								v-model="sampleVolC"
-								:options="sampleVolOptions"
-								:default-value="defaultSampleVol"
-								/>          
-								<span class="self-center text-sm font-semibold px-1 whitespace-nowrap">× 100 =</span>
-								<UInput v-model="ecoliC" type="number" disabled />
-							</div>
-
-							<!-- Average -->
-							<div class="mt-4 grid grid-cols-2 gap-2">
-								<label class="text-sm font-semibold self-center required-field">Average E.&nbsp;coli/100mL:</label>
-								<UInput v-model="averageEcoli" disabled />
-							</div>
-
-							<div v-if="isEcoliVariationHigh" class="mt-2 p-2 bg-yellow-100 text-yellow-800 rounded">
-								The variation between E. Coli samples is high ( > 1000).
-							</div>
-							</div>
-						</div>
-
-						<!-- Bottom row - Bacterial Sources -->
-						<div class="border-t border-gray-200 pt-4">
-							<h3 class="text-m font-semibold mb-2 whitespace-nowrap required-field">Possible Bacterial Sources:</h3>
-							<div class="grid grid-cols-1 gap-x-1 gap-y-1">
-							<UCheckbox v-model="bacterialSourceDuckGoose" label="Duck/Goose" value="1" />
-							<UCheckbox v-model="bacterialSourceHuman" label="Human" value="2" />
-							<UCheckbox v-model="bacterialSourceLivestock" label="Livestock" value="3" />
-							<UCheckbox v-model="bacterialSourcePetWaste" label="Pet Waste" value="4" />
-							<UCheckbox v-model="bacterialSourceWildlife" label="Wildlife" value="5" />
-							<UCheckbox v-model="bacterialSourceOther" label="Other" @click="!bacterialSourceOther" value="6" />
-							<div v-if="bacterialSourceOther" class="col-span-2 mt-1">
-								<UInput v-model="bacterialSourceOtherData" class="w-full" placeholder="Specify other bacterial source..." />
-							</div>
-							</div>
-						</div>
 						</div>
 					</template>
 				</div>
-				<div class="flex">
-					<div class="border-4 p-1 border-gray-900 w-1/2">
-					<h2 class="text-lg">Other Observations or Measurements</h2>
-					<UFormGroup class="p-2">
-						<UTextarea 
-						v-model="otherObs" 
-						rows="10"
-						class="w-full min-h-[200px] resize-y"
-						placeholder="Enter any additional observations or measurements here..."
-						/>
-					</UFormGroup>
+
+				<!-- Observations and Photos Section -->
+				<div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+					<div class="border-4 p-2 sm:p-4 border-gray-900">
+						<h2 class="text-base sm:text-lg mb-3">Other Observations or Measurements</h2>
+						<UFormGroup>
+							<UTextarea 
+							v-model="otherObs" 
+							rows="8"
+							class="w-full min-h-[150px] sm:min-h-[200px] resize-y"
+							placeholder="Enter any additional observations or measurements here..."
+							/>
+						</UFormGroup>
 					</div>
-					<div class="border-4 p-1 border-gray-900 w-1/2">
-						<UFormGroup class="p-2">
+					
+					<div class="border-4 p-2 sm:p-4 border-gray-900">
+						<UFormGroup>
 							<PhotoUpload 
 								ref="photoUpload"
 								@filesSelected="handleFilesSelected"
@@ -2393,43 +2535,46 @@ const confirmCancel = () => {
 							/>
 						</UFormGroup>
 					</div>
-					<div class="border-4 p-1 border-gray-900 w-1/2">
-						<div class="flex flex-col items-center text-center">
-						<div class="p-4">
-							<img 
-							src="assets/KyWW_logo.png" 
-							alt="Kentucky Watershed Watch Logo" 
-							class="w-48 h-auto"
-							/>
-						</div>
-						<div class="p-4">
-							<h2 class="text-lg">
-							Visit
-							<a href="https://www.kywater.org" target="_blank" class="text-blue-600 hover:text-blue-800">www.kywater.org</a>
-							to view data. For questions or feedback, email <a href="mailto:contact@kywater.org" class="text-blue-600 hover:text-blue-800">contact@kywater.org</a>.
-							</h2>
-						</div>
+					
+					<div class="border-4 p-2 sm:p-4 border-gray-900">
+						<div class="flex flex-col items-center text-center h-full justify-center">
+							<div class="p-2 sm:p-4">
+								<img 
+								src="assets/KyWW_logo.png" 
+								alt="Kentucky Watershed Watch Logo" 
+								class="w-32 sm:w-48 h-auto mx-auto"
+								/>
+							</div>
+							<div class="p-2 sm:p-4">
+								<h2 class="text-sm sm:text-lg">
+								Visit
+								<a href="https://www.kywater.org" target="_blank" class="text-blue-600 hover:text-blue-800">www.kywater.org</a>
+								to view data. For questions or feedback, email <a href="mailto:contact@kywater.org" class="text-blue-600 hover:text-blue-800">contact@kywater.org</a>.
+								</h2>
+							</div>
 						</div>
 					</div>
 				</div>
-					<!-- Submit and Cancel Buttons -->
-					<div class="flex justify-end space-x-4 mt-6">
-						<UButton
-							@click="showCancelConfirmation"
-							variant="outline"
-							color="gray"
-						>
-							Cancel
-						</UButton>
-						<UButton
-							@click="confirmSubmission"
-							class="text-gray-900"
-							variant="solid"
-							:disabled="!isFormValid || isSubmitting"
-						>
-							{{ isSubmitting ? 'Submitting...' : isEditMode ? 'Save Changes' : 'Submit Sample' }}
-						</UButton>
-					</div>
+
+				<!-- Submit and Cancel Buttons -->
+				<div class="flex flex-col sm:flex-row justify-end gap-2 sm:space-x-4 mt-6">
+					<UButton
+						@click="showCancelConfirmation"
+						variant="outline"
+						color="gray"
+						class="w-full sm:w-auto order-2 sm:order-1"
+					>
+						Cancel
+					</UButton>
+					<UButton
+						@click="confirmSubmission"
+						class="text-gray-900 w-full sm:w-auto order-1 sm:order-2"
+						variant="solid"
+						:disabled="!isFormValid || isSubmitting"
+					>
+						{{ isSubmitting ? 'Submitting...' : isEditMode ? 'Save Changes' : 'Submit Sample' }}
+					</UButton>
+				</div>
 				</div>
 			</Form>
 
@@ -2447,16 +2592,18 @@ const confirmCancel = () => {
 					</p>
 					</div>
 					<template #footer>
-					<div class="flex justify-end space-x-4">
+					<div class="flex flex-col sm:flex-row justify-end gap-2 sm:space-x-4">
 						<UButton 
 						@click="isCancelModalOpen = false" 
 						color="gray"
+						class="w-full sm:w-auto"
 						>
 						No, Continue Editing
 						</UButton>
 						<UButton 
 						@click="confirmCancel" 
 						color="yellow"
+						class="w-full sm:w-auto"
 						>
 						Yes, Cancel
 						</UButton>
@@ -2473,18 +2620,18 @@ const confirmCancel = () => {
 						{{ isEditMode ? 'Confirm Changes' : 'Confirm Submission' }}
 					</div>
 					</template>
-					<p>
+					<p class="text-sm sm:text-base">
 					{{ isEditMode 
 						? 'Are you sure you want to save these changes to the sample data? Please review your modifications before confirming.'
 						: 'Are you sure you want to submit this new sample data? Please review your entries before confirming.'
 					}}
 					</p>
 					<template #footer>
-					<div class="flex justify-end space-x-4">
-						<UButton @click="isConfirmationModalOpen = false" color="gray">
+					<div class="flex flex-col sm:flex-row justify-end gap-2 sm:space-x-4">
+						<UButton @click="isConfirmationModalOpen = false" color="gray" class="w-full sm:w-auto">
 						Cancel
 						</UButton>
-						<UButton @click="submitData" color="primary">
+						<UButton @click="submitData" color="primary" class="w-full sm:w-auto">
 						{{ isEditMode ? 'Save Changes' : 'Submit Sample Data' }}
 						</UButton>
 					</div>
@@ -2493,9 +2640,9 @@ const confirmCancel = () => {
 			</UModal>
 
 			<!-- Loading Overlay -->
-			<div v-if="isSubmitting" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
-				<div class="bg-white p-8 rounded-lg shadow-xl text-center">
-					<p class="mb-4">{{ submissionStatus }}</p>
+			<div v-if="isSubmitting" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50 p-4">
+				<div class="bg-white p-4 sm:p-8 rounded-lg shadow-xl text-center max-w-sm w-full">
+					<p class="mb-4 text-sm sm:text-base">{{ submissionStatus }}</p>
 					<UProgress :model-value="submissionProgress" />
 				</div>
 			</div>
@@ -2504,9 +2651,9 @@ const confirmCancel = () => {
 		<!-- Map Modal -->
 		<Teleport to="body">
 			<Transition name="fade">
-				<div v-if="isMapOpen" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" @click="handleClickOutside">
-				<div ref="mapModalRef" class="bg-white rounded-lg p-4 max-w-[750px] w-full max-h-[500px] h-full overflow-auto relative">
-					<button @click="closeMap" class="absolute top-2 right-2 text-gray-500 hover:text-gray-700">
+				<div v-if="isMapOpen" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" @click="handleClickOutside">
+				<div ref="mapModalRef" class="bg-white rounded-lg p-2 sm:p-4 max-w-[750px] w-full max-h-[90vh] h-full overflow-auto relative">
+					<button @click="closeMap" class="absolute top-2 right-2 text-gray-500 hover:text-gray-700 z-10">
 					<i class="fas fa-times"></i>
 					</button>
 					<MapSelector @select-site="handleSiteSelection" />
@@ -2517,10 +2664,10 @@ const confirmCancel = () => {
 
 		<Teleport to="body">
 			<Transition name="fade">
-				<div v-if="isErrorModalVisible" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-				<div class="bg-white rounded-lg p-6 max-w-md w-full">
-					<h3 class="text-xl font-bold mb-4">There was an error - Please try to submit again.</h3>
-					<p class="mb-4">{{ errorMessage }}</p>
+				<div v-if="isErrorModalVisible" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+				<div class="bg-white rounded-lg p-4 sm:p-6 max-w-md w-full">
+					<h3 class="text-lg sm:text-xl font-bold mb-4">There was an error - Please try to submit again.</h3>
+					<p class="mb-4 text-sm sm:text-base">{{ errorMessage }}</p>
 					<div class="flex justify-end">
 					<UButton @click="isErrorModalVisible = false" label="Close" />
 					</div>
@@ -2530,8 +2677,9 @@ const confirmCancel = () => {
 		</Teleport>
 	</div>
 
-	<div v-if="formErrors.length > 0" class="mb-4 mt-6 mx-auto max-w-4xl"> <!-- Added mt-6 for top margin -->
-		<div class="bg-orange-50 border-2 border-orange-400 p-4 rounded-lg"> <!-- Changed to border-2 and added rounded-lg -->
+	<!-- Validation Errors - Only show after submit attempt -->
+	<div v-if="formErrors.length > 0 && showValidationErrors" class="fixed bottom-4 left-4 right-4 sm:bottom-6 sm:left-auto sm:right-6 sm:max-w-md z-50">
+		<div class="bg-orange-50 border-2 border-orange-400 p-3 sm:p-4 rounded-lg shadow-lg">
 			<div class="flex">
 			<div class="flex-shrink-0">
 				<UIcon 
@@ -2540,11 +2688,11 @@ const confirmCancel = () => {
 				/>
 			</div>
 			<div class="ml-3">
-				<h3 class="text-sm font-medium text-orange-800">
+				<h3 class="text-xs sm:text-sm font-medium text-orange-800">
 				Please make sure these are filled:
 				</h3>
-				<div class="mt-2 text-sm text-orange-700">
-				<ul class="list-disc pl-5 space-y-1">
+				<div class="mt-2 text-xs sm:text-sm text-orange-700">
+				<ul class="list-disc pl-4 space-y-1">
 					<li v-for="(error, index) in formErrors" :key="index">
 					{{ error }}
 					</li>
@@ -2617,7 +2765,7 @@ const confirmCancel = () => {
 .water-color-orange i { color: #FFA500; }
 
 :deep(.textarea) {
-  min-height: 200px;
+  min-height: 150px;
   line-height: 1.5;
   padding: 0.75rem;
 }
@@ -2631,5 +2779,48 @@ const confirmCancel = () => {
 
 :deep(input[type="number"]) {
   -moz-appearance: textfield;
+}
+
+/* Mobile responsive improvements */
+@media (max-width: 640px) {
+  .bact-msg {
+    font-size: 0.875rem;
+    padding: 0.25rem 0.5rem;
+  }
+  
+  :deep(.textarea) {
+    min-height: 120px;
+  }
+  
+  /* Better touch targets for mobile */
+  :deep(input[type="radio"]),
+  :deep(input[type="checkbox"]) {
+    min-height: 1.25rem;
+    min-width: 1.25rem;
+  }
+  
+  /* Improve readability on small screens */
+  :deep(label) {
+    line-height: 1.4;
+  }
+}
+
+/* Tablet improvements */
+@media (min-width: 641px) and (max-width: 1024px) {
+  .bact-msg {
+    font-size: 0.9rem;
+  }
+}
+
+/* Prevent horizontal overflow */
+.overflow-x-hidden {
+  overflow-x: hidden;
+}
+
+/* Better spacing for form groups on mobile */
+@media (max-width: 640px) {
+  :deep(.form-group) {
+    margin-bottom: 1rem;
+  }
 }
 </style>

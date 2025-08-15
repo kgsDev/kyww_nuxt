@@ -293,118 +293,123 @@ onMounted(async () => {
     <!-- Content -->
     <template v-else>
       <!-- Header -->
-      <div class="flex justify-between items-start mb-6">
-        <div>
-          <h1 class="text-2xl font-bold mb-2">
+      <div class="flex flex-col sm:flex-row justify-between items-start gap-4 mb-6">
+        <div class="flex-1">
+          <h1 class="text-xl sm:text-2xl font-bold mb-2">
             Sample Details
-            <span class="text-gray-500 text-lg">(ID: {{ sampleData.id }})</span>
+            <span class="text-gray-500 text-base sm:text-lg">(ID: {{ sampleData.id }})</span>
           </h1>
-          <p class="text-gray-900">
-            Site: {{ siteData?.stream_name || 'Unnamed Stream' }}
-            (ID: {{ sampleData.wwky_id }})
-          </p>
-          <p class="text-gray-900">
-            Taken on {{ formatDate(sampleData.date) }} at {{ formatTime(sampleData.start_time) }}
-          </p>
-          <p class="text-gray-900">
-            Sampled / Entered by: {{ samplerName }}
-          </p>
+          <div class="space-y-1 text-sm sm:text-base">
+            <p class="text-gray-900">
+              Site: {{ siteData?.stream_name || 'Unnamed Stream' }}
+              (ID: {{ sampleData.wwky_id }})
+            </p>
+            <p class="text-gray-900">
+              Taken on {{ formatDate(sampleData.date) }} at {{ formatTime(sampleData.start_time) }}
+            </p>
+            <p class="text-gray-900">
+              Sampled / Entered by: {{ samplerName }}
+            </p>
+          </div>
         </div>
         <UButton
           icon="i-heroicons-arrow-left"
           @click="navigateTo(`/portal/sites/${sampleData.wwky_id}`)"
+          class="w-full sm:w-auto"
         >
           Back to Site
         </UButton>
       </div>
 
       <!-- Main Content Grid -->
-      <div class="space-y-6">
+      <div class="space-y-4 sm:space-y-6">
 
         <!-- Participant Information -->
         <UCard>
           <template #header>
-            <h2 class="text-lg font-semibold">Participant Information</h2>
+            <h2 class="text-base sm:text-lg font-semibold">Participant Information</h2>
           </template>
           <div class="space-y-4">
-            <div class="grid grid-cols-2 gap-4">
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
               <div>
-                <p class="font-medium">Adult Participants</p>
-                <p>{{ sampleData.participants_adults }}</p>
+                <p class="font-medium text-sm sm:text-base">Adult Participants</p>
+                <p class="text-sm sm:text-base">{{ sampleData.participants_adults }}</p>
               </div>
               <div>
-                <p class="font-medium">Youth Participants</p>
-                <p>{{ sampleData.participants_youth }}</p>
+                <p class="font-medium text-sm sm:text-base">Youth Participants</p>
+                <p class="text-sm sm:text-base">{{ sampleData.participants_youth }}</p>
               </div>
               <div>
-                <p class="font-medium">Total Volunteer Minutes</p>
-                <p>{{ sampleData.total_volunteer_minutes }}</p>
+                <p class="font-medium text-sm sm:text-base">Total Volunteer Minutes</p>
+                <p class="text-sm sm:text-base">{{ sampleData.total_volunteer_minutes }}</p>
               </div>  
               <div>
-                <p class="font-medium">Miles Driven</p>
-                <p>{{ sampleData.miles_driven }}</p>
+                <p class="font-medium text-sm sm:text-base">Miles Driven</p>
+                <p class="text-sm sm:text-base">{{ sampleData.miles_driven }}</p>
               </div>
             </div>
 
             <!-- Additional Samplers Section -->
             <div v-if="additionalSamplers.length > 0">
-              <p class="font-medium mb-2">Additional Samplers</p>
-              <ul class="list-disc list-inside space-y-1">
+              <p class="font-medium mb-2 text-sm sm:text-base">Additional Samplers</p>
+              <ul class="list-disc list-inside space-y-1 text-sm sm:text-base">
                 <li v-for="(sampler, index) in additionalSamplers" :key="index">
                   {{ sampler.name }}
                 </li>
               </ul>
             </div>
             <div v-if="otherSamplers.length > 0">
-                <p class="font-medium">Non-KYWW Samplers</p>
-                <p>{{ sampleData.other_samplers }}</p>
+                <p class="font-medium text-sm sm:text-base">Non-KYWW Samplers</p>
+                <p class="text-sm sm:text-base">{{ sampleData.other_samplers }}</p>
             </div>
           </div>
         </UCard>
 
         <!-- Main Information Grid -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
           <!-- Environmental Conditions -->
           <UCard>
             <template #header>
-              <h2 class="text-lg font-semibold">Environmental Conditions</h2>
+              <h2 class="text-base sm:text-lg font-semibold">Environmental Conditions</h2>
             </template>
             <div class="space-y-4">
-              <div class="grid grid-cols-2 gap-4">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div>
-                  <p class="font-medium">Weather</p>
-                  <p>{{ weatherTypes[sampleData.current_weather] }}</p>
+                  <p class="font-medium text-sm sm:text-base">Weather</p>
+                  <p class="text-sm sm:text-base">{{ weatherTypes[sampleData.current_weather] }}</p>
                 </div>
                 <div>
-                  <p class="font-medium">Rainfall (48hrs)</p>
-                  <p>{{ rainfallAmounts[sampleData.rainfall_amount] }}</p>
+                  <p class="font-medium text-sm sm:text-base">Rainfall (48hrs)</p>
+                  <p class="text-sm sm:text-base">{{ rainfallAmounts[sampleData.rainfall_amount] }}</p>
                 </div>
                 <div>
-                  <p class="font-medium">Water Color</p>
-                  <p>{{ waterColors[sampleData.water_color] || 'Not recorded' }}</p>
+                  <p class="font-medium text-sm sm:text-base">Water Color</p>
+                  <p class="text-sm sm:text-base">{{ waterColors[sampleData.water_color] || 'Not recorded' }}</p>
                 </div>
                 <div>
-                  <p class="font-medium">Stream Flow</p>
-                  <p>{{ streamFlowTypes[sampleData.stream_flow_visual] }}</p>
+                  <p class="font-medium text-sm sm:text-base">Stream Flow</p>
+                  <p class="text-sm sm:text-base">{{ streamFlowTypes[sampleData.stream_flow_visual] }}</p>
                 </div>
                 <div>
-                  <p class="font-medium">Trash</p>
-                  <p>{{ trashTypes[sampleData.trash] }}</p>
+                  <p class="font-medium text-sm sm:text-base">Trash</p>
+                  <p class="text-sm sm:text-base">{{ trashTypes[sampleData.trash] }}</p>
                 </div>
                 <div>
-                  <p class="font-medium">Turbidity</p>
-                  <p>{{ turbidityTypes[sampleData.turbidity] }}</p>
+                  <p class="font-medium text-sm sm:text-base">Turbidity</p>
+                  <p class="text-sm sm:text-base">{{ turbidityTypes[sampleData.turbidity] }}</p>
                 </div>
               </div>
 
-              <div>
-                <p class="font-medium">Odors Detected</p>
-                <p>{{ formatList(sampleData.odors, odorTypes) }}</p>
-              </div>
+              <div class="space-y-3">
+                <div>
+                  <p class="font-medium text-sm sm:text-base">Odors Detected</p>
+                  <p class="text-sm sm:text-base break-words">{{ formatList(sampleData.odors, odorTypes) }}</p>
+                </div>
 
-              <div>
-                <p class="font-medium">Water Surface Conditions</p>
-                <p>{{ formatList(sampleData.waterSurfaces, waterSurfaceTypes) }}</p>
+                <div>
+                  <p class="font-medium text-sm sm:text-base">Water Surface Conditions</p>
+                  <p class="text-sm sm:text-base break-words">{{ formatList(sampleData.waterSurfaces, waterSurfaceTypes) }}</p>
+                </div>
               </div>
             </div>
           </UCard>
@@ -412,37 +417,37 @@ onMounted(async () => {
           <!-- Water Quality Measurements -->
           <UCard>
             <template #header>
-              <h2 class="text-lg font-semibold">Water Quality Measurements</h2>
+              <h2 class="text-base sm:text-lg font-semibold">Water Quality Measurements</h2>
             </template>
             <div class="space-y-4">
-              <div class="grid grid-cols-2 gap-4">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div>
-                  <p class="font-medium">Temperature</p>
-                  <p>{{ formatMeasurement(sampleData.water_temperature, '°C') }}</p>
+                  <p class="font-medium text-sm sm:text-base">Temperature</p>
+                  <p class="text-sm sm:text-base">{{ formatMeasurement(sampleData.water_temperature, '°C') }}</p>
                 </div>
                 <div>
-                  <p class="font-medium">pH</p>
-                  <p>{{ formatMeasurement(sampleData.pH, '') }}</p>
+                  <p class="font-medium text-sm sm:text-base">pH</p>
+                  <p class="text-sm sm:text-base">{{ formatMeasurement(sampleData.pH, '') }}</p>
                 </div>
                 <div>
-                  <p class="font-medium">Dissolved Oxygen</p>
-                  <p>{{ formatMeasurement(sampleData.dissolved_oxygen, 'mg/L') }}</p>
+                  <p class="font-medium text-sm sm:text-base">Dissolved Oxygen</p>
+                  <p class="text-sm sm:text-base">{{ formatMeasurement(sampleData.dissolved_oxygen, 'mg/L') }}</p>
                 </div>
                 <div>
-                  <p class="font-medium">Conductivity</p>
-                  <p>{{ formatMeasurement(sampleData.conductivity, 'μS/cm') }}</p>
+                  <p class="font-medium text-sm sm:text-base">Conductivity</p>
+                  <p class="text-sm sm:text-base">{{ formatMeasurement(sampleData.conductivity, 'μS/cm') }}</p>
                 </div>
                 <div v-if="sampleData.transparency_tube_measure">
-                  <p class="font-medium">Transparency Tube</p>
-                  <p>{{ formatMeasurement(sampleData.transparency_tube_measure, 'cm') }}</p>
+                  <p class="font-medium text-sm sm:text-base">Transparency Tube</p>
+                  <p class="text-sm sm:text-base">{{ formatMeasurement(sampleData.transparency_tube_measure, 'cm') }}</p>
                 </div>
                 <div v-if="sampleData.turbidtube_measure">
-                  <p class="font-medium">Turbidity Meter</p>
-                  <p>{{ formatMeasurement(sampleData.turbidtube_measure, 'NTU') }}</p>
+                  <p class="font-medium text-sm sm:text-base">Turbidity Meter</p>
+                  <p class="text-sm sm:text-base">{{ formatMeasurement(sampleData.turbidtube_measure, 'NTU') }}</p>
                 </div>
-                <div v-if="sampleData.stream_flow_measurement">
-                  <p class="font-medium">Stream Flow</p>
-                  <p>{{ formatMeasurement(sampleData.stream_flow_measurement, 'ft³/s') }}</p>
+                <div v-if="sampleData.stream_flow_measurement" class="sm:col-span-2">
+                  <p class="font-medium text-sm sm:text-base">Stream Flow</p>
+                  <p class="text-sm sm:text-base">{{ formatMeasurement(sampleData.stream_flow_measurement, 'ft³/s') }}</p>
                 </div>
               </div>
             </div>
@@ -452,69 +457,105 @@ onMounted(async () => {
         <!-- Bacteria Analysis Section (if present) -->
         <UCard v-if="sampleData.bacteria_timedate_in">
           <template #header>
-            <h2 class="text-lg font-semibold">Bacteria Analysis (R-Card Method)</h2>
+            <h2 class="text-base sm:text-lg font-semibold">Bacteria Analysis (R-Card Method)</h2>
           </template>
           <div class="space-y-4">
-            <div class="grid grid-cols-2 gap-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
               <div>
-                <p class="font-medium">Time In Incubator</p>
-                <p>{{ new Date(sampleData.bacteria_timedate_in).toLocaleString() }}</p>
+                <p class="font-medium text-sm sm:text-base">Time In Incubator</p>
+                <p class="text-sm sm:text-base">{{ new Date(sampleData.bacteria_timedate_in).toLocaleString() }}</p>
               </div>
               <div>
-                <p class="font-medium">Time Out Incubator</p>
-                <p>{{ new Date(sampleData.bacteria_timedate_out).toLocaleString() }}</p>
+                <p class="font-medium text-sm sm:text-base">Time Out Incubator</p>
+                <p class="text-sm sm:text-base">{{ new Date(sampleData.bacteria_timedate_out).toLocaleString() }}</p>
               </div>
               <div>
-                <p class="font-medium">R-Card Reader Initials</p>
-                <p>{{ sampleData.bacteria_rcard_initials }}</p>
+                <p class="font-medium text-sm sm:text-base">R-Card Reader Initials</p>
+                <p class="text-sm sm:text-base">{{ sampleData.bacteria_rcard_initials }}</p>
               </div>
             </div>
 
             <!-- E. coli Results -->
             <div class="mt-4">
-              <h3 class="text-md font-semibold mb-2">E. coli Results</h3>
-              <table class="min-w-full">
-                <thead>
-                  <tr class="border-b">
-                    <th class="text-left py-2">Sample</th>
-                    <th class="text-right py-2">Count</th>
-                    <th class="text-right py-2">Volume (mL)</th>
-                    <th class="text-right py-2">E. coli/100mL</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr class="border-b">
-                    <td class="py-2">Sample A</td>
-                    <td class="text-right">{{ sampleData.bacteria_sample_a_ecoli_count }}</td>
-                    <td class="text-right">{{ sampleData.bacteria_sample_a_volume }}</td>
-                    <td class="text-right">{{ sampleData.bacteria_sample_a_ecoli }}</td>
-                  </tr>
-                  <tr class="border-b">
-                    <td class="py-2">Sample B</td>
-                    <td class="text-right">{{ sampleData.bacteria_sample_b_ecoli_count }}</td>
-                    <td class="text-right">{{ sampleData.bacteria_sample_b_volume }}</td>
-                    <td class="text-right">{{ sampleData.bacteria_sample_b_ecoli }}</td>
-                  </tr>
-                  <tr class="border-b">
-                    <td class="py-2">Sample C</td>
-                    <td class="text-right">{{ sampleData.bacteria_sample_c_ecoli_count }}</td>
-                    <td class="text-right">{{ sampleData.bacteria_sample_c_volume }}</td>
-                    <td class="text-right">{{ sampleData.bacteria_sample_c_ecoli }}</td>
-                  </tr>
-                  <tr class="font-semibold">
-                    <td class="py-2">Average</td>
-                    <td class="text-right" colspan="3">
-                      {{ formatMeasurement(sampleData.bacteria_avg_ecoli_cfu, 'CFU/100mL', 0) }}
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
+              <h3 class="text-sm sm:text-base font-semibold mb-3">E. coli Results</h3>
+              
+              <!-- Desktop Table -->
+              <div class="hidden sm:block overflow-x-auto">
+                <table class="min-w-full text-sm">
+                  <thead>
+                    <tr class="border-b">
+                      <th class="text-left py-2 font-medium">Sample</th>
+                      <th class="text-right py-2 font-medium">Count</th>
+                      <th class="text-right py-2 font-medium">Volume (mL)</th>
+                      <th class="text-right py-2 font-medium">E. coli/100mL</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr class="border-b">
+                      <td class="py-2">Sample A</td>
+                      <td class="text-right">{{ sampleData.bacteria_sample_a_ecoli_count }}</td>
+                      <td class="text-right">{{ sampleData.bacteria_sample_a_volume }}</td>
+                      <td class="text-right">{{ sampleData.bacteria_sample_a_ecoli }}</td>
+                    </tr>
+                    <tr class="border-b">
+                      <td class="py-2">Sample B</td>
+                      <td class="text-right">{{ sampleData.bacteria_sample_b_ecoli_count }}</td>
+                      <td class="text-right">{{ sampleData.bacteria_sample_b_volume }}</td>
+                      <td class="text-right">{{ sampleData.bacteria_sample_b_ecoli }}</td>
+                    </tr>
+                    <tr class="border-b">
+                      <td class="py-2">Sample C</td>
+                      <td class="text-right">{{ sampleData.bacteria_sample_c_ecoli_count }}</td>
+                      <td class="text-right">{{ sampleData.bacteria_sample_c_volume }}</td>
+                      <td class="text-right">{{ sampleData.bacteria_sample_c_ecoli }}</td>
+                    </tr>
+                    <tr class="font-semibold">
+                      <td class="py-2">Average</td>
+                      <td class="text-right" colspan="3">
+                        {{ formatMeasurement(sampleData.bacteria_avg_ecoli_cfu, 'CFU/100mL', 0) }}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <!-- Mobile Cards -->
+              <div class="sm:hidden space-y-3">
+                <div class="border border-gray-200 rounded-lg p-3 bg-gray-50">
+                  <h4 class="font-medium text-sm mb-2">Sample A</h4>
+                  <div class="grid grid-cols-2 gap-2 text-xs">
+                    <div><span class="font-medium">Count:</span> {{ sampleData.bacteria_sample_a_ecoli_count }}</div>
+                    <div><span class="font-medium">Volume:</span> {{ sampleData.bacteria_sample_a_volume }} mL</div>
+                    <div class="col-span-2"><span class="font-medium">E. coli/100mL:</span> {{ sampleData.bacteria_sample_a_ecoli }}</div>
+                  </div>
+                </div>
+                <div class="border border-gray-200 rounded-lg p-3 bg-gray-50">
+                  <h4 class="font-medium text-sm mb-2">Sample B</h4>
+                  <div class="grid grid-cols-2 gap-2 text-xs">
+                    <div><span class="font-medium">Count:</span> {{ sampleData.bacteria_sample_b_ecoli_count }}</div>
+                    <div><span class="font-medium">Volume:</span> {{ sampleData.bacteria_sample_b_volume }} mL</div>
+                    <div class="col-span-2"><span class="font-medium">E. coli/100mL:</span> {{ sampleData.bacteria_sample_b_ecoli }}</div>
+                  </div>
+                </div>
+                <div class="border border-gray-200 rounded-lg p-3 bg-gray-50">
+                  <h4 class="font-medium text-sm mb-2">Sample C</h4>
+                  <div class="grid grid-cols-2 gap-2 text-xs">
+                    <div><span class="font-medium">Count:</span> {{ sampleData.bacteria_sample_c_ecoli_count }}</div>
+                    <div><span class="font-medium">Volume:</span> {{ sampleData.bacteria_sample_c_volume }} mL</div>
+                    <div class="col-span-2"><span class="font-medium">E. coli/100mL:</span> {{ sampleData.bacteria_sample_c_ecoli }}</div>
+                  </div>
+                </div>
+                <div class="border border-blue-200 rounded-lg p-3 bg-blue-50">
+                  <h4 class="font-semibold text-sm">Average Result</h4>
+                  <p class="text-sm mt-1">{{ formatMeasurement(sampleData.bacteria_avg_ecoli_cfu, 'CFU/100mL', 0) }}</p>
+                </div>
+              </div>
             </div>
 
             <!-- Bacterial Sources -->
             <div class="mt-4">
-              <p class="font-medium">Possible Bacterial Sources</p>
-              <p>{{ formatList(sampleData.bacterialSources, bacterialSourceTypes) }}</p>
+              <p class="font-medium text-sm sm:text-base">Possible Bacterial Sources</p>
+              <p class="text-sm sm:text-base break-words">{{ formatList(sampleData.bacterialSources, bacterialSourceTypes) }}</p>
             </div>
           </div>
         </UCard>
@@ -522,76 +563,77 @@ onMounted(async () => {
         <!-- Other Observations -->
         <UCard v-if="sampleData.other_observations_or_measurements">
           <template #header>
-            <h2 class="text-lg font-semibold">Additional Observations</h2>
+            <h2 class="text-base sm:text-lg font-semibold">Additional Observations</h2>
           </template>
-          <p class="whitespace-pre-wrap">{{ sampleData.other_observations_or_measurements }}</p>
+          <p class="whitespace-pre-wrap text-sm sm:text-base">{{ sampleData.other_observations_or_measurements }}</p>
         </UCard>
 
-      <!-- Photos Section -->
-      <UCard v-if="!loadingPhotos && photos.length > 0">
-        <template #header>
-          <h2 class="text-lg font-semibold">Sample Photos & Documents</h2>
-        </template>
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <template v-for="photo in photos" :key="photo.id">
-            <!-- Form File Display -->
-            <div v-if="photo.type === 'form'" class="relative group">
-              <!-- Image Form Preview -->
-              <a 
-                v-if="photo.url?.toLowerCase().endsWith('.png')"
-                :href="photo.url" 
-                target="_blank" 
-                class="block"
-              >
-                <img 
-                  :src="photo.url" 
-                  alt="Sample Form"
-                  class="w-full h-48 object-cover rounded-lg hover:opacity-90 transition-opacity"
-                />
-                <div class="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white p-2 rounded-b-lg">
-                  Sample Form (Image)
-                </div>
-              </a>
-              <!-- PDF Form Preview -->
-              <a 
-                v-else
-                :href="photo.url" 
-                target="_blank" 
-                class="block h-48 bg-gray-50 rounded-lg border-2 border-gray-200 hover:border-blue-400 transition-colors duration-200"
-              >
-                <div class="flex flex-col items-center justify-center h-full p-4">
-                  <i class="fas fa-file-pdf text-4xl text-red-500 mb-2"></i>
-                  <span class="text-sm font-medium text-gray-700">Sample Form</span>
-                  <span class="text-xs text-gray-500 mt-1">Click to view PDF</span>
-                </div>
-                <!-- Hover overlay -->
-                <div class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-5 transition-opacity duration-200 rounded-lg"></div>
-              </a>
-            </div>
-            
-            <!-- Regular Photo Display -->
-            <div v-else class="relative group">
-              <a :href="photo.url" target="_blank" class="block">
-                <img 
-                  :src="photo.url" 
-                  :alt="getPhotoLabel(photo.type)"
-                  class="w-full h-48 object-cover rounded-lg hover:opacity-90 transition-opacity"
-                />
-                <div class="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white p-2 rounded-b-lg">
-                  {{ getPhotoLabel(photo.type) }}
-                </div>
-              </a>
-            </div>
+        <!-- Photos Section -->
+        <UCard v-if="!loadingPhotos && photos.length > 0">
+          <template #header>
+            <h2 class="text-base sm:text-lg font-semibold">Sample Photos & Documents</h2>
           </template>
-        </div>
-      </UCard>
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
+            <template v-for="photo in photos" :key="photo.id">
+              <!-- Form File Display -->
+              <div v-if="photo.type === 'form'" class="relative group">
+                <!-- Image Form Preview -->
+                <a 
+                  v-if="photo.url?.toLowerCase().endsWith('.png')"
+                  :href="photo.url" 
+                  target="_blank" 
+                  class="block"
+                >
+                  <img 
+                    :src="photo.url" 
+                    alt="Sample Form"
+                    class="w-full h-32 sm:h-48 object-cover rounded-lg hover:opacity-90 transition-opacity"
+                  />
+                  <div class="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white p-2 rounded-b-lg">
+                    <span class="text-xs sm:text-sm">Sample Form (Image)</span>
+                  </div>
+                </a>
+                <!-- PDF Form Preview -->
+                <a 
+                  v-else
+                  :href="photo.url" 
+                  target="_blank" 
+                  class="block h-32 sm:h-48 bg-gray-50 rounded-lg border-2 border-gray-200 hover:border-blue-400 transition-colors duration-200"
+                >
+                  <div class="flex flex-col items-center justify-center h-full p-2 sm:p-4">
+                    <i class="fas fa-file-pdf text-2xl sm:text-4xl text-red-500 mb-2"></i>
+                    <span class="text-xs sm:text-sm font-medium text-gray-700 text-center">Sample Form</span>
+                    <span class="text-xs text-gray-500 mt-1 text-center">Click to view PDF</span>
+                  </div>
+                  <!-- Hover overlay -->
+                  <div class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-5 transition-opacity duration-200 rounded-lg"></div>
+                </a>
+              </div>
+              
+              <!-- Regular Photo Display -->
+              <div v-else class="relative group">
+                <a :href="photo.url" target="_blank" class="block">
+                  <img 
+                    :src="photo.url" 
+                    :alt="getPhotoLabel(photo.type)"
+                    class="w-full h-32 sm:h-48 object-cover rounded-lg hover:opacity-90 transition-opacity"
+                  />
+                  <div class="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white p-2 rounded-b-lg">
+                    <span class="text-xs sm:text-sm">{{ getPhotoLabel(photo.type) }}</span>
+                  </div>
+                </a>
+              </div>
+            </template>
+          </div>
+        </UCard>
 
         <!-- Edit Button -->
-        <div class="mt-6 flex justify-end">
+        <div class="mt-4 sm:mt-6 flex justify-end">
           <UButton
             v-if="canEditSample"
             icon="i-heroicons-pencil-square"
             @click="navigateTo(`/portal/sample?edit=${sampleData.id}`)"
+            class="w-full sm:w-auto"
           >
             Edit Sample
           </UButton>
@@ -600,3 +642,80 @@ onMounted(async () => {
     </template>
   </PageContainer>
 </template>
+
+<style scoped>
+/* Mobile responsive improvements */
+@media (max-width: 640px) {
+  /* Better spacing for mobile */
+  .space-y-4 > * + * {
+    margin-top: 1rem;
+  }
+  
+  /* Ensure text doesn't overflow on very small screens */
+  .break-words {
+    word-break: break-word;
+    hyphens: auto;
+  }
+  
+  /* Better touch targets for links */
+  a {
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+  }
+  
+  /* Improve readability of small text */
+  .text-xs {
+    line-height: 1.4;
+  }
+}
+
+/* Tablet improvements */
+@media (min-width: 641px) and (max-width: 1024px) {
+  /* Better grid spacing on tablets */
+  .grid {
+    gap: 1rem;
+  }
+}
+
+/* Desktop improvements */
+@media (min-width: 1025px) {
+  /* Ensure proper spacing on large screens */
+  .space-y-6 > * + * {
+    margin-top: 1.5rem;
+  }
+}
+
+/* Photo gallery improvements */
+.group:hover .group-hover\:bg-opacity-5 {
+  background-opacity: 0.05;
+}
+
+/* Table responsiveness */
+.overflow-x-auto {
+  max-width: 100%;
+}
+
+@media (max-width: 640px) {
+  .overflow-x-auto {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* Better visual hierarchy */
+.font-medium {
+  font-weight: 500;
+}
+
+.font-semibold {
+  font-weight: 600;
+}
+
+/* Improved card spacing */
+@media (max-width: 640px) {
+  .space-y-3 > * + * {
+    margin-top: 0.75rem;
+  }
+}
+</style>

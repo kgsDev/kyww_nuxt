@@ -1,5 +1,5 @@
 <template>
-  <PolicyGuard path="/portal/train/report">
+<PolicyGuard path="/portal/train/report">
   <div>
     <PortalPageHeader
       title="Training Report"
@@ -10,7 +10,7 @@
       ]"
     />
 
-    <div class="space-y-4 p-4 max-w-full overflow-hidden">
+    <div class="space-y-4 p-2 sm:p-4 w-full max-w-full overflow-hidden">
       <!-- Loading State -->
       <div v-if="loading" class="text-center py-8">
         <ULoadingIcon />
@@ -29,15 +29,16 @@
         <!-- Compact Summary Stats Card -->
         <UCard>
           <template #header>
-            <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
-              <h2 class="text-lg font-semibold">Training Summary</h2>
-              <div class="flex flex-wrap gap-2">
+            <div class="flex flex-col space-y-2 sm:space-y-0 sm:flex-row sm:justify-between sm:items-center">
+              <h2 class="text-base sm:text-lg font-semibold">Training Summary</h2>
+              <div class="flex flex-col space-y-2 sm:space-y-0 sm:flex-row sm:gap-2">
                 <UButton
                   @click="clearAllFilters"
                   color="gray"
                   variant="outline"
                   size="sm"
                   icon="i-heroicons-x-mark"
+                  class="text-xs"
                 >
                   Clear Filters
                 </UButton>
@@ -47,6 +48,7 @@
                   icon="i-heroicons-arrow-down-tray"
                   color="primary"
                   size="sm"
+                  class="text-xs"
                 >
                   Export CSV
                 </UButton>
@@ -54,25 +56,25 @@
             </div>
           </template>
           
-          <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
-            <div class="text-center p-2 bg-gray-50 rounded">
-              <p class="text-lg font-bold">{{ stats.totalInvites }}</p>
+          <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3">
+            <div class="text-center p-2 sm:p-3 bg-gray-50 rounded">
+              <p class="text-base sm:text-lg font-bold">{{ stats.totalInvites }}</p>
               <label class="text-xs text-gray-500">My Total</label>
             </div>
-            <div class="text-center p-2 bg-green-50 rounded">
-              <p class="text-lg font-bold text-green-600">{{ stats.completedSignups }}</p>
+            <div class="text-center p-2 sm:p-3 bg-green-50 rounded">
+              <p class="text-base sm:text-lg font-bold text-green-600">{{ stats.completedSignups }}</p>
               <label class="text-xs text-gray-500">My Completed</label>
             </div>
-            <div class="text-center p-2 bg-yellow-50 rounded">
-              <p class="text-lg font-bold text-yellow-600">{{ stats.pendingInvites }}</p>
+            <div class="text-center p-2 sm:p-3 bg-yellow-50 rounded">
+              <p class="text-base sm:text-lg font-bold text-yellow-600">{{ stats.pendingInvites }}</p>
               <label class="text-xs text-gray-500">My Pending</label>
             </div>
-            <div class="text-center p-2 bg-blue-50 rounded">
-              <p class="text-lg font-bold text-blue-600">{{ otherTraineesInvites.length }}</p>
+            <div class="text-center p-2 sm:p-3 bg-blue-50 rounded">
+              <p class="text-base sm:text-lg font-bold text-blue-600">{{ otherTraineesInvites.length }}</p>
               <label class="text-xs text-gray-500">Others' Pending</label>
             </div>
-            <div class="text-center p-2 bg-purple-50 rounded">
-              <p class="text-lg font-bold text-purple-600">{{ otherTrainersCompleted.length }}</p>
+            <div class="text-center p-2 sm:p-3 bg-purple-50 rounded col-span-2 sm:col-span-1">
+              <p class="text-base sm:text-lg font-bold text-purple-600">{{ otherTrainersCompleted.length }}</p>
               <label class="text-xs text-gray-500">Others' Completed</label>
             </div>
           </div>
@@ -81,23 +83,68 @@
         <!-- Responsive Filter Controls -->
         <UCard>
           <template #header>
-            <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
-              <h3 class="text-lg font-semibold">Filters</h3>
-              <UBadge color="blue" variant="soft">
+            <div class="flex flex-col space-y-1 sm:space-y-0 sm:flex-row sm:justify-between sm:items-center">
+              <h3 class="text-base sm:text-lg font-semibold">Filters</h3>
+              <UBadge color="blue" variant="soft" size="sm">
                 {{ totalFilteredRecords }} total records
               </UBadge>
             </div>
           </template>
           
           <div class="space-y-3">
-            <!-- Responsive filter grid -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
+            <!-- Mobile: Stack all filters -->
+            <div class="grid grid-cols-1 gap-3 sm:hidden">
               <UInput
                 v-model="globalSearch"
                 icon="i-heroicons-magnifying-glass"
                 placeholder="Search..."
                 size="sm"
-                class="col-span-1 sm:col-span-2 lg:col-span-1"
+              />
+              
+              <USelect
+                v-model="selectedDateRange"
+                :options="dateRangeOptions"
+                size="sm"
+                placeholder="Date Range"
+              />
+
+              <USelect
+                v-model="selectedLocation"
+                :options="locationOptions"
+                size="sm"
+                placeholder="Location"
+              />
+
+              <USelect
+                v-model="selectedTrainingType"
+                :options="trainingTypeOptions"
+                size="sm"
+                placeholder="Training Type"
+              />
+
+              <USelect
+                v-model="selectedStatus"
+                :options="statusOptions"
+                size="sm"
+                placeholder="Status"
+              />
+
+              <div class="text-center">
+                <UBadge v-if="hasActiveFilters" color="orange" variant="soft" size="sm">
+                  {{ activeFilterCount }} active filters
+                </UBadge>
+                <span v-else class="text-sm text-gray-500">No filters active</span>
+              </div>
+            </div>
+
+            <!-- Desktop: Responsive grid -->
+            <div class="hidden sm:grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
+              <UInput
+                v-model="globalSearch"
+                icon="i-heroicons-magnifying-glass"
+                placeholder="Search..."
+                size="sm"
+                class="col-span-2 lg:col-span-1"
               />
               
               <USelect
@@ -139,7 +186,7 @@
             <!-- Active filters display - more compact -->
             <div v-if="hasActiveFilters" class="flex flex-wrap gap-1">
               <UBadge v-if="globalSearch" color="blue" variant="soft" @click="globalSearch = ''" class="cursor-pointer text-xs">
-                "{{ globalSearch }}" ×
+                "{{ globalSearch.length > 10 ? globalSearch.substring(0, 10) + '...' : globalSearch }}" ×
               </UBadge>
               
               <UBadge v-if="selectedDateRange !== 'all'" color="green" variant="soft" @click="selectedDateRange = 'all'" class="cursor-pointer text-xs">
@@ -147,7 +194,7 @@
               </UBadge>
               
               <UBadge v-if="selectedLocation !== 'all'" color="purple" variant="soft" @click="selectedLocation = 'all'" class="cursor-pointer text-xs">
-                {{ selectedLocation }} ×
+                {{ selectedLocation.length > 12 ? selectedLocation.substring(0, 12) + '...' : selectedLocation }} ×
               </UBadge>
               
               <UBadge v-if="selectedTrainingType !== 'all'" color="orange" variant="soft" @click="selectedTrainingType = 'all'" class="cursor-pointer text-xs">
@@ -172,8 +219,49 @@
             </div>
           </template>
 
-          <!-- Responsive table wrapper -->
-          <div class="overflow-x-auto">
+          <!-- Mobile: Card Layout -->
+          <div class="block sm:hidden space-y-3">
+            <div v-for="invite in sortedFilteredInvites" :key="invite.id" 
+                 class="bg-gray-50 p-3 rounded-lg border">
+              <div class="flex justify-between items-start mb-2">
+                <div class="flex-1 min-w-0">
+                  <div class="font-medium text-sm truncate">{{ invite.email }}</div>
+                  <div class="text-xs text-gray-600">{{ formatCompactDate(invite.training_date) }}</div>
+                </div>
+                <div class="flex gap-1 ml-2">
+                  <UButton
+                    size="2xs"
+                    color="primary"
+                    :loading="processingId === `resend-${invite.id}`"
+                    :disabled="!!processingId"
+                    @click="resendInvite(invite)"
+                    icon="i-heroicons-envelope"
+                  />
+                  <UButton
+                    size="2xs"
+                    color="red"
+                    :loading="processingId === `delete-${invite.id}`"
+                    :disabled="!!processingId"
+                    @click="confirmDeleteInvite(invite)"
+                    icon="i-heroicons-trash"
+                  />
+                </div>
+              </div>
+              <div class="text-xs text-gray-600 mb-2 truncate">{{ invite.training_location }}</div>
+              <div class="flex justify-between items-center">
+                <div class="flex flex-wrap gap-1">
+                  <UBadge v-if="invite.training_field_chemistry" size="xs" color="blue">FC</UBadge>
+                  <UBadge v-if="invite.training_r_card" size="xs" color="green">RC</UBadge>
+                  <UBadge v-if="invite.training_habitat" size="xs" color="purple">H</UBadge>
+                  <UBadge v-if="invite.training_biological" size="xs" color="orange">B</UBadge>
+                </div>
+                <span class="text-xs text-gray-500">Sent: {{ formatCompactDate(invite.invite_sent_at) }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Desktop: Table Layout -->
+          <div class="hidden sm:block overflow-x-auto">
             <UTable 
               :columns="responsiveInviteColumns" 
               :rows="sortedFilteredInvites" 
@@ -243,198 +331,282 @@
           </div>
         </UCard>
 
-        <!-- My Completed Signups Card -->
         <UCard>
-          <template #header>
-            <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
-              <h2 class="text-lg font-semibold">My Completed Signups</h2>
-              <UBadge color="green" variant="soft">
-                {{ filteredUsers.length }} records
-              </UBadge>
-            </div>
-          </template>
+            <template #header>
+              <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
+                <h2 class="text-lg font-semibold">My Completed Signups</h2>
+                <UBadge color="green" variant="soft">
+                  {{ filteredUsers.length }} records
+                </UBadge>
+              </div>
+            </template>
 
-          <div class="overflow-x-auto">
-            <UTable 
-              :columns="responsiveRegisteredColumns" 
-              :rows="sortedFilteredUsers" 
-              :loading="loading"
-              class="min-w-full"
-            >
-              <template #display_name-data="{ row }">
-                <div class="truncate max-w-[200px]" :title="`${row.first_name} ${row.last_name}`">
-                  {{ row.first_name }} {{ row.last_name }}
+            <!-- Mobile: Card Layout -->
+            <div class="block sm:hidden space-y-3">
+              <div v-for="user in sortedFilteredUsers" :key="user.id" 
+                  class="bg-gray-50 p-3 rounded-lg border">
+                <div class="flex justify-between items-start mb-2">
+                  <div class="flex-1 min-w-0">
+                    <div class="font-medium text-sm">{{ user.first_name }} {{ user.last_name }}</div>
+                    <div class="text-xs text-gray-600 truncate">{{ user.email }}</div>
+                  </div>
                 </div>
-              </template>
-              
-              <template #email-data="{ row }">
-                <div class="truncate max-w-[200px]" :title="row.email">
-                  {{ row.email }}
-                </div>
-              </template>
-              
-              <template #training_date-data="{ row }">
-                <span class="text-xs whitespace-nowrap">{{ formatCompactDate(row.training_date) }}</span>
-              </template>
-              
-              <template #training_location-data="{ row }">
-                <div class="truncate max-w-[150px]" :title="row.training_location">
-                  {{ row.training_location }}
-                </div>
-              </template>
-              
-              <template #training_types-data="{ row }">
+                <div class="text-xs text-gray-600 mb-2">{{ formatCompactDate(user.training_date) }} • {{ user.training_location }}</div>
                 <div class="flex flex-wrap gap-1">
-                  <UBadge v-if="row.training_field_chemistry" size="xs" color="blue">FC</UBadge>
-                  <UBadge v-if="row.training_r_card" size="xs" color="green">RC</UBadge>
-                  <UBadge v-if="row.training_habitat" size="xs" color="purple">H</UBadge>
-                  <UBadge v-if="row.training_biological" size="xs" color="orange">B</UBadge>
+                  <UBadge v-if="user.training_field_chemistry" size="xs" color="blue">FC</UBadge>
+                  <UBadge v-if="user.training_r_card" size="xs" color="green">RC</UBadge>
+                  <UBadge v-if="user.training_habitat" size="xs" color="purple">H</UBadge>
+                  <UBadge v-if="user.training_biological" size="xs" color="orange">B</UBadge>
                 </div>
-              </template>
-            </UTable>
-          </div>
-
-          <div v-if="!loading && filteredUsers.length === 0" class="text-center text-gray-500 py-8">
-            {{ hasActiveFilters ? 'No matching completed signups found.' : 'No completed signups found.' }}
-          </div>
-        </UCard>
-
-        <!-- Other Trainers' Pending Invites Card -->
-        <UCard>
-          <template #header>
-            <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
-              <h2 class="text-lg font-semibold">Other Trainers' Pending Invites</h2>
-              <UBadge color="blue" variant="soft">
-                {{ filteredOtherInvites.length }} records
-              </UBadge>
+              </div>
             </div>
-          </template>
 
-          <div class="overflow-x-auto">
-            <UTable 
-              :columns="responsiveOtherInviteColumns" 
-              :rows="sortedFilteredOtherInvites" 
-              :loading="loadingOtherInvites"
-              class="min-w-full"
-            >
-              <template #email-data="{ row }">
-                <div class="truncate max-w-[200px]" :title="row.email">
-                  {{ row.email }}
-                </div>
-              </template>
-              
-              <template #training_date-data="{ row }">
-                <span class="text-xs whitespace-nowrap">{{ formatCompactDate(row.training_date) }}</span>
-              </template>
-              
-              <template #training_location-data="{ row }">
-                <div class="truncate max-w-[120px]" :title="row.training_location">
-                  {{ row.training_location }}
-                </div>
-              </template>
-              
-              <template #trainer-data="{ row }">
-                <div class="truncate max-w-[120px]" v-if="row.trainer" :title="`${row.trainer.first_name} ${row.trainer.last_name}`">
-                  <span class="text-xs">{{ row.trainer.first_name }} {{ row.trainer.last_name }}</span>
-                </div>
-                <span v-else class="text-gray-500 italic text-xs">Unknown</span>
-              </template>
-              
-              <template #training_types-data="{ row }">
-                <div class="flex flex-wrap gap-1">
-                  <UBadge v-if="row.training_field_chemistry" size="xs" color="blue">FC</UBadge>
-                  <UBadge v-if="row.training_r_card" size="xs" color="green">RC</UBadge>
-                  <UBadge v-if="row.training_habitat" size="xs" color="purple">H</UBadge>
-                  <UBadge v-if="row.training_biological" size="xs" color="orange">B</UBadge>
-                </div>
-              </template>
-              
-              <template #invite_sent_at-data="{ row }">
-                <span class="text-xs whitespace-nowrap">{{ formatCompactDate(row.invite_sent_at) }}</span>
-              </template>
-              
-              <template #actions-data="{ row }">
-                <UButton
-                  size="2xs"
-                  color="primary"
-                  :loading="processingId === `resend-other-${row.id}`"
-                  :disabled="!!processingId"
-                  @click="resendOtherInvite(row)"
-                  icon="i-heroicons-envelope"
-                >
-                  Resend
-                </UButton>
-              </template>
-            </UTable>
-          </div>
-
-          <div v-if="!loadingOtherInvites && filteredOtherInvites.length === 0" class="text-center text-gray-500 py-8">
-            {{ hasActiveFilters ? 'No matching other trainers\' invites found.' : 'No other trainers\' invites found.' }}
-          </div>
-        </UCard>
-
-        <!-- Other Trainers' Completed Signups Card -->
-        <UCard>
-          <template #header>
-            <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
-              <h2 class="text-lg font-semibold">Other Trainers' Completed Signups</h2>
-              <UBadge color="purple" variant="soft">
-                {{ filteredOtherCompleted.length }} records
-              </UBadge>
+            <!-- Desktop: Table Layout -->
+            <div class="hidden sm:block overflow-x-auto">
+              <UTable 
+                :columns="responsiveRegisteredColumns" 
+                :rows="sortedFilteredUsers" 
+                :loading="loading"
+                class="min-w-full"
+              >
+                <template #display_name-data="{ row }">
+                  <div class="truncate max-w-[200px]" :title="`${row.first_name} ${row.last_name}`">
+                    {{ row.first_name }} {{ row.last_name }}
+                  </div>
+                </template>
+                
+                <template #email-data="{ row }">
+                  <div class="truncate max-w-[200px]" :title="row.email">
+                    {{ row.email }}
+                  </div>
+                </template>
+                
+                <template #training_date-data="{ row }">
+                  <span class="text-xs whitespace-nowrap">{{ formatCompactDate(row.training_date) }}</span>
+                </template>
+                
+                <template #training_location-data="{ row }">
+                  <div class="truncate max-w-[150px]" :title="row.training_location">
+                    {{ row.training_location }}
+                  </div>
+                </template>
+                
+                <template #training_types-data="{ row }">
+                  <div class="flex flex-wrap gap-1">
+                    <UBadge v-if="row.training_field_chemistry" size="xs" color="blue">FC</UBadge>
+                    <UBadge v-if="row.training_r_card" size="xs" color="green">RC</UBadge>
+                    <UBadge v-if="row.training_habitat" size="xs" color="purple">H</UBadge>
+                    <UBadge v-if="row.training_biological" size="xs" color="orange">B</UBadge>
+                  </div>
+                </template>
+              </UTable>
             </div>
-          </template>
 
-          <div class="overflow-x-auto">
-            <UTable 
-              :columns="responsiveOtherCompletedColumns" 
-              :rows="sortedFilteredOtherCompleted" 
-              :loading="loadingOtherCompleted"
-              class="min-w-full"
-            >
-              <template #display_name-data="{ row }">
-                <div class="truncate max-w-[180px]" :title="`${row.first_name} ${row.last_name}`">
-                  {{ row.first_name }} {{ row.last_name }}
-                </div>
-              </template>
-              
-              <template #email-data="{ row }">
-                <div class="truncate max-w-[180px]" :title="row.email">
-                  {{ row.email }}
-                </div>
-              </template>
-              
-              <template #training_date-data="{ row }">
-                <span class="text-xs whitespace-nowrap">{{ formatCompactDate(row.training_date) }}</span>
-              </template>
-              
-              <template #training_location-data="{ row }">
-                <div class="truncate max-w-[120px]" :title="row.training_location">
-                  {{ row.training_location }}
-                </div>
-              </template>
-              
-              <template #trainer-data="{ row }">
-                <div class="truncate max-w-[120px]" v-if="row.trainer_name" :title="row.trainer_name">
-                  <span class="text-xs">{{ row.trainer_name }}</span>
-                </div>
-                <span v-else class="text-gray-500 italic text-xs">Unknown</span>
-              </template>
-              
-              <template #training_types-data="{ row }">
-                <div class="flex flex-wrap gap-1">
-                  <UBadge v-if="row.training_field_chemistry" size="xs" color="blue">FC</UBadge>
-                  <UBadge v-if="row.training_r_card" size="xs" color="green">RC</UBadge>
-                  <UBadge v-if="row.training_habitat" size="xs" color="purple">H</UBadge>
-                  <UBadge v-if="row.training_biological" size="xs" color="orange">B</UBadge>
-                </div>
-              </template>
-            </UTable>
-          </div>
+            <div v-if="!loading && filteredUsers.length === 0" class="text-center text-gray-500 py-8">
+              {{ hasActiveFilters ? 'No matching completed signups found.' : 'No completed signups found.' }}
+            </div>
+          </UCard>
 
-          <div v-if="!loadingOtherCompleted && filteredOtherCompleted.length === 0" class="text-center text-gray-500 py-8">
-            {{ hasActiveFilters ? 'No matching other trainers\' completed signups found.' : 'No other trainers\' completed signups found.' }}
-          </div>
-        </UCard>
+          <!-- Other Trainers' Pending Invites Card -->
+          <UCard>
+            <template #header>
+              <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
+                <h2 class="text-lg font-semibold">Other Trainers' Pending Invites</h2>
+                <UBadge color="blue" variant="soft">
+                  {{ filteredOtherInvites.length }} records
+                </UBadge>
+              </div>
+            </template>
+
+            <!-- Mobile: Card Layout -->
+            <div class="block sm:hidden space-y-3">
+              <div v-for="invite in sortedFilteredOtherInvites" :key="invite.id" 
+                  class="bg-gray-50 p-3 rounded-lg border">
+                <div class="flex justify-between items-start mb-2">
+                  <div class="flex-1 min-w-0">
+                    <div class="font-medium text-sm truncate">{{ invite.email }}</div>
+                    <div class="text-xs text-gray-600">
+                      {{ formatCompactDate(invite.training_date) }} • 
+                      <span v-if="invite.trainer">{{ invite.trainer.first_name }} {{ invite.trainer.last_name }}</span>
+                      <span v-else>Unknown Trainer</span>
+                    </div>
+                  </div>
+                  <UButton
+                    size="2xs"
+                    color="primary"
+                    :loading="processingId === `resend-other-${invite.id}`"
+                    :disabled="!!processingId"
+                    @click="resendOtherInvite(invite)"
+                    icon="i-heroicons-envelope"
+                  />
+                </div>
+                <div class="text-xs text-gray-600 mb-2 truncate">{{ invite.training_location }}</div>
+                <div class="flex justify-between items-center">
+                  <div class="flex flex-wrap gap-1">
+                    <UBadge v-if="invite.training_field_chemistry" size="xs" color="blue">FC</UBadge>
+                    <UBadge v-if="invite.training_r_card" size="xs" color="green">RC</UBadge>
+                    <UBadge v-if="invite.training_habitat" size="xs" color="purple">H</UBadge>
+                    <UBadge v-if="invite.training_biological" size="xs" color="orange">B</UBadge>
+                  </div>
+                  <span class="text-xs text-gray-500">Sent: {{ formatCompactDate(invite.invite_sent_at) }}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Desktop: Table Layout -->
+            <div class="hidden sm:block overflow-x-auto">
+              <UTable 
+                :columns="responsiveOtherInviteColumns" 
+                :rows="sortedFilteredOtherInvites" 
+                :loading="loadingOtherInvites"
+                class="min-w-full"
+              >
+                <template #email-data="{ row }">
+                  <div class="truncate max-w-[200px]" :title="row.email">
+                    {{ row.email }}
+                  </div>
+                </template>
+                
+                <template #training_date-data="{ row }">
+                  <span class="text-xs whitespace-nowrap">{{ formatCompactDate(row.training_date) }}</span>
+                </template>
+                
+                <template #training_location-data="{ row }">
+                  <div class="truncate max-w-[120px]" :title="row.training_location">
+                    {{ row.training_location }}
+                  </div>
+                </template>
+                
+                <template #trainer-data="{ row }">
+                  <div class="truncate max-w-[120px]" v-if="row.trainer" :title="`${row.trainer.first_name} ${row.trainer.last_name}`">
+                    <span class="text-xs">{{ row.trainer.first_name }} {{ row.trainer.last_name }}</span>
+                  </div>
+                  <span v-else class="text-gray-500 italic text-xs">Unknown</span>
+                </template>
+                
+                <template #training_types-data="{ row }">
+                  <div class="flex flex-wrap gap-1">
+                    <UBadge v-if="row.training_field_chemistry" size="xs" color="blue">FC</UBadge>
+                    <UBadge v-if="row.training_r_card" size="xs" color="green">RC</UBadge>
+                    <UBadge v-if="row.training_habitat" size="xs" color="purple">H</UBadge>
+                    <UBadge v-if="row.training_biological" size="xs" color="orange">B</UBadge>
+                  </div>
+                </template>
+                
+                <template #invite_sent_at-data="{ row }">
+                  <span class="text-xs whitespace-nowrap">{{ formatCompactDate(row.invite_sent_at) }}</span>
+                </template>
+                
+                <template #actions-data="{ row }">
+                  <UButton
+                    size="2xs"
+                    color="primary"
+                    :loading="processingId === `resend-other-${row.id}`"
+                    :disabled="!!processingId"
+                    @click="resendOtherInvite(row)"
+                    icon="i-heroicons-envelope"
+                  >
+                    Resend
+                  </UButton>
+                </template>
+              </UTable>
+            </div>
+
+            <div v-if="!loadingOtherInvites && filteredOtherInvites.length === 0" class="text-center text-gray-500 py-8">
+              {{ hasActiveFilters ? 'No matching other trainers\' invites found.' : 'No other trainers\' invites found.' }}
+            </div>
+          </UCard>
+
+          <!-- Other Trainers' Completed Signups Card -->
+          <UCard>
+            <template #header>
+              <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
+                <h2 class="text-lg font-semibold">Other Trainers' Completed Signups</h2>
+                <UBadge color="purple" variant="soft">
+                  {{ filteredOtherCompleted.length }} records
+                </UBadge>
+              </div>
+            </template>
+
+            <!-- Mobile: Card Layout -->
+            <div class="block sm:hidden space-y-3">
+              <div v-for="user in sortedFilteredOtherCompleted" :key="user.id" 
+                  class="bg-gray-50 p-3 rounded-lg border">
+                <div class="flex justify-between items-start mb-2">
+                  <div class="flex-1 min-w-0">
+                    <div class="font-medium text-sm">{{ user.first_name }} {{ user.last_name }}</div>
+                    <div class="text-xs text-gray-600 truncate">{{ user.email }}</div>
+                  </div>
+                </div>
+                <div class="text-xs text-gray-600 mb-2">
+                  {{ formatCompactDate(user.training_date) }} • {{ user.training_location }}
+                </div>
+                <div class="flex justify-between items-center">
+                  <div class="flex flex-wrap gap-1">
+                    <UBadge v-if="user.training_field_chemistry" size="xs" color="blue">FC</UBadge>
+                    <UBadge v-if="user.training_r_card" size="xs" color="green">RC</UBadge>
+                    <UBadge v-if="user.training_habitat" size="xs" color="purple">H</UBadge>
+                    <UBadge v-if="user.training_biological" size="xs" color="orange">B</UBadge>
+                  </div>
+                  <span class="text-xs text-gray-500">
+                    Trainer: {{ user.trainer_name || 'Unknown' }}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Desktop: Table Layout -->
+            <div class="hidden sm:block overflow-x-auto">
+              <UTable 
+                :columns="responsiveOtherCompletedColumns" 
+                :rows="sortedFilteredOtherCompleted" 
+                :loading="loadingOtherCompleted"
+                class="min-w-full"
+              >
+                <template #display_name-data="{ row }">
+                  <div class="truncate max-w-[180px]" :title="`${row.first_name} ${row.last_name}`">
+                    {{ row.first_name }} {{ row.last_name }}
+                  </div>
+                </template>
+                
+                <template #email-data="{ row }">
+                  <div class="truncate max-w-[180px]" :title="row.email">
+                    {{ row.email }}
+                  </div>
+                </template>
+                
+                <template #training_date-data="{ row }">
+                  <span class="text-xs whitespace-nowrap">{{ formatCompactDate(row.training_date) }}</span>
+                </template>
+                
+                <template #training_location-data="{ row }">
+                  <div class="truncate max-w-[120px]" :title="row.training_location">
+                    {{ row.training_location }}
+                  </div>
+                </template>
+                
+                <template #trainer-data="{ row }">
+                  <div class="truncate max-w-[120px]" v-if="row.trainer_name" :title="row.trainer_name">
+                    <span class="text-xs">{{ row.trainer_name }}</span>
+                  </div>
+                  <span v-else class="text-gray-500 italic text-xs">Unknown</span>
+                </template>
+                
+                <template #training_types-data="{ row }">
+                  <div class="flex flex-wrap gap-1">
+                    <UBadge v-if="row.training_field_chemistry" size="xs" color="blue">FC</UBadge>
+                    <UBadge v-if="row.training_r_card" size="xs" color="green">RC</UBadge>
+                    <UBadge v-if="row.training_habitat" size="xs" color="purple">H</UBadge>
+                    <UBadge v-if="row.training_biological" size="xs" color="orange">B</UBadge>
+                  </div>
+                </template>
+              </UTable>
+            </div>
+
+            <div v-if="!loadingOtherCompleted && filteredOtherCompleted.length === 0" class="text-center text-gray-500 py-8">
+              {{ hasActiveFilters ? 'No matching other trainers\' completed signups found.' : 'No other trainers\' completed signups found.' }}
+            </div>
+          </UCard>
       </template>
     </div>
     
@@ -555,6 +727,30 @@
       </UCard>
     </UModal>
   </div>
+   <!-- Scroll to Top Button -->
+    <Transition
+      name="fade"
+      enter-active-class="transition-opacity duration-300"
+      leave-active-class="transition-opacity duration-300"
+      enter-from-class="opacity-0"
+      enter-to-class="opacity-100"
+      leave-from-class="opacity-100"
+      leave-to-class="opacity-0"
+    >
+      <div
+        v-if="showScrollTop"
+        class="fixed bottom-4 right-4 z-50"
+      >
+        <UButton
+          @click="scrollToTop"
+          icon="i-heroicons-arrow-up"
+          color="primary"
+          variant="solid"
+          size="lg"
+          class="rounded-full shadow-lg hover:shadow-xl transition-all duration-200"
+        />
+      </div>
+    </Transition>
   </PolicyGuard>
 </template>
   
@@ -590,6 +786,7 @@ const showResendModal = ref(false);
 const showEmailStatusModal = ref(false);
 const selectedInvite = ref(null);
 const emailStatus = ref({ success: false, message: '' });
+const showScrollTop = ref(false)
 
 // Format functions
 const formatCompactDate = (dateString) => {
@@ -1097,8 +1294,21 @@ const processResendInvite = async () => {
   }
 };
 
+const handleScroll = () => {
+  showScrollTop.value = window.scrollY > 300
+}
+
+const scrollToTop = () => {
+  window.scrollTo({
+    top: 0,
+    behavior: 'smooth'
+  })
+}
+
+
 // Data fetching
 onMounted(async () => {
+  window.addEventListener('scroll', handleScroll);
   try {
     const { user } = useDirectusAuth();
     
@@ -1252,6 +1462,10 @@ onMounted(async () => {
   } finally {
     loading.value = false;
   }
+});
+
+onUnmounted(() => {
+  window.removeEventListener('scroll', handleScroll);
 });
 </script>
 
