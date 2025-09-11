@@ -27,9 +27,9 @@
         </div>
       </div>
 
-      <!-- Date validation warning -->
+      <!-- Date validation warning - only show for actual samplers with problematic dates -->
       <div 
-        v-if="dateValidationWarning && showForm" 
+        v-if="dateValidationWarning && showForm && isActualSampler" 
         class="message warning-message"
       >
         <div class="flex items-center">
@@ -43,10 +43,10 @@
 
       <form ref="signupForm" v-if="showForm" @submit.prevent="onSubmit">
         <h2>Welcome to Kentucky Watershed Watch!</h2>
-        <h1>We greatly appreciate your interest in supporting the organization and Kentucky's waterways with your stream sampling efforts.
+        <h1>We greatly appreciate your interest in supporting the organization and Kentucky's waterways{{ isActualSampler ? ' with your stream sampling efforts' : ' as a community partner' }}.
         <br><br> 
-        This data portal will serve as your access point to information about participation, including identifying other samplers and sampling sites and finding support hub locations. 
-        It will also enable you to enter your monitoring data.<br><br>
+        This data portal will serve as your access point to information about participation, including identifying other samplers and sampling sites and finding support hub locations.{{ isActualSampler ? ' It will also enable you to enter your monitoring data.' : '' }}
+        <br><br>
         To get started, please create a data portal user name (your email), password, and enter your contact information.</h1>
       
         <!-- Directus User Fields -->
@@ -119,114 +119,119 @@
           <p v-if="passwordMatchMessage" class="password-message">{{ passwordMatchMessage }}</p>
         </div>
 
-        <!-- Read-only Sampler Data Fields from Token -->
-        <label>Details from your Training (read only):</label>
-        <div class="read-group-div">
-          <div class="form-group">
-            <label>Original Training Date:</label>
-            <input 
-              type="text" 
-              :value="displayOriginalTrainingDate" 
-              disabled 
-              class="readonly-field"
-              :class="{ 'date-warning': hasDateIssue }"
-            />
-            <p v-if="hasDateIssue" class="date-warning-text">
-              ⚠️ This date appears to have an issue. Please contact your trainer if this looks incorrect.
-            </p>
-          </div>
-          <div class="form-group">
-            <label>Latest Training Date:</label>
-            <input 
-              type="text" 
-              :value="displayLatestTrainingDate" 
-              disabled 
-              readonly  
-              class="readonly-field"
-              :class="{ 'date-warning': hasDateIssue }"
-            />
-          </div>
-          <div class="form-group">
-            <label>Training Location:</label>
-            <input type="text" :value="trainingLocation" disabled readonly  class="readonly-field"/>
-          </div>
-          <div class="form-group">
-            <label>Trainer:</label>
-            <input type="text" :value="trainer_name" disabled readonly  class="readonly-field"/>
-          </div>
+        <!-- Read-only Sampler Data Fields from Token - only show if there's actually training data -->
+        <div v-if="hasTrainingInfo">
+          <label>Details from your Training (read only):</label>
+          <div class="read-group-div">
+            <div class="form-group" v-if="originalTrainingDate">
+              <label>Original Training Date:</label>
+              <input 
+                type="text" 
+                :value="displayOriginalTrainingDate" 
+                disabled 
+                class="readonly-field"
+                :class="{ 'date-warning': hasActualDateIssue }"
+              />
+              <p v-if="hasActualDateIssue && originalTrainingDate" class="date-warning-text">
+                ⚠️ This date appears to have an issue. Please contact your trainer if this looks incorrect.
+              </p>
+            </div>
+            <div class="form-group" v-if="trainingDateLatest">
+              <label>Latest Training Date:</label>
+              <input 
+                type="text" 
+                :value="displayLatestTrainingDate" 
+                disabled 
+                readonly  
+                class="readonly-field"
+                :class="{ 'date-warning': hasActualDateIssue }"
+              />
+            </div>
+            <div class="form-group" v-if="trainingLocation">
+              <label>Training Location:</label>
+              <input type="text" :value="trainingLocation" disabled readonly class="readonly-field"/>
+            </div>
+            <div class="form-group" v-if="trainer_name">
+              <label>Trainer:</label>
+              <input type="text" :value="trainer_name" disabled readonly class="readonly-field"/>
+            </div>
 
-          <label>Training Completed:</label>
+            <label v-if="hasAnyTrainingType">Training Completed:</label>
 
-          <div class="form-group read-group">
-            <label>Field Chemistry: <input type="checkbox" :checked="training_field_chemistry" disabled readonly  class="readonly-checkbox"/></label>
-          </div>
-          <div class="form-group read-group">
-            <label>R-Card:
-            <input type="checkbox" :checked="training_r_card" disabled readonly class="readonly-checkbox"/></label>
-          </div>
-          <div class="form-group read-group">
-            <label>Habitat:
-            <input type="checkbox" :checked="training_habitat" disabled readonly class="readonly-checkbox"/></label>
-          </div>
-          <div class="form-group read-group">
-            <label>Biological:
-            <input type="checkbox" :checked="training_biological" disabled readonly class="readonly-checkbox"/></label>
+            <div class="form-group read-group" v-if="training_field_chemistry">
+              <label>Field Chemistry: <input type="checkbox" :checked="training_field_chemistry" disabled readonly class="readonly-checkbox"/></label>
+            </div>
+            <div class="form-group read-group" v-if="training_r_card">
+              <label>R-Card:
+              <input type="checkbox" :checked="training_r_card" disabled readonly class="readonly-checkbox"/></label>
+            </div>
+            <div class="form-group read-group" v-if="training_habitat">
+              <label>Habitat:
+              <input type="checkbox" :checked="training_habitat" disabled readonly class="readonly-checkbox"/></label>
+            </div>
+            <div class="form-group read-group" v-if="training_biological">
+              <label>Biological:
+              <input type="checkbox" :checked="training_biological" disabled readonly class="readonly-checkbox"/></label>
+            </div>
           </div>
         </div>
 
-        <label>Please Enter the Equipment Issued:</label>
+        <!-- Equipment section - only show for actual samplers -->
+        <div v-if="isActualSampler">
+          <label>Please Enter the Equipment Issued:</label>
 
-        <div class="form-group read-group">
-          <div class="form-group">
-            <label>pH kit: <input type="checkbox" :checked="equip_ph" v-model="equip_ph"/></label>
-          </div>
-          <div v-if="equip_ph" class="form-group">
-            <label>pH Kit Expiration Date:
-            <input type="date" v-model="equip_ph_expiration" id="equip_ph_expiration" @input="validateEquipmentDate('ph')"/></label>
-            <p v-if="equipmentDateErrors.ph" class="error-message">{{ equipmentDateErrors.ph }}</p>
-          </div>
-          <div class="form-group">
-            <label>Dissolved oxygen kit:
-            <input type="checkbox" :checked="equip_do" v-model="equip_do"/></label>
-          </div>
-          <div v-if="equip_do" class="form-group">
-            <label>DO Kit Expiration Date:
-            <input type="date" v-model="equip_do_expiration" id="equip_do_expiration" @input="validateEquipmentDate('do')"/></label>
-            <p v-if="equipmentDateErrors.do" class="error-message">{{ equipmentDateErrors.do }}</p>
-          </div>
-          <div class="form-group">
-            <label>
-              Conductivity meter:
-              <input type="checkbox" v-model="equip_cond" />
-            </label>
-          </div>
-          <div class="form-group">
-            <label>Thermometer:
-              <input type="checkbox" v-model="equip_thermo" />
-            </label>
-          </div>
-          <div class="form-group">
-            <label>Waste container:
-              <input type="checkbox" v-model="equip_waste" />
-            </label>
-          </div>
-          <div class="form-group">
-            <label>
-              White pan:
-              <input type="checkbox" v-model="equip_pan" />
-            </label>
-          </div>
-          <div class="form-group">
-            <label>
-              Instructional flip cards:
-              <input type="checkbox" v-model="equip_flip" />
-            </label>
-          </div>
-          <div class="form-group">
-            <label>
-              Incubator:
-              <input type="checkbox" v-model="equip_incubator" />
-            </label>
+          <div class="form-group read-group">
+            <div class="form-group">
+              <label>pH kit: <input type="checkbox" :checked="equip_ph" v-model="equip_ph"/></label>
+            </div>
+            <div v-if="equip_ph" class="form-group">
+              <label>pH Kit Expiration Date:
+              <input type="date" v-model="equip_ph_expiration" id="equip_ph_expiration" @input="validateEquipmentDate('ph')"/></label>
+              <p v-if="equipmentDateErrors.ph" class="error-message">{{ equipmentDateErrors.ph }}</p>
+            </div>
+            <div class="form-group">
+              <label>Dissolved oxygen kit:
+              <input type="checkbox" :checked="equip_do" v-model="equip_do"/></label>
+            </div>
+            <div v-if="equip_do" class="form-group">
+              <label>DO Kit Expiration Date:
+              <input type="date" v-model="equip_do_expiration" id="equip_do_expiration" @input="validateEquipmentDate('do')"/></label>
+              <p v-if="equipmentDateErrors.do" class="error-message">{{ equipmentDateErrors.do }}</p>
+            </div>
+            <div class="form-group">
+              <label>
+                Conductivity meter:
+                <input type="checkbox" v-model="equip_cond" />
+              </label>
+            </div>
+            <div class="form-group">
+              <label>Thermometer:
+                <input type="checkbox" v-model="equip_thermo" />
+              </label>
+            </div>
+            <div class="form-group">
+              <label>Waste container:
+                <input type="checkbox" v-model="equip_waste" />
+              </label>
+            </div>
+            <div class="form-group">
+              <label>
+                White pan:
+                <input type="checkbox" v-model="equip_pan" />
+              </label>
+            </div>
+            <div class="form-group">
+              <label>
+                Instructional flip cards:
+                <input type="checkbox" v-model="equip_flip" />
+              </label>
+            </div>
+            <div class="form-group">
+              <label>
+                Incubator:
+                <input type="checkbox" v-model="equip_incubator" />
+              </label>
+            </div>
           </div>
         </div>
 
@@ -290,17 +295,19 @@
           <small class="info-text">Required.</small>
         </div>
 
-        <!-- Sampling Kit Section with Radio Buttons -->
-        <label class="block font-bold mt-4">Sampling Kit:</label>
-        <div class="form-group">
-          <label>
-            <input type="radio" v-model="kitOption" value="personal" />
-            I have been issued my own kit to use until I no longer participate in sampling.
-          </label>
-          <label>
-            <input type="radio" v-model="kitOption" value="borrow" />
-            I plan to borrow a kit from a nearby Support Hub.
-          </label>
+        <!-- Sampling Kit Section with Radio Buttons - only show for actual samplers -->
+        <div v-if="isActualSampler">
+          <label class="block font-bold mt-4">Sampling Kit:</label>
+          <div class="form-group">
+            <label>
+              <input type="radio" v-model="kitOption" value="personal" />
+              I have been issued my own kit to use until I no longer participate in sampling.
+            </label>
+            <label>
+              <input type="radio" v-model="kitOption" value="borrow" />
+              I plan to borrow a kit from a nearby Support Hub.
+            </label>
+          </div>
         </div>
 
         <div class="form-group">
@@ -331,6 +338,7 @@
     </div>
   </div>
 </template>
+
 <script setup>
 //This is the signup page for new users to create an account. It is a form that takes in user information and sends it to the backend for processing.
   import { useRoute, useFetch } from '#app';
@@ -399,9 +407,41 @@
   const dateValidationWarning = ref('');
   const equipmentDateErrors = ref({ ph: '', do: '' });
 
-  // Date validation functions
+  // Computed properties to determine user type and what to show
+  const isActualSampler = computed(() => {
+    // A user is an actual sampler if they have any training completed (not just no training)
+    return training_field_chemistry.value || 
+           training_r_card.value || 
+           training_habitat.value || 
+           training_biological.value;
+  });
+
+  const hasTrainingInfo = computed(() => {
+    // Show training info if there's any meaningful training data
+    return originalTrainingDate.value || 
+           trainingLocation.value || 
+           trainer_name.value || 
+           isActualSampler.value;
+  });
+
+  const hasAnyTrainingType = computed(() => {
+    return training_field_chemistry.value || 
+           training_r_card.value || 
+           training_habitat.value || 
+           training_biological.value;
+  });
+
+  // Date validation functions - improved to handle blank dates properly
   function validateTrainingDate(dateString) {
-    if (!dateString) return { isValid: true, message: '', displayDate: '' };
+    // If date is blank or null, that's perfectly fine (non-sampler)
+    if (!dateString || dateString.trim() === '') {
+      return { 
+        isValid: true, 
+        message: '', 
+        displayDate: 'Not applicable',
+        isBlank: true
+      };
+    }
     
     const date = new Date(dateString);
     const currentYear = new Date().getFullYear();
@@ -411,7 +451,8 @@
       return { 
         isValid: false, 
         message: 'Invalid date format', 
-        displayDate: 'Invalid Date' 
+        displayDate: 'Invalid Date',
+        isBlank: false
       };
     }
     
@@ -422,14 +463,16 @@
       return { 
         isValid: false, 
         message: `Training date appears to be from year ${year}, which seems incorrect`, 
-        displayDate: `${date.toLocaleDateString()} (Year ${year} - Please verify)` 
+        displayDate: `${date.toLocaleDateString()} (Year ${year} - Please verify)`,
+        isBlank: false
       };
     }
     
     return { 
       isValid: true, 
       message: '', 
-      displayDate: date.toLocaleDateString() 
+      displayDate: date.toLocaleDateString(),
+      isBlank: false
     };
   }
 
@@ -442,7 +485,7 @@
     }
     
     const validation = validateTrainingDate(dateValue);
-    if (!validation.isValid) {
+    if (!validation.isValid && !validation.isBlank) {
       equipmentDateErrors.value[equipmentType] = validation.message;
     } else {
       equipmentDateErrors.value[equipmentType] = '';
@@ -456,8 +499,10 @@
   const displayOriginalTrainingDate = computed(() => originalDateValidation.value.displayDate);
   const displayLatestTrainingDate = computed(() => latestDateValidation.value.displayDate);
   
-  const hasDateIssue = computed(() => 
-    !originalDateValidation.value.isValid || !latestDateValidation.value.isValid
+  // Only show date issues for actual dates that have problems (not blank dates)
+  const hasActualDateIssue = computed(() => 
+    (!originalDateValidation.value.isValid && !originalDateValidation.value.isBlank) || 
+    (!latestDateValidation.value.isValid && !latestDateValidation.value.isBlank)
   );
 
   const canSubmitForm = computed(() => {
@@ -475,7 +520,7 @@
 
   // Counties data array
   const counties = [
-    { id: '', name: 'Select a county' }, // Default option
+    { id: '', name: 'Select a county' },
     { id: 'adair', name: 'Adair' },
     { id: 'allen', name: 'Allen' },
     { id: 'anderson', name: 'Anderson' },
@@ -627,18 +672,10 @@
 
 // Update password validation functions
 const validatePassword = () => {
-  // This regex ensures password contains:
-  // - At least one lowercase letter
-  // - At least one uppercase letter 
-  // - At least one number
-  // - At least one special character
-  // - Minimum length of 8 characters
-  // - Allows all special characters including spaces (but not control characters)
   const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?~` ])[A-Za-z\d!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?~` ]{8,}$/;
 
   if (regex.test(password.value)) {
     passwordMessage.value = '';
-    // Add password match validation here
     validatePasswordMatch();
   } else {
     passwordMessage.value = 'Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, one number, and one special character. Spaces are allowed.';
@@ -646,7 +683,6 @@ const validatePassword = () => {
 };
 
 const validatePasswordMatch = () => {
-  // Only show match error if there's a confirm password value
   if (confirmPassword.value) {
     if (confirmPassword.value !== password.value) {
       passwordMatchMessage.value = 'Passwords do not match.';
@@ -743,8 +779,8 @@ const validatePasswordMatch = () => {
       return;
     }
 
-    // Check if we have date issues and warn the user
-    if (hasDateIssue.value) {
+    // Only warn about date issues if this is an actual sampler with problematic dates
+    if (hasActualDateIssue.value && isActualSampler.value) {
       dateValidationWarning.value = 'Your training date appears to have an issue. The signup will proceed, but please contact your trainer to verify the correct training date.';
     }
 
@@ -755,13 +791,13 @@ const validatePasswordMatch = () => {
     }
   };
 
-  // Function to sanitize dates before sending to API
+  // Function to sanitize dates before sending to API - improved to handle non-samplers
   function sanitizeDate(dateString) {
-    if (!dateString) return null;
+    if (!dateString || dateString.trim() === '') return null;
     
     const validation = validateTrainingDate(dateString);
-    if (!validation.isValid) {
-      // If date is invalid, return null to prevent API errors
+    if (!validation.isValid && !validation.isBlank) {
+      // If date is invalid (but not blank), return null to prevent API errors
       console.warn(`Invalid date detected: ${dateString}, sending null instead`);
       return null;
     }
@@ -852,7 +888,7 @@ const validatePasswordMatch = () => {
             // Check if there was an email warning
             if (response.code === 'EMAIL_WARNING') {
               message.value = `⚠️ ${response.message}`;
-            } else if (hasDateIssue.value) {
+            } else if (hasActualDateIssue.value && isActualSampler.value) {
               message.value = `✅ ${response.message}<br><br>⚠️ Note: Your training date had some issues. Please contact your trainer to verify the correct training date after logging in.`;
             } else {
               message.value = `✅ ${response.message}`;
@@ -865,7 +901,7 @@ const validatePasswordMatch = () => {
           } else {
             // Legacy support
             let successMessage = response.message || 'Account created successfully!';
-            if (hasDateIssue.value) {
+            if (hasActualDateIssue.value && isActualSampler.value) {
               successMessage += '<br><br>⚠️ Note: Your training date had some issues. Please contact your trainer to verify the correct training date after logging in.';
             }
             message.value = successMessage;
@@ -945,12 +981,14 @@ const validatePasswordMatch = () => {
         training_habitat.value = data.training_habitat;
         training_biological.value = data.training_biological;
 
-        // Check for date issues after loading data
-        const originalValidation = validateTrainingDate(originalTrainingDate.value);
-        const latestValidation = validateTrainingDate(trainingDateLatest.value);
-        
-        if (!originalValidation.isValid || !latestValidation.isValid) {
-          dateValidationWarning.value = 'There appears to be an issue with your training date. You can still complete signup, but please contact your trainer to verify the correct date.';
+        // Only check for date issues if this is an actual sampler with real dates
+        if (isActualSampler.value) {
+          const originalValidation = validateTrainingDate(originalTrainingDate.value);
+          const latestValidation = validateTrainingDate(trainingDateLatest.value);
+          
+          if (!originalValidation.isValid || !latestValidation.isValid) {
+            dateValidationWarning.value = 'There appears to be an issue with your training date. You can still complete signup, but please contact your trainer to verify the correct date.';
+          }
         }
       }
     } catch (error) {
@@ -983,7 +1021,8 @@ const validatePasswordMatch = () => {
       },
     ],
   });
-</script> 
+</script>
+
 <style scoped>
   input[type="text"],
   input[type="email"],
@@ -997,14 +1036,20 @@ const validatePasswordMatch = () => {
     border: 1px solid #ddd;
     border-radius: 4px;
     box-sizing: border-box;
-    background-color: #ffffff; /* Explicit white background */
-    color: #000000; /* Explicit black text */
-    /* Add a slightly darker border on focus for accessibility */
-    &:focus {
-      border-color: #666;
-      outline: none;
-      box-shadow: 0 0 0 2px rgba(66, 153, 225, 0.5);
-    }
+    background-color: #ffffff;
+    color: #000000;
+  }
+
+  input[type="text"]:focus,
+  input[type="email"]:focus,
+  input[type="password"]:focus,
+  input[type="tel"]:focus,
+  input[type="date"]:focus,
+  select:focus,
+  textarea:focus {
+    border-color: #666;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(66, 153, 225, 0.5);
   }
 
   /* Force color scheme */
@@ -1022,7 +1067,6 @@ const validatePasswordMatch = () => {
     }
   }
 
-  /* Add specific styling for disabled/readonly fields */
   .readonly-field,
   input:disabled,
   textarea:disabled,
@@ -1042,12 +1086,12 @@ const validatePasswordMatch = () => {
   
   .signup-form-container {
     width: 100%;
-    max-width: 500px; /* Increase form width */
+    max-width: 500px;
     padding: 2rem;
     background: white;
     border-radius: 8px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    text-align: left; /* Align text to the left */
+    text-align: left;
   }
   
   .logo-container {
@@ -1071,7 +1115,7 @@ const validatePasswordMatch = () => {
     margin-bottom: 1.5rem;
     font-size: 1.3rem;
     color: #333;
-    text-align: center; /* Center-align title */
+    text-align: center;
   }
 
   .form-group {
@@ -1084,17 +1128,6 @@ const validatePasswordMatch = () => {
     font-weight: bold;
     margin-bottom: 0.5rem;
     color: #666;
-  }
-  
-  input[type="text"],
-  input[type="email"],
-  select,
-  textarea {
-    width: 100%;
-    padding: 0.5rem;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    box-sizing: border-box;
   }
   
   .checkbox-group {
@@ -1110,10 +1143,10 @@ const validatePasswordMatch = () => {
   }
   
   .readonly-field {
-    background-color: #f0f0f0; /* Light grey to indicate read-only */
-    color: #888; /* Grey text color */
-    border: 1px solid #ddd; /* Subtle border for clarity */
-    cursor: not-allowed; /* Cursor indicates non-editable */
+    background-color: #f0f0f0;
+    color: #888;
+    border: 1px solid #ddd;
+    cursor: not-allowed;
   }
 
   .read-group {
@@ -1134,27 +1167,27 @@ const validatePasswordMatch = () => {
   }
 
   input[type="checkbox"].readonly-checkbox {
-    appearance: none; /* Remove default checkbox appearance */
+    appearance: none;
     width: 20px;
     height: 20px;
-    background-color: #e0e0e0; /* Light grey background */
-    border: 1px solid #333; /* Darker border for better visibility */
+    background-color: #e0e0e0;
+    border: 1px solid #333;
     position: relative;
-    pointer-events: none; /* Make it non-interactive */
+    pointer-events: none;
   }
 
   input[type="checkbox"].readonly-checkbox:checked {
-    background-color: #333; /* Dark background for checked state */
+    background-color: #333;
   }
 
   .read-group-div label {
     font-weight: normal;
-    color: #801a1a; /* Dark grey text for visibility */
+    color: #801a1a;
   }
 
   .read-group-div input[type="text"] {
     font-weight: normal;
-    color: #333; /* Dark grey text for visibility */
+    color: #333;
   }
 
   input[type="checkbox"] {
@@ -1182,22 +1215,17 @@ const validatePasswordMatch = () => {
     background-color: #cccccc;
     cursor: not-allowed;
   }
-  
-  .message {
-    margin-top: 1rem;
-    color: #f00;
-  }
 
   .info-text {
-    display: block;           /* Ensures text appears on a new line */
-    font-size: 0.85rem;       /* Slightly smaller font size */
-    color: #6c757d;           /* Light grey color for subtlety */
-    margin-top: 0.25rem;      /* Space between input and text */
+    display: block;
+    font-size: 0.85rem;
+    color: #6c757d;
+    margin-top: 0.25rem;
   }
 
   .password-message {
     font-size: 0.85rem;
-    color: #dc3545; /* Red color to indicate a warning */
+    color: #dc3545;
     margin-top: 0.25rem;
   }
 
@@ -1254,13 +1282,11 @@ const validatePasswordMatch = () => {
     cursor: pointer;
   }
 
-  /* Ensure password input has enough padding on the right for the icon */
   input[type="password"],
   input[type="text"] {
     padding-right: 2.5rem;
   }
 
-  /* Date validation styling */
   .date-warning {
     border-color: #f59e0b !important;
     background-color: #fffbeb !important;

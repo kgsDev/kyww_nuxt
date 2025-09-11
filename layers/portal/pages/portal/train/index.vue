@@ -26,8 +26,39 @@ const hasTrainingSelected = computed(() => {
 			training_no_training.value;
 });
 
+// Watch for "No Training" checkbox changes to clear other checkboxes
+const onNoTrainingChange = () => {
+	if (training_no_training.value) {
+		training_field_chemistry.value = false;
+		training_r_card.value = false;
+		training_habitat.value = false;
+		training_biological.value = false;
+		// Clear date and location when no training is selected
+		training_date.value = '';
+		training_location.value = '';
+	}
+};
+
+// Watch for other training checkboxes to clear "No Training"
+const onTrainingTypeChange = () => {
+	if (training_field_chemistry.value || training_r_card.value || 
+		training_habitat.value || training_biological.value) {
+		training_no_training.value = false;
+	}
+};
+
+// Computed property to check if date and location are required
+const isDateLocationRequired = computed(() => {
+	return !training_no_training.value;
+});
+
 // Enhanced date validation
 function validateTrainingDate(dateString: string): { isValid: boolean; message: string } {
+	// If no training conducted, date is not required
+	if (!isDateLocationRequired.value) {
+		return { isValid: true, message: '' };
+	}
+	
 	if (!dateString?.trim()) {
 		return { isValid: false, message: 'Training date is required' };
 	}
@@ -67,11 +98,10 @@ const canSubmit = computed(() => {
 		// Check that emails are valid and present
 		emails.value?.trim().length > 0 &&
 		validateEmails(emails.value) &&
-		// Check that training date is selected and valid
-		!!training_date.value?.length &&
-		dateValidation.value.isValid &&
-		// Check that location is entered
-		training_location.value?.trim().length > 0 &&
+		// Check that training date is selected and valid (if required)
+		(!isDateLocationRequired.value || (!!training_date.value?.length && dateValidation.value.isValid)) &&
+		// Check that location is entered (if required)
+		(!isDateLocationRequired.value || training_location.value?.trim().length > 0) &&
 		// Check that at least one training type is selected
 		hasTrainingSelected.value
 	);
@@ -102,11 +132,13 @@ function confirmSubmit() {
 		return;
 	}
 
-	// Additional date validation before submission
-	const dateCheck = validateTrainingDate(training_date.value);
-	if (!dateCheck.isValid) {
-		error.value = `Invalid training date: ${dateCheck.message}`;
-		return;
+	// Additional date validation before submission (only if required)
+	if (isDateLocationRequired.value) {
+		const dateCheck = validateTrainingDate(training_date.value);
+		if (!dateCheck.isValid) {
+			error.value = `Invalid training date: ${dateCheck.message}`;
+			return;
+		}
 	}
 
 	showModal.value = true;
@@ -116,11 +148,13 @@ async function submitEmails() {
 	showModal.value = false;
 	error.value = ''; // Clear previous errors
 
-	// Final date validation before API call
-	const dateCheck = validateTrainingDate(training_date.value);
-	if (!dateCheck.isValid) {
-		error.value = `Cannot submit: ${dateCheck.message}`;
-		return;
+	// Final date validation before API call (only if required)
+	if (isDateLocationRequired.value) {
+		const dateCheck = validateTrainingDate(training_date.value);
+		if (!dateCheck.isValid) {
+			error.value = `Cannot submit: ${dateCheck.message}`;
+			return;
+		}
 	}
 
 	try {
@@ -223,7 +257,7 @@ function resetForm() {
 	training_r_card.value = false;
 	training_habitat.value = false;
 	training_biological.value = false;
-	training_no_training.value = false; // Add new field
+	training_no_training.value = false;
 	error.value = '';
 	success.value = '';
 }
@@ -299,62 +333,99 @@ function viewReport() {
 				required
 			></textarea>
   
-			<label class="block mt-4 mb-2 font-bold required">Training Date:</label>
+			<label class="block mt-4 mb-2 font-bold" :class="{ 'required': isDateLocationRequired }">Training Date:</label>
 			<input
 				type="date"
 				v-model="training_date"
 				@input="clearMessages"
 				class="w-full p-2 border rounded-lg"
-				:class="{ 'border-red-500': training_date && !dateValidation.isValid }"
-				required
+				:class="{ 
+					'border-red-500': training_date && !dateValidation.isValid,
+					'opacity-50': !isDateLocationRequired
+				}"
+				:required="isDateLocationRequired"
+				:disabled="!isDateLocationRequired"
 			/>
 			<div v-if="training_date && !dateValidation.isValid" class="text-sm text-red-500 mt-1">
 				{{ dateValidation.message }}
 			</div>
+			<div v-if="!isDateLocationRequired" class="text-sm text-gray-500 mt-1">
+				Date not required for non-samplers
+			</div>
   
-			<label class="block mt-4 mb-2 font-bold required">Training Location:</label>
+			<label class="block mt-4 mb-2 font-bold" :class="{ 'required': isDateLocationRequired }">Training Location:</label>
 			<input
 				type="text"
 				v-model="training_location"
 				class="w-full p-2 border rounded-lg"
+				:class="{ 'opacity-50': !isDateLocationRequired }"
 				placeholder="Enter training location"
-				required
+				:required="isDateLocationRequired"
+				:disabled="!isDateLocationRequired"
 			/>
+			<div v-if="!isDateLocationRequired" class="text-sm text-gray-500 mt-1">
+				Location not required for non-samplers
+			</div>
   
 			<label class="block mt-4 mb-2 font-bold required">Training Completed (select at least one):</label>
 			
 			<div class="form-group checkbox-group">
 			  <label>Field Chemistry:</label>
-			  <input type="checkbox" v-model="training_field_chemistry" />
+			  <input 
+			  	type="checkbox" 
+			  	v-model="training_field_chemistry" 
+			  	@change="onTrainingTypeChange"
+			  	:disabled="training_no_training"
+			  />
 			</div>
 			<div class="form-group checkbox-group">
 			  <label>R-Card:</label>
-			  <input type="checkbox" v-model="training_r_card" />
+			  <input 
+			  	type="checkbox" 
+			  	v-model="training_r_card" 
+			  	@change="onTrainingTypeChange"
+			  	:disabled="training_no_training"
+			  />
 			</div>
 			<div class="form-group checkbox-group">
 			  <label>Habitat:</label>
-			  <input type="checkbox" v-model="training_habitat" />
+			  <input 
+			  	type="checkbox" 
+			  	v-model="training_habitat" 
+			  	@change="onTrainingTypeChange"
+			  	:disabled="training_no_training"
+			  />
 			</div>
 			<div class="form-group checkbox-group">
 			  <label>Biological:</label>
-			  <input type="checkbox" v-model="training_biological" />
+			  <input 
+			  	type="checkbox" 
+			  	v-model="training_biological" 
+			  	@change="onTrainingTypeChange"
+			  	:disabled="training_no_training"
+			  />
 			</div>
 			<div class="form-group checkbox-group">
-				<label>No Training Conducted (for Hub contacts and non-samplers only):</label>
-				<input type="checkbox" v-model="training_no_training" />
+				<label>No Training Conducted (for Hub contacts and non-samplers only - please contact Doug Curl doug@uky.edu about these registrants):</label>
+				<input 
+					type="checkbox" 
+					v-model="training_no_training" 
+					@change="onNoTrainingChange"
+					:disabled="training_field_chemistry || training_r_card || training_habitat || training_biological"
+				/>
 			</div>
 	
 			<div v-if="!canSubmit" class="text-sm text-red-500 mt-2">
 				<p v-if="!emails?.trim() || !validateEmails(emails)">
 					Please enter valid email addresses
 				</p>
-				<p v-if="!training_date">
+				<p v-if="isDateLocationRequired && !training_date">
 					Please select a training date
 				</p>
-				<p v-if="training_date && !dateValidation.isValid">
+				<p v-if="isDateLocationRequired && training_date && !dateValidation.isValid">
 					{{ dateValidation.message }}
 				</p>
-				<p v-if="!training_location?.trim()">
+				<p v-if="isDateLocationRequired && !training_location?.trim()">
 					Please enter a training location
 				</p>
 				<p v-if="!hasTrainingSelected">
@@ -460,6 +531,18 @@ function viewReport() {
 	margin-left: 5px;
   }
 
+  /* Disabled checkbox styling */
+  input[type="checkbox"]:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  /* Disabled input styling */
+  input:disabled {
+    background-color: #f7fafc;
+    cursor: not-allowed;
+  }
+
   .modal {
 	position: fixed;
 	left: 0;
@@ -517,7 +600,7 @@ function viewReport() {
 		cursor: pointer;
 	}
 
-	input[type="checkbox"]:hover {
+	input[type="checkbox"]:hover:not(:disabled) {
 		outline: 2px solid #e2e8f0;
 	}
 
@@ -568,7 +651,15 @@ function viewReport() {
 		color: #ef4444;
 	}
 
+	.text-gray-500 {
+		color: #6b7280;
+	}
+
 	.mt-1 {
 		margin-top: 0.25rem;
+	}
+
+	.opacity-50 {
+		opacity: 0.5;
 	}
 </style>
