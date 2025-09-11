@@ -406,13 +406,17 @@ function viewReport() {
 			  />
 			</div>
 			<div class="form-group checkbox-group">
-				<label>No Training Conducted (for Hub contacts and non-samplers only - please contact Doug Curl doug@uky.edu about these registrants):</label>
+				<label>No Training Conducted:</label>
 				<input 
 					type="checkbox" 
 					v-model="training_no_training" 
 					@change="onNoTrainingChange"
 					:disabled="training_field_chemistry || training_r_card || training_habitat || training_biological"
 				/>
+			</div>
+			<div class="text-sm text-gray-500 mt-1">
+				Select "No Training Conducted" if the invitees are not samplers (e.g., hub managers, basin admins). <br>
+				Please contact Doug Curl (doug@uky.edu) about these registrants.
 			</div>
 	
 			<div v-if="!canSubmit" class="text-sm text-red-500 mt-2">
