@@ -123,7 +123,7 @@ export function useRBAC() {
     {
       path: '/portal/habitat',
       roles: [roles.devAdmin, roles.wwkyAdmin],
-      policies: [policies.fullAdmin]
+      policies: [policies.fullAdmin, policies.wwkyAdmin]
     },
     {
       path: '/unauthorized',
