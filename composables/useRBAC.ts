@@ -118,7 +118,7 @@ export function useRBAC() {
     {
       path: '/portal/biological',
       roles: [roles.devAdmin, roles.wwkyAdmin],
-      policies: [policies.fullAdmin]
+      policies: [policies.fullAdmin, policies.wwkyAdmin]
     },
     {
       path: '/portal/habitat',

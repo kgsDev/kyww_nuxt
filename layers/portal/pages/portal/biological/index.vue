@@ -107,35 +107,82 @@ const submergedAquaticPlants = ref(false);
 // Other observations
 const otherObs = ref('');
 
-// Computed biological score
-const habitatScore = computed(
-	() =>
-		(mussels.value ? 3 : 0) +
-		(stoneflies.value ? 3 : 0) +
-		(caddisfliesCaseBuilding.value ? 3 : 0) +
-		(mayflies.value ? 3 : 0) +
-		(waterPennies.value ? 3 : 0) +
-		(waterSnipe.value ? 3 : 0) +
-		(caddisfliesNetSpinning.value ? 3 : 0) +
-		(riffleBeetles.value ? 3 : 0) +
-		(operculateSnails.value ? 3 : 0) +
-		(blackFlyLarva.value ? 3 : 0) +
-		(craneFlyLarva.value ? 3 : 0) +
-		(hellgrammites.value ? 2 : 0) +
-		(clamsAndMussels.value ? 2 : 0) +
-		(crayfish.value ? 2 : 0) +
-		(dragonflies.value ? 2 : 0) +
-		(flatworms.value ? 2 : 0) +
-		(midges.value ? 2 : 0) +
-		(alderflies.value ? 1 : 0) +
-		(scuds.value ? 1 : 0) +
-		(nonOperculateSnails.value ? 1 : 0) +
-		(sowBugs.value ? 1 : 0) +
-		(leeches.value ? 1 : 0) +
-		(damselflies.value ? 1 : 0) +
-		(aquaticWorms.value ? 1 : 0) +
-		(otherAquaticBeetles.value ? 1 : 0),
-);
+// Computed biological score - weighted average
+const habitatScore = computed(() => {
+	// Highly Sensitive (4 points)
+	const highlySensitive = [
+		mussels.value,
+		stoneflies.value,
+		caddisfliesCaseBuilding.value,
+		mayflies.value,
+		waterPennies.value,
+		waterSnipe.value
+	];
+	
+	// Sensitive (3 points)
+	const sensitive = [
+		caddisfliesNetSpinning.value,
+		riffleBeetles.value,
+		operculateSnails.value,
+		blackFlyLarva.value,
+		craneFlyLarva.value
+	];
+	
+	// Moderately Tolerant (2 points)
+	const moderatelyTolerant = [
+		hellgrammites.value,
+		clamsAndMussels.value,
+		crayfish.value,
+		dragonflies.value,
+		flatworms.value,
+		midges.value
+	];
+	
+	// Tolerant (1 point)
+	const tolerant = [
+		alderflies.value,
+		scuds.value,
+		nonOperculateSnails.value,
+		sowBugs.value,
+		leeches.value,
+		damselflies.value,
+		aquaticWorms.value,
+		otherAquaticBeetles.value
+	];
+	
+	// Calculate total points
+	const totalPoints = 
+		(highlySensitive.filter(Boolean).length * 4) +
+		(sensitive.filter(Boolean).length * 3) +
+		(moderatelyTolerant.filter(Boolean).length * 2) +
+		(tolerant.filter(Boolean).length * 1);
+	
+	// Calculate total count of organisms found
+	const totalCount = 
+		highlySensitive.filter(Boolean).length +
+		sensitive.filter(Boolean).length +
+		moderatelyTolerant.filter(Boolean).length +
+		tolerant.filter(Boolean).length;
+	
+	// Return weighted average, or 0 if no organisms found
+	return totalCount > 0 ? (totalPoints / totalCount).toFixed(2) : 0;
+});
+
+// Helper function to get rating text
+const getRatingText = (score) => {
+	if (score >= 3.26) return 'Good';
+	if (score >= 2.51) return 'Fair';
+	if (score >= 1.76) return 'Marginal';
+	return 'Poor';
+};
+
+// Helper function to get rating color class
+const getRatingColorClass = (score) => {
+	if (score >= 3.26) return 'bg-green-500';
+	if (score >= 2.51) return 'bg-yellow-500';
+	if (score >= 1.76) return 'bg-orange-500';
+	return 'bg-red-500';
+};
 
 const weatherflowConditionOptions = [
 	{ value: '1', label: 'Flooded over banks' },
@@ -1302,36 +1349,36 @@ watch([isEditMode, sampleId], ([newIsEditMode, newSampleId]) => {
                 Click all of the macroinvertebrates that you find in your stream and the form will calculate your stream's
                 biological water quality score.
               </p>
-
               <h2
                 class="border-2 border-gray-900 text-xl text-gray-900 text-center p-2"
                 :class="{
-                  'bg-red-500': habitatScore < 19,
-                  'bg-orange-500': habitatScore >= 19 && habitatScore <= 32,
-                  'bg-yellow-500': habitatScore > 32 && habitatScore <= 41,
-                  'bg-green-500': habitatScore > 41,
+                  'bg-red-500': habitatScore < 1.76,
+                  'bg-orange-500': habitatScore >= 1.76 && habitatScore < 2.51,
+                  'bg-yellow-500': habitatScore >= 2.51 && habitatScore < 3.26,
+                  'bg-green-500': habitatScore >= 3.26,
                 }"
               >
-                Biological Water Quality Score = {{ habitatScore }} - {{ habitatScore < 19 ? 'Poor' : '' }}
-                {{ habitatScore >= 19 && habitatScore <= 32 ? 'Marginal' : '' }}
-                {{ habitatScore > 32 && habitatScore <= 41 ? 'Fair' : '' }}
-                {{ habitatScore > 41 ? 'Good' : '' }}
+                Biological Water Quality Score = {{ habitatScore }} - 
+                <span v-if="habitatScore < 1.76">Poor</span>
+                <span v-else-if="habitatScore >= 1.76 && habitatScore < 2.51">Marginal</span>
+                <span v-else-if="habitatScore >= 2.51 && habitatScore < 3.26">Fair</span>
+                <span v-else>Good</span>
               </h2>
 
               <div class="flex">
-                <h2 class="border-2 border-gray-900 bg-lime-500 basis-1/5 text-xl text-gray-900 text-center">
-                  Highly Sensitive
+                <h2 class="border-2 border-gray-900 bg-lime-500 basis-1/4 text-xl text-gray-900 text-center p-2">
+                  Highly Sensitive (4)
                 </h2>
-                <h2 class="border-2 border-gray-900 bg-lime-500 basis-1/5 text-xl text-gray-900 text-center">Sensitive</h2>
-                <h2 class="border-2 border-gray-900 bg-lime-500 basis-1/5 text-xl text-gray-900 text-center">
-                  Moderately Tolerant
+                <h2 class="border-2 border-gray-900 bg-lime-500 basis-1/4 text-xl text-gray-900 text-center p-2">Sensitive (3)</h2>
+                <h2 class="border-2 border-gray-900 bg-lime-500 basis-1/4 text-xl text-gray-900 text-center p-2">
+                  Moderately Tolerant (2)
                 </h2>
-                <h2 class="border-2 border-gray-900 bg-lime-500 basis-2/5 text-xl text-gray-900 text-center">Tolerant</h2>
+                <h2 class="border-2 border-gray-900 bg-lime-500 basis-1/4 text-xl text-gray-900 text-center p-2">Tolerant (1)</h2>
               </div>
 
               <!-- Macroinvertebrates Grid -->
               <div class="flex">
-                <div class="border-2 border-gray-900 basis-1/5">
+                <div class="border-2 border-gray-900 basis-1/4">
                   <div class="p-2 cursor-pointer" :class="{ 'bg-lime-500 text-gray-900': mussels }" @click="mussels = !mussels">
                     <label for="mussels" class="cursor-pointer">Mussels (Native)</label>
                     <img src="@/assets/form_icons/mussels-native.png" alt="Mussels" />
@@ -1365,7 +1412,7 @@ watch([isEditMode, sampleId], ([newIsEditMode, newSampleId]) => {
                     <img src="@/assets/form_icons/water_snipe.png" alt="Water Snipe" />
                   </div>
                 </div>
-                <div class="border-2 border-gray-900 basis-1/5">
+                <div class="border-2 border-gray-900 basis-1/4">
                   <div
                     class="p-2 cursor-pointer"
                     :class="{ 'bg-lime-500 text-gray-900': caddisfliesNetSpinning }"
@@ -1407,7 +1454,7 @@ watch([isEditMode, sampleId], ([newIsEditMode, newSampleId]) => {
                     <img src="@/assets/form_icons/crane_fly_larva.png" alt="Crane Fly Larva" />
                   </div>
                 </div>
-                <div class="border-2 border-gray-900 basis-1/5">
+                <div class="border-2 border-gray-900 basis-1/4">
                   <div
                     class="p-2 cursor-pointer"
                     :class="{ 'bg-lime-500 text-gray-900': hellgrammites }"
@@ -1441,7 +1488,7 @@ watch([isEditMode, sampleId], ([newIsEditMode, newSampleId]) => {
                     <img src="@/assets/form_icons/midges_chironomids.png" alt="Midges" />
                   </div>
                 </div>
-                <div class="border-2 border-gray-900 basis-2/5">
+                <div class="border-2 border-gray-900 basis-1/4">
                   <div class="p-2 cursor-pointer" :class="{ 'bg-lime-500 text-gray-900': alderflies }" @click="alderflies = !alderflies">
                     <label for="alderflies" class="cursor-pointer">Alderflies</label>
                     <img src="@/assets/form_icons/alderflies.png" alt="Alderflies" />
@@ -1466,8 +1513,6 @@ watch([isEditMode, sampleId], ([newIsEditMode, newSampleId]) => {
                     <label for="leeches" class="cursor-pointer">Leeches</label>
                     <img src="@/assets/form_icons/leeches.png" alt="Leeches" />
                   </div>
-                </div>
-                <div class="border-b-2 border-r-2 border-t-2 border-gray-900 basis-1/5">
                   <div class="p-2 cursor-pointer" :class="{ 'bg-lime-500 text-gray-900': damselflies }" @click="damselflies = !damselflies">
                     <label for="damselflies" class="cursor-pointer">Damselflies</label>
                     <img src="@/assets/form_icons/damselflies.png" alt="Damselflies" />
@@ -1495,17 +1540,40 @@ watch([isEditMode, sampleId], ([newIsEditMode, newSampleId]) => {
                 <h2
                   class="border-2 border-gray-900 text-xl text-gray-900 text-center p-2"
                   :class="{
-                    'bg-red-500': habitatScore < 19,
-                    'bg-orange-500': habitatScore >= 19 && habitatScore <= 32,
-                    'bg-yellow-500': habitatScore > 32 && habitatScore <= 41,
-                    'bg-green-500': habitatScore > 41,
+                    'bg-red-500': habitatScore < 1.76,
+                    'bg-orange-500': habitatScore >= 1.76 && habitatScore < 2.51,
+                    'bg-yellow-500': habitatScore >= 2.51 && habitatScore < 3.26,
+                    'bg-green-500': habitatScore >= 3.26,
                   }"
                 >
-                  Biological Water Quality Score = {{ habitatScore }} - {{ habitatScore < 19 ? 'Poor' : '' }}
-                  {{ habitatScore >= 19 && habitatScore <= 32 ? 'Marginal' : '' }}
-                  {{ habitatScore > 32 && habitatScore <= 41 ? 'Fair' : '' }}
-                  {{ habitatScore > 41 ? 'Good' : '' }}
+                  Biological Water Quality Score = {{ habitatScore }} - 
+                  <span v-if="habitatScore < 1.76">Poor</span>
+                  <span v-else-if="habitatScore >= 1.76 && habitatScore < 2.51">Marginal</span>
+                  <span v-else-if="habitatScore >= 2.51 && habitatScore < 3.26">Fair</span>
+                  <span v-else>Good</span>
                 </h2>
+              </div>
+
+              <div class="border-2 border-gray-900 bg-blue-50 p-4 mt-2">
+                <h3 class="font-bold text-gray-900 mb-2">Understanding Your Score</h3>
+                <p class="text-sm text-gray-700">
+                  The Biological Water Quality Score is a weighted average based on the sensitivity of organisms found:
+                </p>
+                <ul class="text-sm text-gray-700 list-disc ml-6 mt-2">
+                  <li><strong>Highly Sensitive organisms</strong> (4 points): Mussels, Stoneflies, Caddisflies (case-building), Mayflies, Water Pennies, Water Snipe</li>
+                  <li><strong>Sensitive organisms</strong> (3 points): Caddisflies (net-spinning), Riffle Beetles, Operculate Snails, Black Fly Larvae, Crane Fly Larvae</li>
+                  <li><strong>Moderately Tolerant organisms</strong> (2 points): Hellgrammites, Clams/Mussels (Asian), Crayfish, Dragonflies, Flatworms, Midges</li>
+                  <li><strong>Tolerant organisms</strong> (1 point): Alderflies, Scuds, Non-operculate Snails, Sow Bugs, Leeches, Damselflies, Aquatic Worms, Other Aquatic Beetles</li>
+                </ul>
+                <div class="mt-3 text-sm text-gray-700">
+                  <strong>Rating Scale:</strong>
+                  <ul class="list-none ml-4 mt-1">
+                    <li>• <strong>Good</strong>: 3.26 - 4.00</li>
+                    <li>• <strong>Fair</strong>: 2.51 - 3.25</li>
+                    <li>• <strong>Marginal</strong>: 1.76 - 2.50</li>
+                    <li>• <strong>Poor</strong>: 1.00 - 1.75</li>
+                  </ul>
+                </div>
               </div>
 
               <div>
@@ -1521,6 +1589,9 @@ watch([isEditMode, sampleId], ([newIsEditMode, newSampleId]) => {
                   sensitivity to pollution.
                 </p>
               </div>
+
+
+
 
               <!-- Other Observations and Photo Upload Section -->
               <div class="flex">
