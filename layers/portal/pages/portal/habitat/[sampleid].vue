@@ -31,6 +31,53 @@ const loadingPhotos = ref(true);
 const additionalSamplers = ref([]);
 const otherSamplers = ref([]);
 
+// Pollutant indicator data from join tables
+const odorData = ref([]);
+const waterColorData = ref([]);
+const floatablesData = ref([]);
+
+// Lookup tables for pollutant indicators
+const odorLabels = {
+  1: 'None',
+  2: 'Rotten Eggs',
+  3: 'Chlorine',
+  4: 'Rancid/Sour',
+  6: 'Gas/Petro',
+  7: 'Musty',
+  8: 'Sweet/Fruity',
+  9: 'Sharp/Pungent'
+};
+
+const waterColorLabels = {
+  1: 'Clear',
+  2: 'Brown/Muddy',
+  3: 'Green',
+  4: 'White',
+  5: 'Gray',
+  6: 'Orange'
+};
+
+const floatablesLabels = {
+  1: 'None',
+  2: 'Oil Sheen',
+  3: 'Algae',
+  4: 'Soap Suds',
+  5: 'Sewage'
+};
+
+// Computed properties for display
+const odorsList = computed(() => {
+  return odorData.value.map(id => odorLabels[id]).filter(Boolean);
+});
+
+const waterColorsList = computed(() => {
+  return waterColorData.value.map(id => waterColorLabels[id]).filter(Boolean);
+});
+
+const floatablesList = computed(() => {
+  return floatablesData.value.map(id => floatablesLabels[id]).filter(Boolean);
+});
+
 // Function to fetch photos
 const fetchSamplePhotos = async () => {
   try {
@@ -54,6 +101,18 @@ const fetchSamplePhotos = async () => {
   } finally {
     loadingPhotos.value = false;
   }
+};
+
+// Helper function to fetch related data from join tables
+const fetchRelatedData = async (table: string, sampleId: string) => {
+  const response = await useDirectus(
+    readItems(table, {
+      filter: {
+        habitat_samples_id: { _eq: sampleId }
+      }
+    })
+  );
+  return response.map(item => item[`${table.replace('habitat_samples_', '')}_id`]);
 };
 
 // Fetch all related data
@@ -101,6 +160,17 @@ const fetchSampleData = async () => {
       }));
 
       otherSamplers.value = sampleData.value.other_samplers || '';
+
+      // Fetch pollutant indicators from join tables
+      const [odors, waterColors, floatables] = await Promise.all([
+        fetchRelatedData('habitat_samples_lu_odor', sampleId.value),
+        fetchRelatedData('habitat_samples_lu_water_color', sampleId.value),
+        fetchRelatedData('habitat_samples_lu_water_surface', sampleId.value)
+      ]);
+
+      odorData.value = odors;
+      waterColorData.value = waterColors;
+      floatablesData.value = floatables;
 
     } else {
       error.value = 'Habitat sample not found';
@@ -277,7 +347,7 @@ const assessmentResults = computed(() => {
         ...item,
         score: score,
         description: item.options[score - 1],
-        scoreClass: score >= 3 ? 'text-green-600' : score === 2 ? 'text-yellow-600' : 'text-red-600'
+        scoreClass: score >= 3 ? 'text-green-600' : score === 2 ? 'text-orange-600' : 'text-red-600'
       };
     }
     return {
@@ -332,9 +402,6 @@ onMounted(async () => {
           </p>
           <p class="text-gray-900">
             Assessed by: {{ samplerName }}
-          </p>
-          <p v-if="sampleData.stream_location_description" class="text-gray-900">
-            Location: {{ sampleData.stream_location_description }}
           </p>
         </div>
         <UButton
@@ -478,19 +545,38 @@ onMounted(async () => {
               <h2 class="text-lg font-semibold">Pollutant Indicators</h2>
             </template>
             <div class="space-y-4">
-              <div v-if="sampleData.odor">
-                <p class="font-medium">Odor</p>
-                <p class="text-sm text-gray-600">{{ sampleData.odor }}</p>
+              <!-- Odor -->
+              <div v-if="odorsList.length > 0">
+                <p class="font-medium mb-1">Odor:</p>
+                <ul class="list-disc list-inside space-y-1">
+                  <li v-for="(odor, index) in odorsList" :key="index" class="text-sm text-gray-700">
+                    {{ odor }}
+                  </li>
+                </ul>
               </div>
-              <div v-if="sampleData.color">
-                <p class="font-medium">Color</p>
-                <p class="text-sm text-gray-600">{{ sampleData.color }}</p>
+              
+              <!-- Water Color -->
+              <div v-if="waterColorsList.length > 0">
+                <p class="font-medium mb-1">Water Color:</p>
+                <ul class="list-disc list-inside space-y-1">
+                  <li v-for="(color, index) in waterColorsList" :key="index" class="text-sm text-gray-700">
+                    {{ color }}
+                  </li>
+                </ul>
               </div>
-              <div v-if="sampleData.floatables">
-                <p class="font-medium">Floatables on Water Surface</p>
-                <p class="text-sm text-gray-600">{{ sampleData.floatables }}</p>
+              
+              <!-- Floatables on Water Surface -->
+              <div v-if="floatablesList.length > 0">
+                <p class="font-medium mb-1">Floatables on Water Surface:</p>
+                <ul class="list-disc list-inside space-y-1">
+                  <li v-for="(floatable, index) in floatablesList" :key="index" class="text-sm text-gray-700">
+                    {{ floatable }}
+                  </li>
+                </ul>
               </div>
-              <div v-if="!sampleData.odor && !sampleData.color && !sampleData.floatables" class="text-gray-500">
+              
+              <!-- No indicators message -->
+              <div v-if="odorsList.length === 0 && waterColorsList.length === 0 && floatablesList.length === 0" class="text-gray-500">
                 No pollutant indicators were recorded for this assessment.
               </div>
             </div>
@@ -507,7 +593,7 @@ onMounted(async () => {
               <div class="flex justify-between items-start mb-2">
                 <div>
                   <h3 class="font-medium">{{ result.title }}</h3>
-                  <p class="text-sm text-gray-600">{{ result.description }}</p>
+                  <p class="text-sm text-gray-600 italic">{{ result.description }}</p>
                 </div>
                 <div class="text-right">
                   <span class="text-2xl font-bold" :class="result.scoreClass">
@@ -517,7 +603,7 @@ onMounted(async () => {
                 </div>
               </div>
               <div class="bg-gray-50 p-3 rounded">
-                <p class="text-sm" :class="result.scoreClass">
+                <p class="text-sm">
                   <strong>Assessment:</strong> {{ result.description }}
                 </p>
               </div>

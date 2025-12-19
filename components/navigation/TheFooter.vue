@@ -76,6 +76,11 @@ const currentYear = new Date().getFullYear();
               </NuxtLink>
             </li>
             <li>
+              <NuxtLink to="/api/api-doc" class="text-gray-600 dark:text-gray-400 hover:text-primary-600 text-sm">
+                API Documentation
+              </NuxtLink>
+            </li>
+            <li>
               <NuxtLink to="/portal" class="text-gray-600 dark:text-gray-400 hover:text-primary-600 text-sm">
                 Volunteer Login
               </NuxtLink>

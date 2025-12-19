@@ -185,7 +185,7 @@ const fetchSampleData = async () => {
       }
 
       // Fetch related data from join tables
-      const [odors, waterSurfaces, bacterialSources, waterColors] = await Promise.all([
+      const [odors, waterSurfaces, bacterialSources, waterColorRecords] = await Promise.all([
         useDirectus(readItems('base_samples_lu_odor', {
           filter: { base_samples_id: { _eq: sampleId.value } },
           fields: ['lu_odor_id'],
@@ -214,7 +214,7 @@ const fetchSampleData = async () => {
         odors: odors.map(o => o.lu_odor_id),
         waterSurfaces: waterSurfaces.map(w => w.lu_water_surface_id),
         bacterialSources: bacterialSources.map(b => b.lu_bacterial_sources_id),
-        waterColor: waterColors.length > 0 ? waterColors[0].lu_water_color_id : null
+        water_color: waterColorRecords.length > 0 ? waterColorRecords[0].lu_water_color_id : null
       };
     } else {
       error.value = 'Sample not found';

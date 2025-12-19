@@ -83,7 +83,7 @@ const formRefs = {
 	otherObs: ref(''),
 	allFilesSelected: ref(false),
 	selectedSamplerIds: ref([]),
-	otherSamplers: ref([]),
+	otherSamplers:  ref(''),
 };
 
 //initialize component refs
@@ -629,16 +629,26 @@ const fetchRelatedData = async (table: string, sampleId: string) => {
 
 // ConfirmSubmission function
 const confirmSubmission = () => {
-  showValidationErrors.value = true; // Set to true when submit is clicked
+  showValidationErrors.value = true;
   
-  if (isFormValid.value) {
-    isConfirmationModalOpen.value = true;
-  } else {
+  if (!isFormValid.value) {
+    // Blocking errors - cannot submit
+    window.scrollTo({ top: 0, behavior: 'smooth' });
     toast.add({ 
       title: 'Form Validation Error', 
-      description: 'Please fill in all required fields and correct any errors.',
+      description: `Please fix ${formErrors.value.length} error${formErrors.value.length > 1 ? 's' : ''} before submitting.`,
       color: 'red'
     });
+    return;
+  }
+  
+  // Check for warnings
+  if (formWarnings.value.length > 0) {
+    // Show warning modal but allow submission
+    isWarningModalOpen.value = true;
+  } else {
+    // No warnings, proceed directly
+    isConfirmationModalOpen.value = true;
   }
 };
 
@@ -891,6 +901,69 @@ const submissionProgress = ref(0);
 const uploadedFileTypes = ref([]);
 const errorMessage = ref('');
 
+// New computed property for warnings (non-blocking)
+const formWarnings = computed(() => {
+  const warnings = [];
+  
+  // Temperature warnings
+  if (waterTemperature.value) {
+    const temp = parseFloat(waterTemperature.value);
+    if (temp < 0 || temp > 40) {
+      warnings.push('Water temperature seems unusual (outside 0-40°C range)');
+    }
+  }
+  
+  // pH warnings  
+  if (pH.value) {
+    const phValue = parseFloat(pH.value);
+    if (phValue < 6 || phValue > 9) {
+      warnings.push('pH value is outside typical range (6-9) for natural waters');
+    }
+  }
+  
+  // Dissolved oxygen warnings
+  if (dissolvedOxygen.value) {
+    const doValue = parseFloat(dissolvedOxygen.value);
+    if (doValue > 14) {
+      warnings.push('Dissolved oxygen above 14 ppm is unusual for natural waters');
+    }
+    if (doValue < 2) {
+      warnings.push('Very low dissolved oxygen (<2 ppm) may indicate pollution');
+    }
+  }
+  
+  // Conductivity warnings
+  if (conductivity.value) {
+    const condValue = parseFloat(conductivity.value);
+    if (condValue > 2000) {
+      warnings.push('High conductivity (>2000 μS/cm) may indicate pollution or salt contamination');
+    }
+    if (condValue > 5000) {
+      warnings.push('Extremely high conductivity (>5000 μS/cm) - please verify measurement');
+    }
+  }
+  
+  // Incubation time warnings (only if R-Card is being used)
+  if (useRCard.value && incubationTime.value !== null) {
+    if (incubationTime.value < 20 || incubationTime.value > 24) {
+      warnings.push('R-Card incubation time outside recommended 20-24 hour range');
+    }
+    if (incubationTime.value === 0) {
+      warnings.push('R-Card time in and time out cannot be the same');
+    }
+    if (incubationTime.value < 0) {
+      warnings.push('R-Card time out cannot be before time in');
+    }
+  }
+  
+  // E. coli variation warning
+  if (useRCard.value && isEcoliVariationHigh.value) {
+    warnings.push('High variation between E. coli samples (>1000) - consider reviewing counts');
+  }
+  
+  return warnings;
+});
+
 
 // Validate the form before submission
 const isFormValid = computed(() => {
@@ -930,10 +1003,6 @@ const isFormValid = computed(() => {
 		if (!bacteriaRCardInitials.value) formErrors.value.push('Initials are required for R-Card method');
 		if (!timeINIncDate.value || !timeINIncTime.value) formErrors.value.push('Incubator Time In is required for R-Card method');
 		if (!timeOUTIncDate.value || !timeOUTIncTime.value) formErrors.value.push('Incubator Time Out is required for R-Card method');
-
-		if (incubationTime.value !== null && !isIncubationTimeValid.value) {
-			formErrors.value.push('Incubation time should be between 20 and 24 hours');
-		}
 
 		// Helper function to check if a value has been explicitly set (including zero)
 		const isValueSet = (val) => val === 0 || Boolean(val);
@@ -1745,8 +1814,15 @@ watch([isEditMode, sampleId], ([newIsEditMode, newSampleId]) => {
   }
 });
 
-// Add to your component's script
+
 const isCancelModalOpen = ref(false);
+const isWarningModalOpen = ref(false);
+
+// Function to proceed despite warnings
+const proceedWithWarnings = () => {
+  isWarningModalOpen.value = false;
+  isConfirmationModalOpen.value = true;
+};
 
 const showCancelConfirmation = () => {
   isCancelModalOpen.value = true;
@@ -1795,6 +1871,63 @@ const confirmCancel = () => {
 				}
 			]"
 		/>
+
+		<!-- Enhanced Validation Errors - Always visible when there are errors and sticky -->
+		<div v-if="formErrors.length > 0" class="sticky top-4 z-40 mb-6">
+		  <div class="bg-orange-50 border-2 border-orange-400 p-4 rounded-lg shadow-lg max-w-2xl mx-auto">
+		    <div class="flex">
+		      <div class="flex-shrink-0">
+		        <UIcon 
+		          name="i-heroicons-exclamation-triangle" 
+		          class="h-5 w-5 text-orange-400"
+		        />
+		      </div>
+		      <div class="ml-3">
+		        <h3 class="text-sm font-medium text-orange-800">
+		          Please complete these required fields:
+		        </h3>
+		        <div class="mt-2 text-sm text-orange-700">
+		          <ul class="list-disc pl-5 space-y-1">
+		            <li v-for="(error, index) in formErrors" :key="index">
+		              {{ error }}
+		            </li>
+		          </ul>
+		        </div>
+		      </div>
+		    </div>
+		  </div>
+		</div>
+
+		<!-- Non-blocking Warnings Display -->
+		<div v-if="formWarnings.length > 0 && showValidationErrors" class="sticky top-20 z-30 mb-6">
+		<div class="bg-yellow-50 border-2 border-yellow-400 p-4 rounded-lg shadow-lg max-w-2xl mx-auto">
+			<div class="flex">
+			<div class="flex-shrink-0">
+				<UIcon 
+				name="i-heroicons-exclamation-triangle" 
+				class="h-5 w-5 text-yellow-500"
+				/>
+			</div>
+			<div class="ml-3">
+				<h3 class="text-sm font-medium text-yellow-800">
+				Data Quality Warnings (submission still allowed):
+				</h3>
+				<div class="mt-2 text-sm text-yellow-700">
+				<ul class="list-disc pl-5 space-y-1">
+					<li v-for="(warning, index) in formWarnings" :key="index">
+					{{ warning }}
+					</li>
+				</ul>
+				</div>
+				<div class="mt-3">
+				<p class="text-xs text-yellow-600">
+					These values are outside typical ranges but you may still submit. Please verify your measurements are correct.
+				</p>
+				</div>
+			</div>
+			</div>
+		</div>
+		</div>
 
 		<!-- Submission Confirmation Screen -->
 		<div v-if="isSubmitted" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50 p-4">
@@ -1879,6 +2012,7 @@ const confirmCancel = () => {
 								searchable
 								placeholder="Select primary sampler"
 								required
+								:class="{ 'border-red-500': !volunteer_id && showValidationErrors }"
 							/>
 							<template v-if="isEditMode">
 								<p v-if="originalSampler" class="text-sm text-gray-500 mt-1">
@@ -1947,6 +2081,7 @@ const confirmCancel = () => {
 								placeholder="0"
   								min="0"
 								required
+								:class="{ 'border-red-500': (adults === null || adults === undefined) && showValidationErrors }"
 							/>
 						</UFormGroup>
 						<UFormGroup required>
@@ -1958,6 +2093,7 @@ const confirmCancel = () => {
 								placeholder="0"
   								min="0"
 								required
+								:class="{ 'border-red-500': (youths === null || youths === undefined) && showValidationErrors }"
 							/>
 						</UFormGroup>
 						<UFormGroup required>
@@ -1968,6 +2104,7 @@ const confirmCancel = () => {
 								type="number"
   								min="0"
 								required
+								:class="{ 'border-red-500': (totalVolunteerMinutes === null || totalVolunteerMinutes === undefined) && showValidationErrors }"
 							/>
 						</UFormGroup>
 						<UFormGroup required>
@@ -1979,6 +2116,7 @@ const confirmCancel = () => {
 								placeholder="0"
   								min="0"
 								required
+								:class="{ 'border-red-500': (milesDriven === null || milesDriven === undefined) && showValidationErrors }"
 							/>
 						</UFormGroup>
 					</div>
@@ -2010,7 +2148,7 @@ const confirmCancel = () => {
 							/>
 							<p v-if="isSiteIdValid === false" class="text-red-500 mt-1 text-sm">Invalid Site ID</p>
 							<p v-if="isSiteIdValid === true" class="text-green-500 mt-1 text-sm">Valid Site ID</p>
-							<label class="block mb-1 text-xs sm:text-sm">(click or tab out to check)</label>
+							<label class="block mb-1 text-xs sm:text-sm">(To verify site after entry, click outside of box or press tab)</label>
 						</UFormGroup>
 						<UFormGroup>
 							<label class="block mb-1">or Select/Create a Site:</label>
@@ -2018,7 +2156,13 @@ const confirmCancel = () => {
 						</UFormGroup>
 						<UFormGroup required>
 							<label class="block mb-1 required-field">Site ID:</label>
-							<UInput :model-value="wwkyid_pk !== null ? wwkyid_pk.toString() : ''" icon="bxs:been-here" :disabled="true" required/>
+							<UInput 
+								:model-value="wwkyid_pk !== null ? wwkyid_pk.toString() : ''" 
+								icon="bxs:been-here" 
+								:disabled="true" 
+								required
+								:class="{ 'border-red-500': !wwkyid_pk && showValidationErrors }"
+							/>
 						</UFormGroup>
 						<UFormGroup>
 							<label class="block mb-1">Stream Name:</label>
@@ -2034,11 +2178,23 @@ const confirmCancel = () => {
 					<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-4">
 						<UFormGroup required>
 							<label class="block mb-1 required-field">Date:</label>
-							<UInput v-model="date" icon="solar:calendar-bold" type="date" required />
+							<UInput 
+								v-model="date" 
+								icon="solar:calendar-bold" 
+								type="date" 
+								required 
+								:class="{ 'border-red-500': !date && showValidationErrors }"
+							/>
 						</UFormGroup>
 						<UFormGroup required>
 							<label class="block mb-1 required-field">Start Time:</label>
-							<UInput v-model="startTime" icon="mdi:clock-outline" type="time" required />
+							<UInput 
+								v-model="startTime" 
+								icon="mdi:clock-outline" 
+								type="time" 
+								required 
+								:class="{ 'border-red-500': !startTime && showValidationErrors }"
+							/>
 						</UFormGroup>
 					</div>
 					
@@ -2053,7 +2209,13 @@ const confirmCancel = () => {
 					<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 divide-y md:divide-y-0 md:divide-x divide-gray-300">
 						<UFormGroup class="py-4 md:py-0 md:px-4 first:pt-0 md:first:pl-0 last:pb-0 md:last:pr-0">
 						<label class="block mb-2 sm:mb-1 required-field text-sm sm:text-base">Current Weather:</label>
-							<URadioGroup v-model="currentWeather" :options="currentWeatherOptions" name="currentWeather" class="space-y-1">
+							<URadioGroup 
+								v-model="currentWeather" 
+								:options="currentWeatherOptions" 
+								name="currentWeather" 
+								class="space-y-1"
+								:class="{ 'border-red-500 p-2 rounded': !currentWeather && showValidationErrors }"
+							>
 								<template #option="{ option }">
 								<div class="flex items-center text-sm">
 									<i :class="[option.icon, 'mr-2 text-base']"></i>
@@ -2065,7 +2227,13 @@ const confirmCancel = () => {
 						
 						<UFormGroup class="py-4 md:py-0 md:px-4">
 							<label class="block mb-2 sm:mb-1 required-field text-sm sm:text-base">Rainfall in last 48 hours (round up):</label>
-							<URadioGroup v-model="rainfall" :options="rainfallOptions" name="rainfall" class="space-y-1" />
+							<URadioGroup 
+								v-model="rainfall" 
+								:options="rainfallOptions" 
+								name="rainfall" 
+								class="space-y-1"
+								:class="{ 'border-red-500 p-2 rounded': !rainfall && showValidationErrors }"
+							/>
 						</UFormGroup>
 						
 						<UFormGroup class="py-4 md:py-0 md:px-4">
@@ -2108,7 +2276,13 @@ const confirmCancel = () => {
 					<div class="border-4 p-2 sm:p-4 border-gray-900">
 						<UFormGroup class="mb-4">
 							<label class="block mb-2 sm:mb-1 required-field text-sm sm:text-base">Stream Flow (Visual):</label>
-							<URadioGroup v-model="streamFlowVisual" :options="streamFlowVisualOptions" name="streamFlowVisual" class="space-y-1" />
+							<URadioGroup 
+								v-model="streamFlowVisual" 
+								:options="streamFlowVisualOptions" 
+								name="streamFlowVisual" 
+								class="space-y-1"
+								:class="{ 'border-red-500 p-2 rounded': !streamFlowVisual && showValidationErrors }"
+							/>
 						</UFormGroup>
 						<UFormGroup class="mb-4">
 							<UCheckbox
@@ -2140,7 +2314,13 @@ const confirmCancel = () => {
 					<div class="border-4 p-2 sm:p-4 border-gray-900">
 						<UFormGroup>
 							<label class="block mb-2 sm:mb-1 required-field text-sm sm:text-base">Trash/Litter:</label>
-							<URadioGroup v-model="trash" :options="trashOptions" name="trash" class="space-y-1" />
+							<URadioGroup 
+								v-model="trash" 
+								:options="trashOptions" 
+								name="trash" 
+								class="space-y-1"
+								:class="{ 'border-red-500 p-2 rounded': !trash && showValidationErrors }"
+							/>
 						</UFormGroup>
 					</div>
 					<div class="border-4 p-2 sm:p-4 border-gray-900">
@@ -2301,6 +2481,7 @@ const confirmCancel = () => {
 											v-model="timeINIncDate"
 											type="date"
 											icon="solar:calendar-bold"
+											:class="{ 'border-red-500': useRCard && !timeINIncDate && showValidationErrors }"
 											/>
 										</UFormGroup>
 										<UFormGroup>
@@ -2309,6 +2490,7 @@ const confirmCancel = () => {
 											v-model="timeINIncTime"
 											type="time"
 											icon="mdi:clock-outline"
+											:class="{ 'border-red-500': useRCard && !timeINIncTime && showValidationErrors }"
 											/>
 										</UFormGroup>
 									</div>
@@ -2320,6 +2502,7 @@ const confirmCancel = () => {
 											v-model="timeOUTIncDate"
 											type="date"
 											icon="solar:calendar-bold"
+											:class="{ 'border-red-500': useRCard && !timeOUTIncDate && showValidationErrors }"
 											/>
 										</UFormGroup>
 										<UFormGroup>
@@ -2328,6 +2511,7 @@ const confirmCancel = () => {
 											v-model="timeOUTIncTime"
 											type="time"
 											icon="mdi:clock-outline"
+											:class="{ 'border-red-500': useRCard && !timeOUTIncTime && showValidationErrors }"
 											/>
 										</UFormGroup>
 									</div>
@@ -2344,7 +2528,10 @@ const confirmCancel = () => {
 									
 									<UFormGroup>
 										<label class="text-sm required-field">Initials of R-Card Reader</label>
-										<UInput v-model="bacteriaRCardInitials" />
+										<UInput 
+											v-model="bacteriaRCardInitials"
+											:class="{ 'border-red-500': useRCard && !bacteriaRCardInitials && showValidationErrors }"
+										/>
 									</UFormGroup>
 								</div>
 
@@ -2363,36 +2550,53 @@ const confirmCancel = () => {
 
 											<!-- Sample A -->
 											<label class="self-center text-sm whitespace-nowrap required-field">Sample A:</label>
-											<UInput v-model="ecoliA_count" type="number" required />
+											<UInput 
+												v-model="ecoliA_count" 
+												type="number" 
+												required 
+												:class="{ 'border-red-500': useRCard && (ecoliA_count === null || ecoliA_count === undefined) && showValidationErrors }"
+											/>
 											<span class="self-center text-sm font-semibold px-1">÷</span>
 											<USelect
 											v-model="sampleVolA"
 											:options="sampleVolOptions"
 											:default-value="defaultSampleVol"
+											:class="{ 'border-red-500': useRCard && !sampleVolA && showValidationErrors }"
 											/>
 											<span class="self-center text-sm font-semibold px-1 whitespace-nowrap">× 100 =</span>
 											<UInput v-model="ecoliA" type="number" disabled />
 
 											<!-- Sample B -->
 											<label class="self-center text-sm whitespace-nowrap required-field">Sample B:</label>
-											<UInput v-model="ecoliB_count" type="number" required/>
+											<UInput 
+												v-model="ecoliB_count" 
+												type="number" 
+												required
+												:class="{ 'border-red-500': useRCard && (ecoliB_count === null || ecoliB_count === undefined) && showValidationErrors }"
+											/>
 											<span class="self-center text-sm font-semibold px-1">÷</span>
 											<USelect
 											v-model="sampleVolB"
 											:options="sampleVolOptions"
 											:default-value="defaultSampleVol"
+											:class="{ 'border-red-500': useRCard && !sampleVolB && showValidationErrors }"
 											/>
 											<span class="self-center text-sm font-semibold px-1 whitespace-nowrap">× 100 =</span>
 											<UInput v-model="ecoliB" type="number" disabled />
 
 											<!-- Sample C -->
 											<label class="self-center text-sm whitespace-nowrap required-field">Sample C:</label>
-											<UInput v-model="ecoliC_count" type="number" />
+											<UInput 
+												v-model="ecoliC_count" 
+												type="number" 
+												:class="{ 'border-red-500': useRCard && (ecoliC_count === null || ecoliC_count === undefined) && showValidationErrors }"
+											/>
 											<span class="self-center text-sm font-semibold px-1">÷</span>
 											<USelect
 											v-model="sampleVolC"
 											:options="sampleVolOptions"
 											:default-value="defaultSampleVol"
+											:class="{ 'border-red-500': useRCard && !sampleVolC && showValidationErrors }"
 											/>          
 											<span class="self-center text-sm font-semibold px-1 whitespace-nowrap">× 100 =</span>
 											<UInput v-model="ecoliC" type="number" disabled />
@@ -2413,7 +2617,12 @@ const confirmCancel = () => {
 											<div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
 												<UFormGroup>
 													<label class="text-xs font-semibold required-field"># E.coli/card</label>
-													<UInput v-model="ecoliA_count" type="number" required />
+													<UInput 
+														v-model="ecoliA_count" 
+														type="number" 
+														required 
+														:class="{ 'border-red-500': useRCard && (ecoliA_count === null || ecoliA_count === undefined) && showValidationErrors }"
+													/>
 												</UFormGroup>
 												<UFormGroup>
 													<label class="text-xs font-semibold required-field">Sample Vol (mL)</label>
@@ -2421,6 +2630,7 @@ const confirmCancel = () => {
 													v-model="sampleVolA"
 													:options="sampleVolOptions"
 													:default-value="defaultSampleVol"
+													:class="{ 'border-red-500': useRCard && !sampleVolA && showValidationErrors }"
 													/>
 												</UFormGroup>
 												<UFormGroup>
@@ -2436,7 +2646,12 @@ const confirmCancel = () => {
 											<div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
 												<UFormGroup>
 													<label class="text-xs font-semibold required-field"># E.coli/card</label>
-													<UInput v-model="ecoliB_count" type="number" required />
+													<UInput 
+														v-model="ecoliB_count" 
+														type="number" 
+														required 
+														:class="{ 'border-red-500': useRCard && (ecoliB_count === null || ecoliB_count === undefined) && showValidationErrors }"
+													/>
 												</UFormGroup>
 												<UFormGroup>
 													<label class="text-xs font-semibold required-field">Sample Vol (mL)</label>
@@ -2444,6 +2659,7 @@ const confirmCancel = () => {
 													v-model="sampleVolB"
 													:options="sampleVolOptions"
 													:default-value="defaultSampleVol"
+													:class="{ 'border-red-500': useRCard && !sampleVolB && showValidationErrors }"
 													/>
 												</UFormGroup>
 												<UFormGroup>
@@ -2459,7 +2675,12 @@ const confirmCancel = () => {
 											<div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
 												<UFormGroup>
 													<label class="text-xs font-semibold required-field"># E.coli/card</label>
-													<UInput v-model="ecoliC_count" type="number" required />
+													<UInput 
+														v-model="ecoliC_count" 
+														type="number" 
+														required 
+														:class="{ 'border-red-500': useRCard && (ecoliC_count === null || ecoliC_count === undefined) && showValidationErrors }"
+													/>
 												</UFormGroup>
 												<UFormGroup>
 													<label class="text-xs font-semibold required-field">Sample Vol (mL)</label>
@@ -2467,6 +2688,7 @@ const confirmCancel = () => {
 													v-model="sampleVolC"
 													:options="sampleVolOptions"
 													:default-value="defaultSampleVol"
+													:class="{ 'border-red-500': useRCard && !sampleVolC && showValidationErrors }"
 													/>
 												</UFormGroup>
 												<UFormGroup>
@@ -2566,13 +2788,21 @@ const confirmCancel = () => {
 					>
 						Cancel
 					</UButton>
+					<!-- Enhanced Submit Button with Warning Indicator -->
 					<UButton
 						@click="confirmSubmission"
 						class="text-gray-900 w-full sm:w-auto order-1 sm:order-2"
 						variant="solid"
-						:disabled="!isFormValid || isSubmitting"
-					>
-						{{ isSubmitting ? 'Submitting...' : isEditMode ? 'Save Changes' : 'Submit Sample' }}
+						:disabled="isSubmitting"
+						:color="formErrors.length > 0 ? 'red' : formWarnings.length > 0 ? 'yellow' : 'primary'"
+						>
+						<template v-if="formWarnings.length > 0 && formErrors.length === 0">
+							<UIcon name="i-heroicons-exclamation-triangle" class="mr-1" />
+						</template>
+						{{ isSubmitting ? 'Submitting...' : 
+							formErrors.length > 0 ? `Fix ${formErrors.length} Error${formErrors.length > 1 ? 's' : ''} to Submit` :
+							formWarnings.length > 0 ? `Submit with ${formWarnings.length} Warning${formWarnings.length > 1 ? 's' : ''}` :
+							isEditMode ? 'Save Changes' : 'Submit Sample' }}
 					</UButton>
 				</div>
 				</div>
@@ -2639,6 +2869,50 @@ const confirmCancel = () => {
 				</UCard>
 			</UModal>
 
+			<!-- Warning Confirmation Modal -->
+			<UModal v-model="isWarningModalOpen">
+			<UCard>
+				<template #header>
+				<div class="text-xl font-bold text-yellow-600 flex items-center">
+					<UIcon name="i-heroicons-exclamation-triangle" class="mr-2" />
+					Data Quality Warning
+				</div>
+				</template>
+				<div class="p-4">
+				<p class="mb-4">
+					Some of your measurements are outside typical ranges for natural waters:
+				</p>
+				<ul class="list-disc pl-5 space-y-1 mb-4 text-sm bg-yellow-50 p-3 rounded">
+					<li v-for="(warning, index) in formWarnings" :key="index" class="text-yellow-800">
+					{{ warning }}
+					</li>
+				</ul>
+				<p class="text-sm text-gray-600">
+					These may be accurate measurements for your site, or they might indicate a measurement error. 
+					You can submit anyway, but please verify your data is correct.
+				</p>
+				</div>
+				<template #footer>
+				<div class="flex flex-col sm:flex-row justify-end gap-2 sm:space-x-4">
+					<UButton 
+					@click="isWarningModalOpen = false" 
+					color="gray"
+					class="w-full sm:w-auto"
+					>
+					Review Measurements
+					</UButton>
+					<UButton 
+					@click="proceedWithWarnings" 
+					color="yellow"
+					class="w-full sm:w-auto"
+					>
+					Submit Anyway
+					</UButton>
+				</div>
+				</template>
+			</UCard>
+			</UModal>
+
 			<!-- Loading Overlay -->
 			<div v-if="isSubmitting" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50 p-4">
 				<div class="bg-white p-4 sm:p-8 rounded-lg shadow-xl text-center max-w-sm w-full">
@@ -2675,32 +2949,6 @@ const confirmCancel = () => {
 				</div>
 			</Transition>
 		</Teleport>
-	</div>
-
-	<!-- Validation Errors - Only show after submit attempt -->
-	<div v-if="formErrors.length > 0 && showValidationErrors" class="fixed bottom-4 left-4 right-4 sm:bottom-6 sm:left-auto sm:right-6 sm:max-w-md z-50">
-		<div class="bg-orange-50 border-2 border-orange-400 p-3 sm:p-4 rounded-lg shadow-lg">
-			<div class="flex">
-			<div class="flex-shrink-0">
-				<UIcon 
-				name="i-heroicons-exclamation-triangle" 
-				class="h-5 w-5 text-orange-400"
-				/>
-			</div>
-			<div class="ml-3">
-				<h3 class="text-xs sm:text-sm font-medium text-orange-800">
-				Please make sure these are filled:
-				</h3>
-				<div class="mt-2 text-xs sm:text-sm text-orange-700">
-				<ul class="list-disc pl-4 space-y-1">
-					<li v-for="(error, index) in formErrors" :key="index">
-					{{ error }}
-					</li>
-				</ul>
-				</div>
-			</div>
-			</div>
-		</div>
 	</div>
 	</ClientOnly>
 </div>
@@ -2822,5 +3070,15 @@ const confirmCancel = () => {
   :deep(.form-group) {
     margin-bottom: 1rem;
   }
+}
+
+/* Enhanced validation styling */
+.border-red-500 {
+  border-color: #ef4444 !important;
+}
+
+/* Sticky validation positioning */
+.sticky {
+  position: sticky;
 }
 </style>

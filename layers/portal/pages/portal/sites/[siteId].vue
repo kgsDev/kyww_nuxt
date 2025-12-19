@@ -1230,7 +1230,6 @@ onMounted(async () => {
                   <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
                   <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Habitat Score</th>
                   <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quality Rating</th>
-                  <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location Description</th>
                   <th class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
@@ -1258,11 +1257,6 @@ onMounted(async () => {
                         sample.physical_assessment_score >= 23 && sample.physical_assessment_score <= 29 ? 'Fair' : 'Good' }}
                     </span>
                     <span v-else class="text-gray-500">—</span>
-                  </td>
-                  <td class="px-3 py-4 text-sm text-gray-500 max-w-xs">
-                    <div class="truncate" :title="sample.stream_location_description">
-                      {{ sample.stream_location_description || 'Not provided' }}
-                    </div>
                   </td>
                   <td class="px-3 py-4 whitespace-nowrap text-center text-sm font-medium">
                     <div class="flex justify-center space-x-1">

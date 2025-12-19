@@ -168,7 +168,7 @@ const fetchSampleData = async () => {
       }
 
       // Fetch related data from join tables
-      const [odors, waterSurfaces, bacterialSources, waterColors, samplers] = await Promise.all([
+      const [odors, waterSurfaces, bacterialSources, waterColorRecords, samplers] = await Promise.all([
         useDirectus(readItems('base_samples_lu_odor', {
           filter: { base_samples_id: { _eq: sampleId.value } },
           fields: ['lu_odor_id'],
@@ -195,20 +195,19 @@ const fetchSampleData = async () => {
           limit: -1 // Fetch all related samplers
         }))
       ]);
-
+      
       additionalSamplers.value = samplers.map(s => ({
         name: `${s.directus_users_id.first_name} ${s.directus_users_id.last_name}`
       }));
 
-      otherSamplers.value = sampleData.value.other_samplers || '';
-
+      otherSamplers.value = sampleData.value.other_samplers && sampleData.value.other_samplers !== '[]' ? sampleData.value.other_samplers : null;
       // Add related data to sample data
       sampleData.value = {
         ...sampleData.value,
         odors: odors.map(o => o.lu_odor_id),
         waterSurfaces: waterSurfaces.map(w => w.lu_water_surface_id),
         bacterialSources: bacterialSources.map(b => b.lu_bacterial_sources_id),
-        waterColor: waterColors.length > 0 ? waterColors[0].lu_water_color_id : null
+        water_color: waterColorRecords.length > 0 ? waterColorRecords[0].lu_water_color_id : null
       };
     } else {
       error.value = 'Sample not found';
@@ -358,9 +357,9 @@ onMounted(async () => {
                 </li>
               </ul>
             </div>
-            <div v-if="otherSamplers.length > 0">
+            <div>
                 <p class="font-medium text-sm sm:text-base">Non-KYWW Samplers</p>
-                <p class="text-sm sm:text-base">{{ sampleData.other_samplers }}</p>
+                <p class="text-sm sm:text-base">{{ otherSamplers || 'None' }}</p>
             </div>
           </div>
         </UCard>

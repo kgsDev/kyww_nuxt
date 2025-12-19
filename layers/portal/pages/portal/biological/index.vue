@@ -1215,7 +1215,7 @@ watch([isEditMode, sampleId], ([newIsEditMode, newSampleId]) => {
                     />
                     <p v-if="isSiteIdValid === false" class="text-red-500 mt-1">Invalid Site ID</p>
                     <p v-if="isSiteIdValid === true" class="text-green-500 mt-1">Valid Site ID</p>
-                    <label class="block mb-1 text-sm">(click or tab out to check)</label>
+                    <label class="block mb-1 text-sm">(To verify site after entry, click outside of box or press tab)</label>
                   </UFormGroup>
                   <UFormGroup class="p-2 basis-1/4">
                     <label class="block mb-1">or Select/Create a Site:</label>
