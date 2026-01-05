@@ -1130,7 +1130,20 @@ watch([isEditMode, sampleId], ([newIsEditMode, newSampleId]) => {
 
         <!-- Main Form -->
         <div v-else>
-          <h1 class="text-2xl text-center text-gray-900 mb-4">Kentucky Watershed Watch Biological Assessment Form</h1>
+          <h3 class="text-2xl sm:text-3xl text-center text-gray-900 border-2 border-gray-900 mb-4 bg-blue-300 font-bold p-2">Kentucky Watershed Watch Biological Assessment Form</h3>
+          <!-- PDF Download Link -->
+          <div class="my-4 text-center">
+            <a 
+              href="https://kyww.uky.edu/webshare/kyww_images/Simplified%20Biological%20Assessment%20Form%2020250814.pdf" 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              class="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors shadow-sm text-sm sm:text-base"
+            >
+              <UIcon name="i-heroicons-document-text" class="mr-2" />
+              Download PDF Version of Form
+            </a>
+            <p class="mt-2 text-xs sm:text-sm text-gray-600">Access the printable version of this form for field use</p>
+          </div>
 
           <Form @submit.prevent="submitData">
             <div class="relative items-start">

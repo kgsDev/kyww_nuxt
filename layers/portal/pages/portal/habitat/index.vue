@@ -1245,7 +1245,7 @@ watch([isEditMode, sampleId], ([newIsEditMode, newSampleId]) => {
           <!-- PDF Download Link -->
           <div class="my-4 text-center">
             <a 
-              href="@/assets/pdfs/Habitat assessment form 20250815.pdf" 
+              href="https://kyww.uky.edu/webshare/kyww_images/Habitat%20assessment%20form%2020250815.pdf" 
               target="_blank" 
               rel="noopener noreferrer" 
               class="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors shadow-sm text-sm sm:text-base"
