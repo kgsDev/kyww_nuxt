@@ -1097,8 +1097,8 @@ watch([isEditMode, sampleId], ([newIsEditMode, newSampleId]) => {
 
         <!-- Submission Confirmation Screen -->
         <div v-if="isSubmitted" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
-          <div class="bg-white p-8 rounded-lg shadow-xl text-center">
-            <h2 class="text-2xl font-bold mb-4">Thank You!</h2>
+          <div class="bg-white p-4 sm:p-8 rounded-lg shadow-xl text-center max-w-md mx-auto">
+            <h2 class="text-xl sm:text-2xl font-bold mb-4">Thank You!</h2>
             <p class="mb-4">
               {{ isEditMode 
                 ? `Biological assessment ${sampleId} has been successfully updated.`
@@ -1106,23 +1106,26 @@ watch([isEditMode, sampleId], ([newIsEditMode, newSampleId]) => {
               }}
             </p>
             <p v-if="uploadedFileTypes.length > 0" class="mb-4">Photos have also been uploaded.</p>
-            <div class="space-x-4">
+            <div class="flex flex-col sm:flex-row sm:space-x-4 space-y-2 sm:space-y-0">
               <UButton 
                 variant="solid" 
                 @click="viewDashboard" 
                 label="View Dashboard" 
+                class="w-full sm:w-auto"
               />
               <UButton 
                 v-if="!isEditMode"
                 variant="outline" 
                 @click="handleNewSample" 
                 label="Submit Another Assessment" 
+                class="w-full sm:w-auto"
               />
               <UButton
                 v-if="wwkyid_pk"
                 variant="outline"
                 @click="viewSite"
                 :label="`View Site ${wwkyid_pk}`"
+                class="w-full sm:w-auto"
               />
             </div>
           </div>
@@ -1130,9 +1133,10 @@ watch([isEditMode, sampleId], ([newIsEditMode, newSampleId]) => {
 
         <!-- Main Form -->
         <div v-else>
-          <h3 class="text-2xl sm:text-3xl text-center text-gray-900 border-2 border-gray-900 mb-4 bg-blue-300 font-bold p-2">Kentucky Watershed Watch Biological Assessment Form</h3>
+          <h3 class="text-xl sm:text-2xl md:text-3xl text-center text-gray-900 border-2 border-gray-900 mb-4 bg-blue-300 font-bold p-2">Kentucky Watershed Watch Biological Assessment Form</h3>
+          
           <!-- PDF Download Link -->
-          <div class="my-4 text-center">
+          <div class="my-4 text-center px-4">
             <a 
               href="https://kyww.uky.edu/webshare/kyww_images/Simplified%20Biological%20Assessment%20Form%2020250814.pdf" 
               target="_blank" 
@@ -1147,14 +1151,16 @@ watch([isEditMode, sampleId], ([newIsEditMode, newSampleId]) => {
 
           <Form @submit.prevent="submitData">
             <div class="relative items-start">
-              <!-- Header Section - Same as Sample Form -->
-              <div class="border-4 p-4 border-gray-900 bg-blue-50 mb-6">
+              <!-- Header Section -->
+              <div class="border-4 p-2 sm:p-4 border-gray-900 bg-blue-50 mb-6">
                 <div class="p-2">
-                  <h1 class="text-1xl font-bold text-left text-gray-900 required-field">Required Fields</h1>
+                  <h1 class="text-base sm:text-xl font-bold text-left text-gray-900 required-field">Required Fields</h1>
                 </div>
-                <div class="flex">
-                  <UFormGroup class="p-2 basis-1/3" required>
-                    <label class="block mb-1 required-field">Primary Sampler:</label>
+                
+                <!-- Primary Sampler and Additional Samplers Row -->
+                <div class="flex flex-col md:flex-row">
+                  <UFormGroup class="p-2 w-full md:basis-1/3" required>
+                    <label class="block mb-1 text-sm sm:text-base required-field">Primary Sampler:</label>
                     <USelect
                       v-model="volunteer_id"
                       :options="availableSamplers.map(sampler => ({
@@ -1173,18 +1179,19 @@ watch([isEditMode, sampleId], ([newIsEditMode, newSampleId]) => {
                       required
                     />
                     <template v-if="isEditMode">
-                      <p v-if="originalSampler" class="text-sm text-gray-500 mt-1">
+                      <p v-if="originalSampler" class="text-xs sm:text-sm text-gray-500 mt-1">
                         Originally entered by {{ originalSampler }}
                       </p>
                     </template>
                     <template v-else>
-                      <p class="text-sm text-gray-600 mt-1">
+                      <p class="text-xs sm:text-sm text-gray-600 mt-1">
                         Form entered by: {{ user?.first_name }} {{ user?.last_name }}
                       </p>
                     </template>
                   </UFormGroup>
-                  <UFormGroup class="p-2 basis-2/3">
-                    <label class="block mb-1">Additional Samplers</label>
+                  
+                  <UFormGroup class="p-2 w-full md:basis-2/3">
+                    <label class="block mb-1 text-sm sm:text-base">Additional Samplers</label>
                     <div class="space-y-2">
                       <USelectMenu
                         v-model="selectedSamplerIds"
@@ -1193,15 +1200,15 @@ watch([isEditMode, sampleId], ([newIsEditMode, newSampleId]) => {
                         searchable
                         placeholder="Search and select additional samplers"
                         value-attribute="id"
-                        >
+                      >
                         <template #option="{ option }">
-                          <span>
+                          <span class="text-sm sm:text-base">
                             {{ option.first_name }} {{ option.last_name }}
                             {{ option.id === user?.id ? ' (you)' : '' }}
                           </span>
                         </template>
                         <template #selected-option="{ option }">
-                          <span>
+                          <span class="text-sm sm:text-base">
                             {{ option.first_name }} {{ option.last_name }}
                             {{ option.id === user?.id ? ' (you)' : '' }}
                           </span>
@@ -1213,7 +1220,7 @@ watch([isEditMode, sampleId], ([newIsEditMode, newSampleId]) => {
                         <div 
                           v-for="selectedId in selectedSamplerIds" 
                           :key="selectedId"
-                          class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full flex items-center gap-2"
+                          class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full flex items-center gap-2 text-sm"
                         >
                           <span>{{ getSelectedSamplerName(selectedId) }}</span>
                           <button
@@ -1226,9 +1233,12 @@ watch([isEditMode, sampleId], ([newIsEditMode, newSampleId]) => {
                       </div>
                     </div>
                   </UFormGroup>
+                </div>
 
-                  <UFormGroup class="p-2 basis-1/3" required>
-                    <label class="block mb-1 required-field"># Adult Participants:</label>
+                <!-- Adults and Youths Row -->
+                <div class="flex flex-col sm:flex-row">
+                  <UFormGroup class="p-2 w-full sm:basis-1/2" required>
+                    <label class="block mb-1 text-sm sm:text-base required-field"># Adult Participants:</label>
                     <UInput
                       v-model="adults"
                       icon="ic:baseline-group"
@@ -1238,8 +1248,8 @@ watch([isEditMode, sampleId], ([newIsEditMode, newSampleId]) => {
                       required
                     />
                   </UFormGroup>
-                  <UFormGroup class="p-2 basis-1/3" required>
-                    <label class="block mb-1 required-field"># Youth Participants:</label>
+                  <UFormGroup class="p-2 w-full sm:basis-1/2" required>
+                    <label class="block mb-1 text-sm sm:text-base required-field"># Youth Participants:</label>
                     <UInput
                       v-model="youths"
                       icon="healthicons:child-program"
@@ -1250,20 +1260,24 @@ watch([isEditMode, sampleId], ([newIsEditMode, newSampleId]) => {
                     />
                   </UFormGroup>
                 </div>
+
+                <!-- Other Samplers Textarea -->
                 <div class="w-full px-2">
                   <UFormGroup>
-                    <label class="block mb-1">Other non-KYWW Samplers:</label>
+                    <label class="block mb-1 text-sm sm:text-base">Other non-KYWW Samplers:</label>
                     <UTextarea 
                       v-model="otherSamplers" 
                       rows="2"
-                      class="w-full min-h-[60px] resize-y"
+                      class="w-full min-h-[60px] resize-y text-sm sm:text-base"
                       placeholder="List any non-KYWW samplers here"
                     />
                   </UFormGroup>
                 </div>
-                <div class="flex">
-                  <UFormGroup class="p-2 basis-1/4">
-                    <label class="block mb-1">Enter Site ID:</label>
+
+                <!-- Site Selection Row -->
+                <div class="flex flex-col lg:flex-row gap-2">
+                  <UFormGroup class="p-2 w-full lg:basis-1/5">
+                    <label class="block mb-1 text-sm sm:text-base">Enter Site ID:</label>
                     <UInput
                       :model-value="directSiteId"
                       @input="handleSiteIdInput"
@@ -1273,38 +1287,44 @@ watch([isEditMode, sampleId], ([newIsEditMode, newSampleId]) => {
                       placeholder="Enter Site ID"
                       :loading="isCheckingSiteId"
                     />
-                    <p v-if="isSiteIdValid === false" class="text-red-500 mt-1">Invalid Site ID</p>
-                    <p v-if="isSiteIdValid === true" class="text-green-500 mt-1">Valid Site ID</p>
-                    <label class="block mb-1 text-sm">(To verify site after entry, click outside of box or press tab)</label>
+                    <p v-if="isSiteIdValid === false" class="text-red-500 mt-1 text-xs sm:text-sm">Invalid Site ID</p>
+                    <p v-if="isSiteIdValid === true" class="text-green-500 mt-1 text-xs sm:text-sm">Valid Site ID</p>
+                    <label class="block mb-1 text-xs sm:text-sm">(To verify site after entry, click outside of box or press tab)</label>
                   </UFormGroup>
-                  <UFormGroup class="p-2 basis-1/4">
-                    <label class="block mb-1">or Select/Create a Site:</label>
-                    <UButton label="Open Map" @click="openMap" />
+                  
+                  <UFormGroup class="p-2 w-full lg:basis-1/5">
+                    <label class="block mb-1 text-sm sm:text-base">or Select/Create a Site:</label>
+                    <UButton label="Open Map" @click="openMap" class="w-full sm:w-auto" />
                   </UFormGroup>
-                  <UFormGroup class="p-2 basis-1/4" required>
-                    <label class="block mb-1 required-field">Site ID:</label>
+                  
+                  <UFormGroup class="p-2 w-full lg:basis-1/5" required>
+                    <label class="block mb-1 text-sm sm:text-base required-field">Site ID:</label>
                     <UInput :model-value="wwkyid_pk !== null ? wwkyid_pk.toString() : ''" icon="bxs:been-here" :disabled="true" required/>
                   </UFormGroup>
-                  <UFormGroup class="p-2 basis-1/4">
-                    <label class="block mb-1">Stream Name:</label>
+                  
+                  <UFormGroup class="p-2 w-full lg:basis-1/5">
+                    <label class="block mb-1 text-sm sm:text-base">Stream Name:</label>
                     <UInput v-model="stream_name" icon="mdi:water" :disabled="true"/>
                   </UFormGroup>
-                  <UFormGroup class="p-2 basis-1/4">
-                    <label class="block mb-1">Basin:</label>
+                  
+                  <UFormGroup class="p-2 w-full lg:basis-1/5">
+                    <label class="block mb-1 text-sm sm:text-base">Basin:</label>
                     <UInput v-model="wwkybasin" icon="mdi:terrain" :disabled="true"/>
                   </UFormGroup>
                 </div>
-                <div class="flex">
-                  <UFormGroup class="p-2 basis-1/4" required>
-                    <label class="block mb-1 required-field">Date:</label>
+
+                <!-- Date/Time/Minutes/Miles Row -->
+                <div class="flex flex-col sm:flex-row">
+                  <UFormGroup class="p-2 w-full sm:basis-1/2 lg:basis-1/4" required>
+                    <label class="block mb-1 text-sm sm:text-base required-field">Date:</label>
                     <UInput v-model="date" icon="solar:calendar-bold" type="date" required />
                   </UFormGroup>
-                  <UFormGroup class="p-2 basis-1/4" required>
-                    <label class="block mb-1 required-field">Start Time:</label>
+                  <UFormGroup class="p-2 w-full sm:basis-1/2 lg:basis-1/4" required>
+                    <label class="block mb-1 text-sm sm:text-base required-field">Start Time:</label>
                     <UInput v-model="startTime" icon="mdi:clock-outline" type="time" required />
                   </UFormGroup>
-                  <UFormGroup class="p-2 basis-1/4" required>
-                    <label class="block mb-1 required-field">Total Volunteer Minutes:</label>
+                  <UFormGroup class="p-2 w-full sm:basis-1/2 lg:basis-1/4" required>
+                    <label class="block mb-1 text-sm sm:text-base required-field">Total Volunteer Minutes:</label>
                     <UInput
                       v-model="totalVolunteerMinutes"
                       placeholder="Travel+Sampling"
@@ -1313,8 +1333,8 @@ watch([isEditMode, sampleId], ([newIsEditMode, newSampleId]) => {
                       required
                     />
                   </UFormGroup>
-                  <UFormGroup class="p-2 basis-1/4">
-                    <label class="block mb-1 required-field">Miles Driven:</label>
+                  <UFormGroup class="p-2 w-full sm:basis-1/2 lg:basis-1/4">
+                    <label class="block mb-1 text-sm sm:text-base required-field">Miles Driven:</label>
                     <UInput
                       v-model="milesDriven"
                       icon="fa-solid:car-side"
@@ -1325,260 +1345,262 @@ watch([isEditMode, sampleId], ([newIsEditMode, newSampleId]) => {
                     />
                   </UFormGroup>
                 </div>
-                <div class="p-2 text-sm text-right">
+
+                <div class="p-2 text-xs sm:text-sm text-right">
                   <h1>Total time spent sampling at multiple sites should only be entered once.</h1>
                   <h1>Total miles driven to sample at multiple sites should only be entered once.</h1>
                 </div>
               </div>
 
-              <!-- Biological Assessment Content -->
-              <div class="border-4 p-1 border-gray-900">
-                <div class="flex">
-                  <h3 class="p-2 basis-2/6 border-2 border-gray-900 text-center text-xl">Streamflow Conditions</h3>
-                  <h3 class="p-2 basis-4/6 border-2 border-gray-900 text-center text-xl">Habitat Zone</h3>
+              <!-- Streamflow Conditions and Habitat Zone Section -->
+              <div class="border-4 p-1 border-gray-900 mb-4">
+                <div class="flex flex-col md:flex-row">
+                  <h3 class="p-2 w-full md:basis-2/6 border-2 border-gray-900 text-center text-base sm:text-lg md:text-xl">Streamflow Conditions</h3>
+                  <h3 class="p-2 w-full md:basis-4/6 border-2 border-gray-900 text-center text-base sm:text-lg md:text-xl">Habitat Zone</h3>
                 </div>
-                <div class="flex">
-                  <UFormGroup class="p-2 basis-2/6 border-2 border-gray-900">
+                <div class="flex flex-col md:flex-row">
+                  <UFormGroup class="p-2 w-full md:basis-2/6 border-2 border-gray-900">
                     <URadioGroup v-model="weatherflowConditions" :options="weatherflowConditionOptions" name="weatherflowConditions" />
                   </UFormGroup>
-                  <UFormGroup class="p-2 basis-2/6 border-l-2 border-b-2 border-t-2 border-gray-900">
-                    <UCheckbox v-model="riffle" name="riffle" label="Riffle" />
-                    <UCheckbox v-model="leafPacks" name="leafPacks" label="Leaf Packs" />
-                    <UCheckbox v-model="woodyDebris" name="woodyDebris" label="Woody Debris" />
-                  </UFormGroup>
-                  <UFormGroup class="p-2 basis-2/6 border-r-2 border-b-2 border-t-2 border-gray-900">
-                    <UCheckbox v-model="pools" name="pools" label="Pools" />
-                    <UCheckbox v-model="undercutBanks" name="undercutBanks" label="Undercut Banks" />
-                    <UCheckbox
-                      v-model="submergedAquaticPlants"
-                      name="submergedAquaticPlants"
-                      label="Submerged Aquatic Plants"
-                    />
-                  </UFormGroup>
+                  <div class="w-full md:basis-4/6 flex flex-col sm:flex-row">
+                    <UFormGroup class="p-2 w-full sm:basis-1/2 border-2 border-gray-900">
+                      <UCheckbox v-model="riffle" name="riffle" label="Riffle" />
+                      <UCheckbox v-model="leafPacks" name="leafPacks" label="Leaf Packs" />
+                      <UCheckbox v-model="woodyDebris" name="woodyDebris" label="Woody Debris" />
+                    </UFormGroup>
+                    <UFormGroup class="p-2 w-full sm:basis-1/2 border-2 border-gray-900">
+                      <UCheckbox v-model="pools" name="pools" label="Pools" />
+                      <UCheckbox v-model="undercutBanks" name="undercutBanks" label="Undercut Banks" />
+                      <UCheckbox
+                        v-model="submergedAquaticPlants"
+                        name="submergedAquaticPlants"
+                        label="Submerged Aquatic Plants"
+                      />
+                    </UFormGroup>
+                  </div>
                 </div>
               </div>
 
-              <p class="text-l text-gray-900">
+              <!-- Instructions -->
+              <p class="text-sm sm:text-base text-gray-900 mb-2">
                 Click all of the macroinvertebrates that you find in your stream and the form will calculate your stream's
                 biological water quality score.
               </p>
+
+              <!-- Biological Water Quality Score Display (Top) -->
               <h2
-                class="border-2 border-gray-900 text-xl text-gray-900 text-center p-2"
-                :class="{
-                  'bg-red-500': habitatScore < 1.76,
-                  'bg-orange-500': habitatScore >= 1.76 && habitatScore < 2.51,
-                  'bg-yellow-500': habitatScore >= 2.51 && habitatScore < 3.26,
-                  'bg-green-500': habitatScore >= 3.26,
-                }"
+                class="border-2 border-gray-900 text-base sm:text-lg md:text-xl text-gray-900 text-center p-2 mb-2"
+                :class="getRatingColorClass(habitatScore)"
               >
-                Biological Water Quality Score = {{ habitatScore }} - 
-                <span v-if="habitatScore < 1.76">Poor</span>
-                <span v-else-if="habitatScore >= 1.76 && habitatScore < 2.51">Marginal</span>
-                <span v-else-if="habitatScore >= 2.51 && habitatScore < 3.26">Fair</span>
-                <span v-else>Good</span>
+                Biological Water Quality Score = {{ habitatScore }} - {{ getRatingText(habitatScore) }}
               </h2>
 
-              <div class="flex">
-                <h2 class="border-2 border-gray-900 bg-lime-500 basis-1/4 text-xl text-gray-900 text-center p-2">
+              <!-- Category Headers -->
+              <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-0">
+                <h2 class="border-2 border-gray-900 bg-lime-500 text-sm sm:text-base lg:text-xl text-gray-900 text-center p-2">
                   Highly Sensitive (4)
                 </h2>
-                <h2 class="border-2 border-gray-900 bg-lime-500 basis-1/4 text-xl text-gray-900 text-center p-2">Sensitive (3)</h2>
-                <h2 class="border-2 border-gray-900 bg-lime-500 basis-1/4 text-xl text-gray-900 text-center p-2">
+                <h2 class="border-2 border-gray-900 bg-lime-500 text-sm sm:text-base lg:text-xl text-gray-900 text-center p-2">
+                  Sensitive (3)
+                </h2>
+                <h2 class="border-2 border-gray-900 bg-lime-500 text-sm sm:text-base lg:text-xl text-gray-900 text-center p-2">
                   Moderately Tolerant (2)
                 </h2>
-                <h2 class="border-2 border-gray-900 bg-lime-500 basis-1/4 text-xl text-gray-900 text-center p-2">Tolerant (1)</h2>
+                <h2 class="border-2 border-gray-900 bg-lime-500 text-sm sm:text-base lg:text-xl text-gray-900 text-center p-2">
+                  Tolerant (1)
+                </h2>
               </div>
 
               <!-- Macroinvertebrates Grid -->
-              <div class="flex">
-                <div class="border-2 border-gray-900 basis-1/4">
-                  <div class="p-2 cursor-pointer" :class="{ 'bg-lime-500 text-gray-900': mussels }" @click="mussels = !mussels">
-                    <label for="mussels" class="cursor-pointer">Mussels (Native)</label>
-                    <img src="@/assets/form_icons/mussels-native.png" alt="Mussels" />
+              <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-0">
+                <!-- Highly Sensitive Column -->
+                <div class="border-2 border-gray-900">
+                  <div class="p-2 cursor-pointer transition-colors" :class="{ 'bg-lime-500 text-gray-900': mussels }" @click="mussels = !mussels">
+                    <label for="mussels" class="cursor-pointer text-xs sm:text-sm md:text-base block mb-1">Mussels (Native)</label>
+                    <img src="@/assets/form_icons/mussels-native.png" alt="Mussels" class="w-full max-w-[200px] mx-auto" />
                   </div>
-                  <div class="p-2 cursor-pointer" :class="{ 'bg-lime-500 text-gray-900': stoneflies }" @click="stoneflies = !stoneflies">
-                    <label for="stoneflies" class="cursor-pointer">Stoneflies</label>
-                    <img src="@/assets/form_icons/stoneflies.png" alt="Stoneflies" />
+                  <div class="p-2 cursor-pointer transition-colors" :class="{ 'bg-lime-500 text-gray-900': stoneflies }" @click="stoneflies = !stoneflies">
+                    <label for="stoneflies" class="cursor-pointer text-xs sm:text-sm md:text-base block mb-1">Stoneflies</label>
+                    <img src="@/assets/form_icons/stoneflies.png" alt="Stoneflies" class="w-full max-w-[200px] mx-auto" />
                   </div>
                   <div
-                    class="p-2 cursor-pointer"
+                    class="p-2 cursor-pointer transition-colors"
                     :class="{ 'bg-lime-500 text-gray-900': caddisfliesCaseBuilding }"
                     @click="caddisfliesCaseBuilding = !caddisfliesCaseBuilding"
                   >
-                    <label for="caddisfliesCaseBuilding" class="cursor-pointer">Caddisflies (case-building)</label>
-                    <img src="@/assets/form_icons/caddisflies-case_building.png" alt="Caddisflies" />
+                    <label for="caddisfliesCaseBuilding" class="cursor-pointer text-xs sm:text-sm md:text-base block mb-1">Caddisflies (case-building)</label>
+                    <img src="@/assets/form_icons/caddisflies-case_building.png" alt="Caddisflies" class="w-full max-w-[200px] mx-auto" />
                   </div>
-                  <div class="p-2 cursor-pointer" :class="{ 'bg-lime-500 text-gray-900': mayflies }" @click="mayflies = !mayflies">
-                    <label for="mayflies" class="cursor-pointer">Mayflies</label>
-                    <img src="@/assets/form_icons/mayflies.png" alt="Mayflies" />
+                  <div class="p-2 cursor-pointer transition-colors" :class="{ 'bg-lime-500 text-gray-900': mayflies }" @click="mayflies = !mayflies">
+                    <label for="mayflies" class="cursor-pointer text-xs sm:text-sm md:text-base block mb-1">Mayflies</label>
+                    <img src="@/assets/form_icons/mayflies.png" alt="Mayflies" class="w-full max-w-[200px] mx-auto" />
                   </div>
                   <div
-                    class="p-2 cursor-pointer"
+                    class="p-2 cursor-pointer transition-colors"
                     :class="{ 'bg-lime-500 text-gray-900': waterPennies }"
                     @click="waterPennies = !waterPennies"
                   >
-                    <label for="waterPennies" class="cursor-pointer">Water Pennies</label>
-                    <img src="@/assets/form_icons/water_pennies.png" alt="Water Pennies" />
+                    <label for="waterPennies" class="cursor-pointer text-xs sm:text-sm md:text-base block mb-1">Water Pennies</label>
+                    <img src="@/assets/form_icons/water_pennies.png" alt="Water Pennies" class="w-full max-w-[200px] mx-auto" />
                   </div>
-                  <div class="p-2 cursor-pointer" :class="{ 'bg-lime-500 text-gray-900': waterSnipe }" @click="waterSnipe = !waterSnipe">
-                    <label for="waterSnipe" class="cursor-pointer">Water Snipe</label>
-                    <img src="@/assets/form_icons/water_snipe.png" alt="Water Snipe" />
+                  <div class="p-2 cursor-pointer transition-colors" :class="{ 'bg-lime-500 text-gray-900': waterSnipe }" @click="waterSnipe = !waterSnipe">
+                    <label for="waterSnipe" class="cursor-pointer text-xs sm:text-sm md:text-base block mb-1">Water Snipe</label>
+                    <img src="@/assets/form_icons/water_snipe.png" alt="Water Snipe" class="w-full max-w-[200px] mx-auto" />
                   </div>
                 </div>
-                <div class="border-2 border-gray-900 basis-1/4">
+
+                <!-- Sensitive Column -->
+                <div class="border-2 border-gray-900">
                   <div
-                    class="p-2 cursor-pointer"
+                    class="p-2 cursor-pointer transition-colors"
                     :class="{ 'bg-lime-500 text-gray-900': caddisfliesNetSpinning }"
                     @click="caddisfliesNetSpinning = !caddisfliesNetSpinning"
                   >
-                    <label for="caddisfliesNetSpinning" class="cursor-pointer">Caddisflies (net-spinning)</label>
-                    <img src="@/assets/form_icons/caddisflies-net_spinning.png" alt="Caddisflies" />
+                    <label for="caddisfliesNetSpinning" class="cursor-pointer text-xs sm:text-sm md:text-base block mb-1">Caddisflies (net-spinning)</label>
+                    <img src="@/assets/form_icons/caddisflies-net_spinning.png" alt="Caddisflies" class="w-full max-w-[200px] mx-auto" />
                   </div>
                   <div
-                    class="p-2 cursor-pointer"
+                    class="p-2 cursor-pointer transition-colors"
                     :class="{ 'bg-lime-500 text-gray-900': riffleBeetles }"
                     @click="riffleBeetles = !riffleBeetles"
                   >
-                    <label for="riffleBeetles" class="cursor-pointer">Riffle Beetles (adults and larvae)</label>
-                    <img src="@/assets/form_icons/riffle_beetles-adults_and_larvae.png" alt="Riffle Beetles" />
+                    <label for="riffleBeetles" class="cursor-pointer text-xs sm:text-sm md:text-base block mb-1">Riffle Beetles (adults and larvae)</label>
+                    <img src="@/assets/form_icons/riffle_beetles-adults_and_larvae.png" alt="Riffle Beetles" class="w-full max-w-[200px] mx-auto" />
                   </div>
                   <div
-                    class="p-2 cursor-pointer"
+                    class="p-2 cursor-pointer transition-colors"
                     :class="{ 'bg-lime-500 text-gray-900': operculateSnails }"
                     @click="operculateSnails = !operculateSnails"
                   >
-                    <label for="operculateSnails" class="cursor-pointer">Operculate Snails (Right-opening)</label>
-                    <img src="@/assets/form_icons/operculate_snails-right_opening.png" alt="Operculate Snails" />
+                    <label for="operculateSnails" class="cursor-pointer text-xs sm:text-sm md:text-base block mb-1">Operculate Snails (Right-opening)</label>
+                    <img src="@/assets/form_icons/operculate_snails-right_opening.png" alt="Operculate Snails" class="w-full max-w-[200px] mx-auto" />
                   </div>
                   <div
-                    class="p-2 cursor-pointer"
+                    class="p-2 cursor-pointer transition-colors"
                     :class="{ 'bg-lime-500 text-gray-900': blackFlyLarva }"
                     @click="blackFlyLarva = !blackFlyLarva"
                   >
-                    <label for="blackFlyLarva" class="cursor-pointer">Black Fly Larvae</label>
-                    <img src="@/assets/form_icons/black_fly_larva.png" alt="Black Fly Larva" />
+                    <label for="blackFlyLarva" class="cursor-pointer text-xs sm:text-sm md:text-base block mb-1">Black Fly Larvae</label>
+                    <img src="@/assets/form_icons/black_fly_larva.png" alt="Black Fly Larva" class="w-full max-w-[200px] mx-auto" />
                   </div>
                   <div
-                    class="p-2 cursor-pointer"
+                    class="p-2 cursor-pointer transition-colors"
                     :class="{ 'bg-lime-500 text-gray-900': craneFlyLarva }"
                     @click="craneFlyLarva = !craneFlyLarva"
                   >
-                    <label for="craneFlyLarva" class="cursor-pointer">Crane Fly Larvae</label>
-                    <img src="@/assets/form_icons/crane_fly_larva.png" alt="Crane Fly Larva" />
+                    <label for="craneFlyLarva" class="cursor-pointer text-xs sm:text-sm md:text-base block mb-1">Crane Fly Larvae</label>
+                    <img src="@/assets/form_icons/crane_fly_larva.png" alt="Crane Fly Larva" class="w-full max-w-[200px] mx-auto" />
                   </div>
                 </div>
-                <div class="border-2 border-gray-900 basis-1/4">
+
+                <!-- Moderately Tolerant Column -->
+                <div class="border-2 border-gray-900">
                   <div
-                    class="p-2 cursor-pointer"
+                    class="p-2 cursor-pointer transition-colors"
                     :class="{ 'bg-lime-500 text-gray-900': hellgrammites }"
                     @click="hellgrammites = !hellgrammites"
                   >
-                    <label for="hellgrammites" class="cursor-pointer">Hellgrammites / Dobsonfly Larvae</label>
-                    <img src="@/assets/form_icons/hellgrammites.png" alt="Hellgrammites" />
+                    <label for="hellgrammites" class="cursor-pointer text-xs sm:text-sm md:text-base block mb-1">Hellgrammites / Dobsonfly Larvae</label>
+                    <img src="@/assets/form_icons/hellgrammites.png" alt="Hellgrammites" class="w-full max-w-[200px] mx-auto" />
                   </div>
                   <div
-                    class="p-2 cursor-pointer"
+                    class="p-2 cursor-pointer transition-colors"
                     :class="{ 'bg-lime-500 text-gray-900': clamsAndMussels }"
                     @click="clamsAndMussels = !clamsAndMussels"
                   >
-                    <label for="clamsAndMussels" class="cursor-pointer">Clams and Mussels (Asian)</label>
-                    <img src="@/assets/form_icons/clams_and_mussels-asian.png" alt="Clams and Mussels" />
+                    <label for="clamsAndMussels" class="cursor-pointer text-xs sm:text-sm md:text-base block mb-1">Clams and Mussels (Asian)</label>
+                    <img src="@/assets/form_icons/clams_and_mussels-asian.png" alt="Clams and Mussels" class="w-full max-w-[200px] mx-auto" />
                   </div>
-                  <div class="p-2 cursor-pointer" :class="{ 'bg-lime-500 text-gray-900': crayfish }" @click="crayfish = !crayfish">
-                    <label for="crayfish" class="cursor-pointer">Crayfish</label>
-                    <img src="@/assets/form_icons/crayfish.png" alt="Crayfish" />
+                  <div class="p-2 cursor-pointer transition-colors" :class="{ 'bg-lime-500 text-gray-900': crayfish }" @click="crayfish = !crayfish">
+                    <label for="crayfish" class="cursor-pointer text-xs sm:text-sm md:text-base block mb-1">Crayfish</label>
+                    <img src="@/assets/form_icons/crayfish.png" alt="Crayfish" class="w-full max-w-[200px] mx-auto" />
                   </div>
-                  <div class="p-2 cursor-pointer" :class="{ 'bg-lime-500 text-gray-900': dragonflies }" @click="dragonflies = !dragonflies">
-                    <label for="dragonflies" class="cursor-pointer">Dragonflies</label>
-                    <img src="@/assets/form_icons/dragonflies.png" alt="Dragonflies" />
+                  <div class="p-2 cursor-pointer transition-colors" :class="{ 'bg-lime-500 text-gray-900': dragonflies }" @click="dragonflies = !dragonflies">
+                    <label for="dragonflies" class="cursor-pointer text-xs sm:text-sm md:text-base block mb-1">Dragonflies</label>
+                    <img src="@/assets/form_icons/dragonflies.png" alt="Dragonflies" class="w-full max-w-[200px] mx-auto" />
                   </div>
-                  <div class="p-2 cursor-pointer" :class="{ 'bg-lime-500 text-gray-900': flatworms }" @click="flatworms = !flatworms">
-                    <label for="flatworms" class="cursor-pointer">Flatworms / Planaria</label>
-                    <img src="@/assets/form_icons/flatworms_planaria.png" alt="Flatworms" />
+                  <div class="p-2 cursor-pointer transition-colors" :class="{ 'bg-lime-500 text-gray-900': flatworms }" @click="flatworms = !flatworms">
+                    <label for="flatworms" class="cursor-pointer text-xs sm:text-sm md:text-base block mb-1">Flatworms / Planaria</label>
+                    <img src="@/assets/form_icons/flatworms_planaria.png" alt="Flatworms" class="w-full max-w-[200px] mx-auto" />
                   </div>
-                  <div class="p-2 cursor-pointer" :class="{ 'bg-lime-500 text-gray-900': midges }" @click="midges = !midges">
-                    <label for="midges" class="cursor-pointer">Midges / Chironomids</label>
-                    <img src="@/assets/form_icons/midges_chironomids.png" alt="Midges" />
+                  <div class="p-2 cursor-pointer transition-colors" :class="{ 'bg-lime-500 text-gray-900': midges }" @click="midges = !midges">
+                    <label for="midges" class="cursor-pointer text-xs sm:text-sm md:text-base block mb-1">Midges / Chironomids</label>
+                    <img src="@/assets/form_icons/midges_chironomids.png" alt="Midges" class="w-full max-w-[200px] mx-auto" />
                   </div>
                 </div>
-                <div class="border-2 border-gray-900 basis-1/4">
-                  <div class="p-2 cursor-pointer" :class="{ 'bg-lime-500 text-gray-900': alderflies }" @click="alderflies = !alderflies">
-                    <label for="alderflies" class="cursor-pointer">Alderflies</label>
-                    <img src="@/assets/form_icons/alderflies.png" alt="Alderflies" />
+
+                <!-- Tolerant Column -->
+                <div class="border-2 border-gray-900">
+                  <div class="p-2 cursor-pointer transition-colors" :class="{ 'bg-lime-500 text-gray-900': alderflies }" @click="alderflies = !alderflies">
+                    <label for="alderflies" class="cursor-pointer text-xs sm:text-sm md:text-base block mb-1">Alderflies</label>
+                    <img src="@/assets/form_icons/alderflies.png" alt="Alderflies" class="w-full max-w-[200px] mx-auto" />
                   </div>
-                  <div class="p-2 cursor-pointer" :class="{ 'bg-lime-500 text-gray-900': scuds }" @click="scuds = !scuds">
-                    <label for="scuds" class="cursor-pointer">Scuds / Amphipods</label>
-                    <img src="@/assets/form_icons/scuds_amphipods.png" alt="Scuds" />
+                  <div class="p-2 cursor-pointer transition-colors" :class="{ 'bg-lime-500 text-gray-900': scuds }" @click="scuds = !scuds">
+                    <label for="scuds" class="cursor-pointer text-xs sm:text-sm md:text-base block mb-1">Scuds / Amphipods</label>
+                    <img src="@/assets/form_icons/scuds_amphipods.png" alt="Scuds" class="w-full max-w-[200px] mx-auto" />
                   </div>
                   <div
-                    class="p-2 cursor-pointer"
+                    class="p-2 cursor-pointer transition-colors"
                     :class="{ 'bg-lime-500 text-gray-900': nonOperculateSnails }"
                     @click="nonOperculateSnails = !nonOperculateSnails"
                   >
-                    <label for="nonOperculateSnails" class="cursor-pointer">Non-operculate Snails (Left-opening)</label>
-                    <img src="@/assets/form_icons/non_operculate_snails-left_opening.png" alt="Non-operculate Snails" />
+                    <label for="nonOperculateSnails" class="cursor-pointer text-xs sm:text-sm md:text-base block mb-1">Non-operculate Snails (Left-opening)</label>
+                    <img src="@/assets/form_icons/non_operculate_snails-left_opening.png" alt="Non-operculate Snails" class="w-full max-w-[200px] mx-auto" />
                   </div>
-                  <div class="p-2 cursor-pointer" :class="{ 'bg-lime-500 text-gray-900': sowBugs }" @click="sowBugs = !sowBugs">
-                    <label for="sowBugs" class="cursor-pointer">Sow Bugs</label>
-                    <img src="@/assets/form_icons/sow_bugs.png" alt="Sow Bugs" />
+                  <div class="p-2 cursor-pointer transition-colors" :class="{ 'bg-lime-500 text-gray-900': sowBugs }" @click="sowBugs = !sowBugs">
+                    <label for="sowBugs" class="cursor-pointer text-xs sm:text-sm md:text-base block mb-1">Sow Bugs</label>
+                    <img src="@/assets/form_icons/sow_bugs.png" alt="Sow Bugs" class="w-full max-w-[200px] mx-auto" />
                   </div>
-                  <div class="p-2 cursor-pointer" :class="{ 'bg-lime-500 text-gray-900': leeches }" @click="leeches = !leeches">
-                    <label for="leeches" class="cursor-pointer">Leeches</label>
-                    <img src="@/assets/form_icons/leeches.png" alt="Leeches" />
+                  <div class="p-2 cursor-pointer transition-colors" :class="{ 'bg-lime-500 text-gray-900': leeches }" @click="leeches = !leeches">
+                    <label for="leeches" class="cursor-pointer text-xs sm:text-sm md:text-base block mb-1">Leeches</label>
+                    <img src="@/assets/form_icons/leeches.png" alt="Leeches" class="w-full max-w-[200px] mx-auto" />
                   </div>
-                  <div class="p-2 cursor-pointer" :class="{ 'bg-lime-500 text-gray-900': damselflies }" @click="damselflies = !damselflies">
-                    <label for="damselflies" class="cursor-pointer">Damselflies</label>
-                    <img src="@/assets/form_icons/damselflies.png" alt="Damselflies" />
+                  <div class="p-2 cursor-pointer transition-colors" :class="{ 'bg-lime-500 text-gray-900': damselflies }" @click="damselflies = !damselflies">
+                    <label for="damselflies" class="cursor-pointer text-xs sm:text-sm md:text-base block mb-1">Damselflies</label>
+                    <img src="@/assets/form_icons/damselflies.png" alt="Damselflies" class="w-full max-w-[200px] mx-auto" />
                   </div>
                   <div
-                    class="p-2 cursor-pointer"
+                    class="p-2 cursor-pointer transition-colors"
                     :class="{ 'bg-lime-500 text-gray-900': aquaticWorms }"
                     @click="aquaticWorms = !aquaticWorms"
                   >
-                    <label for="aquaticWorms" class="cursor-pointer">Aquatic Worms</label>
-                    <img src="@/assets/form_icons/aquatic_worms.png" alt="Aquatic Worms" />
+                    <label for="aquaticWorms" class="cursor-pointer text-xs sm:text-sm md:text-base block mb-1">Aquatic Worms</label>
+                    <img src="@/assets/form_icons/aquatic_worms.png" alt="Aquatic Worms" class="w-full max-w-[200px] mx-auto" />
                   </div>
                   <div
-                    class="p-2 cursor-pointer"
+                    class="p-2 cursor-pointer transition-colors"
                     :class="{ 'bg-lime-500 text-gray-900': otherAquaticBeetles }"
                     @click="otherAquaticBeetles = !otherAquaticBeetles"
                   >
-                    <label for="otherAquaticBeetles" class="cursor-pointer">Other Aquatic Beetles (adults and larvae)</label>
-                    <img src="@/assets/form_icons/other_aquatic_beetles-adults_and_larvae.png" alt="Other Aquatic Beetles" />
+                    <label for="otherAquaticBeetles" class="cursor-pointer text-xs sm:text-sm md:text-base block mb-1">Other Aquatic Beetles (adults and larvae)</label>
+                    <img src="@/assets/form_icons/other_aquatic_beetles-adults_and_larvae.png" alt="Other Aquatic Beetles" class="w-full max-w-[200px] mx-auto" />
                   </div>
                 </div>
               </div>
 
+              <!-- Biological Water Quality Score Display (Bottom) -->
               <div>
                 <h2
-                  class="border-2 border-gray-900 text-xl text-gray-900 text-center p-2"
-                  :class="{
-                    'bg-red-500': habitatScore < 1.76,
-                    'bg-orange-500': habitatScore >= 1.76 && habitatScore < 2.51,
-                    'bg-yellow-500': habitatScore >= 2.51 && habitatScore < 3.26,
-                    'bg-green-500': habitatScore >= 3.26,
-                  }"
+                  class="border-2 border-gray-900 text-base sm:text-lg md:text-xl text-gray-900 text-center p-2"
+                  :class="getRatingColorClass(habitatScore)"
                 >
-                  Biological Water Quality Score = {{ habitatScore }} - 
-                  <span v-if="habitatScore < 1.76">Poor</span>
-                  <span v-else-if="habitatScore >= 1.76 && habitatScore < 2.51">Marginal</span>
-                  <span v-else-if="habitatScore >= 2.51 && habitatScore < 3.26">Fair</span>
-                  <span v-else>Good</span>
+                  Biological Water Quality Score = {{ habitatScore }} - {{ getRatingText(habitatScore) }}
                 </h2>
               </div>
 
-              <div class="border-2 border-gray-900 bg-blue-50 p-4 mt-2">
-                <h3 class="font-bold text-gray-900 mb-2">Understanding Your Score</h3>
-                <p class="text-sm text-gray-700">
+              <!-- Understanding Section -->
+              <div class="border-2 border-gray-900 bg-blue-50 p-3 sm:p-4 mt-2">
+                <h3 class="font-bold text-gray-900 mb-2 text-sm sm:text-base">Understanding Your Score</h3>
+                <p class="text-xs sm:text-sm text-gray-700">
                   The Biological Water Quality Score is a weighted average based on the sensitivity of organisms found:
                 </p>
-                <ul class="text-sm text-gray-700 list-disc ml-6 mt-2">
+                <ul class="text-xs sm:text-sm text-gray-700 list-disc ml-4 sm:ml-6 mt-2 space-y-1">
                   <li><strong>Highly Sensitive organisms</strong> (4 points): Mussels, Stoneflies, Caddisflies (case-building), Mayflies, Water Pennies, Water Snipe</li>
                   <li><strong>Sensitive organisms</strong> (3 points): Caddisflies (net-spinning), Riffle Beetles, Operculate Snails, Black Fly Larvae, Crane Fly Larvae</li>
                   <li><strong>Moderately Tolerant organisms</strong> (2 points): Hellgrammites, Clams/Mussels (Asian), Crayfish, Dragonflies, Flatworms, Midges</li>
                   <li><strong>Tolerant organisms</strong> (1 point): Alderflies, Scuds, Non-operculate Snails, Sow Bugs, Leeches, Damselflies, Aquatic Worms, Other Aquatic Beetles</li>
                 </ul>
-                <div class="mt-3 text-sm text-gray-700">
+                <div class="mt-3 text-xs sm:text-sm text-gray-700">
                   <strong>Rating Scale:</strong>
                   <ul class="list-none ml-4 mt-1">
                     <li>• <strong>Good</strong>: 3.26 - 4.00</li>
@@ -1589,13 +1611,14 @@ watch([isEditMode, sampleId], ([newIsEditMode, newSampleId]) => {
                 </div>
               </div>
 
-              <div>
-                <p class="text-sm">
+              <!-- Image Credits -->
+              <div class="mt-4">
+                <p class="text-xs sm:text-sm">
                   Images are not shown to scale. Images from the following sources: Zebra mussel Image: fieldguide.mt.gov;
                   Operculate Snail Image: mdc.mo.gov; Aquatic Worm Image: nwnature.net, All other images from
                   Macroinvertebrates.org
                 </p>
-                <p>
+                <p class="text-xs sm:text-sm mt-2">
                   <strong>NOTE:</strong>
                   Common macroinvertebrates such as water boatmen, backswimmers, water scorpions, giant water bugs, water
                   striders, and fishing spiders are not included on the form as their presences is not linked to tolerance or
@@ -1603,45 +1626,42 @@ watch([isEditMode, sampleId], ([newIsEditMode, newSampleId]) => {
                 </p>
               </div>
 
-
-
-
-              <!-- Other Observations and Photo Upload Section -->
-              <div class="flex">
-                <div class="border-4 p-1 border-gray-900 w-1/2">
-                  <h2 class="text-lg">Other Observations or Measurements</h2>
+              <!-- Other Observations, Photo Upload, and Logo Section -->
+              <div class="flex flex-col lg:flex-row gap-4 mt-6">
+                <div class="border-4 p-2 sm:p-4 border-gray-900 w-full lg:w-1/3">
+                  <h2 class="text-base sm:text-lg font-semibold mb-2">Other Observations or Measurements</h2>
                   <UFormGroup class="p-2">
                     <UTextarea 
                       v-model="otherObs" 
                       rows="10"
-                      class="w-full min-h-[200px] resize-y"
+                      class="w-full min-h-[150px] sm:min-h-[200px] resize-y text-sm sm:text-base"
                       placeholder="Enter any additional observations or measurements here..."
                     />
                   </UFormGroup>
                 </div>
-                <div class="border-4 p-1 border-gray-900 w-1/2">
+                <div class="border-4 p-2 sm:p-4 border-gray-900 w-full lg:w-1/3">
                   <UFormGroup class="p-2">
                     <PhotoUpload 
                       ref="photoUpload"
                       @filesSelected="handleFilesSelected"
                       :key="sampleId"
                       :initial-photos="existingPhotos"
-                      :site-id="wwkyid_pk",
+                      :site-id="wwkyid_pk"
                       form-type="bio"
                     />
                   </UFormGroup>
                 </div>
-                <div class="border-4 p-1 border-gray-900 w-1/2">
+                <div class="border-4 p-2 sm:p-4 border-gray-900 w-full lg:w-1/3">
                   <div class="flex flex-col items-center text-center">
                     <div class="p-4">
                       <img 
                         src="assets/KyWW_logo.png" 
                         alt="Kentucky Watershed Watch Logo" 
-                        class="w-48 h-auto"
+                        class="w-32 sm:w-48 h-auto mx-auto"
                       />
                     </div>
                     <div class="p-4">
-                      <h2 class="text-lg">
+                      <h2 class="text-sm sm:text-lg">
                         Visit
                         <a href="https://www.kywater.org" target="_blank" class="text-blue-600 hover:text-blue-800">www.kywater.org</a>
                         to view data. For questions or feedback, email <a href="mailto:contact@kywater.org" class="text-blue-600 hover:text-blue-800">contact@kywater.org</a>.
@@ -1652,17 +1672,18 @@ watch([isEditMode, sampleId], ([newIsEditMode, newSampleId]) => {
               </div>
 
               <!-- Submit and Cancel Buttons -->
-              <div class="flex justify-end space-x-4 mt-6">
+              <div class="flex flex-col sm:flex-row justify-end gap-2 sm:gap-4 mt-6">
                 <UButton
                   @click="showCancelConfirmation"
                   variant="outline"
                   color="gray"
+                  class="w-full sm:w-auto"
                 >
                   Cancel
                 </UButton>
                 <UButton
                   @click="confirmSubmission"
-                  class="text-gray-900"
+                  class="text-gray-900 w-full sm:w-auto"
                   variant="solid"
                   :disabled="!isFormValid || isSubmitting"
                 >
@@ -1676,26 +1697,28 @@ watch([isEditMode, sampleId], ([newIsEditMode, newSampleId]) => {
           <UModal v-model="isCancelModalOpen">
             <UCard>
               <template #header>
-                <div class="text-xl font-bold text-yellow-600">
+                <div class="text-lg sm:text-xl font-bold text-yellow-600">
                   Confirm Cancel
                 </div>
               </template>
               <div class="p-4">
-                <p class="mb-4">
+                <p class="mb-4 text-sm sm:text-base">
                   Are you sure you want to cancel? Any unsaved changes will be lost.
                 </p>
               </div>
               <template #footer>
-                <div class="flex justify-end space-x-4">
+                <div class="flex flex-col sm:flex-row justify-end gap-2 sm:gap-4">
                   <UButton 
                     @click="isCancelModalOpen = false" 
                     color="gray"
+                    class="w-full sm:w-auto"
                   >
                     No, Continue Editing
                   </UButton>
                   <UButton 
                     @click="confirmCancel" 
                     color="yellow"
+                    class="w-full sm:w-auto"
                   >
                     Yes, Cancel
                   </UButton>
@@ -1708,22 +1731,22 @@ watch([isEditMode, sampleId], ([newIsEditMode, newSampleId]) => {
           <UModal v-model="isConfirmationModalOpen">
             <UCard>
               <template #header>
-                <div class="text-xl font-bold">
+                <div class="text-lg sm:text-xl font-bold">
                   {{ isEditMode ? 'Confirm Changes' : 'Confirm Submission' }}
                 </div>
               </template>
-              <p>
+              <p class="text-sm sm:text-base">
                 {{ isEditMode 
                   ? 'Are you sure you want to save these changes to the biological assessment? Please review your modifications before confirming.'
                   : 'Are you sure you want to submit this biological assessment? Please review your entries before confirming.'
                 }}
               </p>
               <template #footer>
-                <div class="flex justify-end space-x-4">
-                  <UButton @click="isConfirmationModalOpen = false" color="gray">
+                <div class="flex flex-col sm:flex-row justify-end gap-2 sm:gap-4">
+                  <UButton @click="isConfirmationModalOpen = false" color="gray" class="w-full sm:w-auto">
                     Cancel
                   </UButton>
-                  <UButton @click="submitData" color="primary">
+                  <UButton @click="submitData" color="primary" class="w-full sm:w-auto">
                     {{ isEditMode ? 'Save Changes' : 'Submit Assessment' }}
                   </UButton>
                 </div>
@@ -1732,9 +1755,9 @@ watch([isEditMode, sampleId], ([newIsEditMode, newSampleId]) => {
           </UModal>
 
           <!-- Loading Overlay -->
-          <div v-if="isSubmitting" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
-            <div class="bg-white p-8 rounded-lg shadow-xl text-center">
-              <p class="mb-4">{{ submissionStatus }}</p>
+          <div v-if="isSubmitting" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50 p-4">
+            <div class="bg-white p-4 sm:p-8 rounded-lg shadow-xl text-center max-w-md w-full">
+              <p class="mb-4 text-sm sm:text-base">{{ submissionStatus }}</p>
               <UProgress :model-value="submissionProgress" />
             </div>
           </div>
@@ -1743,10 +1766,10 @@ watch([isEditMode, sampleId], ([newIsEditMode, newSampleId]) => {
         <!-- Map Modal -->
         <Teleport to="body">
           <Transition name="fade">
-            <div v-if="isMapOpen" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" @click="handleClickOutside">
-              <div ref="mapModalRef" class="bg-white rounded-lg p-4 max-w-[750px] w-full max-h-[500px] h-full overflow-auto relative">
-                <button @click="closeMap" class="absolute top-2 right-2 text-gray-500 hover:text-gray-700">
-                  <i class="fas fa-times"></i>
+            <div v-if="isMapOpen" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" @click="handleClickOutside">
+              <div ref="mapModalRef" class="bg-white rounded-lg p-4 w-full max-w-[750px] max-h-[90vh] sm:max-h-[500px] overflow-auto relative">
+                <button @click="closeMap" class="absolute top-2 right-2 text-gray-500 hover:text-gray-700 z-10">
+                  <i class="fas fa-times text-xl"></i>
                 </button>
                 <MapSelector @select-site="handleSiteSelection" />
               </div>
@@ -1757,12 +1780,12 @@ watch([isEditMode, sampleId], ([newIsEditMode, newSampleId]) => {
         <!-- Error Modal -->
         <Teleport to="body">
           <Transition name="fade">
-            <div v-if="isErrorModalVisible" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-              <div class="bg-white rounded-lg p-6 max-w-md w-full">
-                <h3 class="text-xl font-bold mb-4">There was an error - Please try to submit again.</h3>
-                <p class="mb-4">{{ errorMessage }}</p>
+            <div v-if="isErrorModalVisible" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+              <div class="bg-white rounded-lg p-4 sm:p-6 max-w-md w-full">
+                <h3 class="text-lg sm:text-xl font-bold mb-4">There was an error - Please try to submit again.</h3>
+                <p class="mb-4 text-sm sm:text-base">{{ errorMessage }}</p>
                 <div class="flex justify-end">
-                  <UButton @click="isErrorModalVisible = false" label="Close" />
+                  <UButton @click="isErrorModalVisible = false" label="Close" class="w-full sm:w-auto" />
                 </div>
               </div>
             </div>
@@ -1770,9 +1793,9 @@ watch([isEditMode, sampleId], ([newIsEditMode, newSampleId]) => {
         </Teleport>
       </div>
 
-      <!-- Form Validation Errors -->
-      <div v-if="formErrors.length > 0" class="mb-4 mt-6 mx-auto max-w-4xl">
-        <div class="bg-orange-50 border-2 border-orange-400 p-4 rounded-lg">
+      <!-- Form Validation Errors - Sticky at bottom on mobile -->
+      <div v-if="formErrors.length > 0 && showValidationErrors" class="fixed bottom-16 md:bottom-4 left-0 right-0 mb-4 mt-6 mx-auto max-w-4xl px-4 z-30">
+        <div class="bg-orange-50 border-2 border-orange-400 p-4 rounded-lg shadow-lg">
           <div class="flex">
             <div class="flex-shrink-0">
               <UIcon 
@@ -1835,5 +1858,54 @@ watch([isEditMode, sampleId], ([newIsEditMode, newSampleId]) => {
   min-height: 200px;
   line-height: 1.5;
   padding: 0.75rem;
+}
+
+/* Mobile-specific styles */
+@media (max-width: 768px) {
+  /* Improve touch targets on mobile */
+  :deep(input[type="radio"]),
+  :deep(input[type="checkbox"]) {
+    min-height: 1.5rem;
+    min-width: 1.5rem;
+  }
+  
+  /* Better label spacing on mobile */
+  :deep(label) {
+    margin-bottom: 0.5rem;
+  }
+  
+  /* Ensure images don't overflow */
+  img {
+    max-width: 100%;
+    height: auto;
+  }
+  
+  /* Stack macroinvertebrate images better */
+  .border-2.border-gray-900 > div {
+    padding: 0.75rem 0.5rem;
+  }
+  
+  :deep(.textarea) {
+    min-height: 120px;
+  }
+}
+
+/* Prevent horizontal scroll */
+@media (max-width: 640px) {
+  .overflow-x-auto {
+    max-width: 100vw;
+  }
+  
+  /* Smaller padding on very small screens */
+  .border-4 {
+    padding: 0.5rem;
+  }
+}
+
+/* Tablet adjustments */
+@media (min-width: 641px) and (max-width: 1024px) {
+  .grid {
+    gap: 0.5rem;
+  }
 }
 </style>
