@@ -130,9 +130,11 @@
                 :value="displayOriginalTrainingDate" 
                 disabled 
                 class="readonly-field"
-                :class="{ 'date-warning': hasActualDateIssue }"
+                :class="{ 
+                  'date-warning': hasActualDateIssue && originalTrainingDate && !originalDateValidation.isBlank 
+                }"
               />
-              <p v-if="hasActualDateIssue && originalTrainingDate" class="date-warning-text">
+              <p v-if="hasActualDateIssue && originalTrainingDate && !originalDateValidation.isBlank" class="date-warning-text">
                 ⚠️ This date appears to have an issue. Please contact your trainer if this looks incorrect.
               </p>
             </div>
@@ -144,7 +146,9 @@
                 disabled 
                 readonly  
                 class="readonly-field"
-                :class="{ 'date-warning': hasActualDateIssue }"
+                :class="{ 
+                  'date-warning': hasActualDateIssue && trainingDateLatest && !latestDateValidation.isBlank 
+                }"
               />
             </div>
             <div class="form-group" v-if="trainingLocation">
@@ -840,6 +844,7 @@ const validatePasswordMatch = () => {
           training_r_card: training_r_card.value,
           training_habitat: training_habitat.value,
           training_biological: training_biological.value,
+          training_no_training: !isActualSampler.value, 
           equip_ph: equip_ph.value,
           equip_do: equip_do.value,
           equip_cond: equip_cond.value,
@@ -1190,9 +1195,32 @@ const validatePasswordMatch = () => {
     color: #333;
   }
 
-  input[type="checkbox"] {
+  input[type="checkbox"].readonly-checkbox {
+    appearance: none;
     width: 20px;
     height: 20px;
+    background-color: #ffffff;  /* Changed from #e0e0e0 to white */
+    border: 2px solid #666;     /* Made border thicker and darker */
+    border-radius: 3px;
+    position: relative;
+    pointer-events: none;
+    cursor: not-allowed;
+  }
+
+  input[type="checkbox"].readonly-checkbox:checked {
+    background-color: #4CAF50;  /* Changed from #333 to green */
+    border-color: #4CAF50;
+  }
+
+  input[type="checkbox"].readonly-checkbox:checked::after {
+    content: '✓';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    font-size: 14px;
+    font-weight: bold;
   }
   
   .submit-button {

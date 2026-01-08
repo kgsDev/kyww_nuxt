@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import PolicyGuard from '../../components/PolicyGuard.vue'
 
 const { user } = useDirectusAuth()
@@ -47,6 +47,13 @@ const onTrainingTypeChange = () => {
 	}
 };
 
+// Watch for field chemistry changes to clear R-Card if unchecked
+watch(training_field_chemistry, (newValue) => {
+	if (!newValue) {
+		training_r_card.value = false;
+	}
+});
+
 // Computed property to check if date and location are required
 const isDateLocationRequired = computed(() => {
 	return !training_no_training.value;
@@ -72,13 +79,11 @@ function validateTrainingDate(dateString: string): { isValid: boolean; message: 
 		return { isValid: false, message: 'Please enter a valid date' };
 	}
 	
-	// Check if year is reasonable (between 2020 and current year + 2)
 	const selectedYear = selectedDate.getFullYear();
 	if (selectedYear < 2020 || selectedYear > currentYear + 5) {
 		return { isValid: false, message: `Valid training date must be between 2020 and ${currentYear + 5}` };
 	}
 	
-	// Check if date is not more than 2 years in the future
 	const fiveYearsFromNow = new Date();
 	fiveYearsFromNow.setFullYear(currentYear + 5);
 	
@@ -94,16 +99,26 @@ const dateValidation = computed(() => {
 });
 
 const canSubmit = computed(() => {
+	// Check that emails are valid and present
+	if (!emails.value?.trim().length || !validateEmails(emails.value)) {
+		return false;
+	}
+	
+	// Check that at least one training type is selected
+	if (!hasTrainingSelected.value) {
+		return false;
+	}
+	
+	// If no training conducted, we don't need date/location
+	if (training_no_training.value) {
+		return true;
+	}
+	
+	// If training was conducted, check date and location
 	return (
-		// Check that emails are valid and present
-		emails.value?.trim().length > 0 &&
-		validateEmails(emails.value) &&
-		// Check that training date is selected and valid (if required)
-		(!isDateLocationRequired.value || (!!training_date.value?.length && dateValidation.value.isValid)) &&
-		// Check that location is entered (if required)
-		(!isDateLocationRequired.value || training_location.value?.trim().length > 0) &&
-		// Check that at least one training type is selected
-		hasTrainingSelected.value
+		training_date.value?.trim().length > 0 &&
+		dateValidation.value.isValid &&
+		training_location.value?.trim().length > 0
 	);
 });
 
@@ -167,8 +182,8 @@ async function submitEmails() {
 			},
 			body: JSON.stringify({
 				emails: emailList,
-				training_date: training_date.value,
-				training_location: training_location.value,
+				training_date: training_date.value || null,
+				training_location: training_location.value || null,
 				training_field_chemistry: training_field_chemistry.value,
 				training_r_card: training_r_card.value,
 				training_habitat: training_habitat.value,
@@ -181,7 +196,6 @@ async function submitEmails() {
 
 		// Handle 202 Accepted response specially
 		if (response.status === 202) {
-			// For 202 responses, try to parse JSON but handle cases where it might be empty
 			let data;
 			try {
 				const responseText = await response.text();
@@ -201,7 +215,6 @@ async function submitEmails() {
 		if (response.ok) {
 			const data = await response.json();
 			
-			// Handle different response types from improved API
 			if (data.status === 'success') {
 				if (data.code === 'PROCESSING') {
 					success.value = 'Invitations are being processed. You will be notified of any failures.';
@@ -215,7 +228,6 @@ async function submitEmails() {
 			showSuccessModal.value = true;
 			resetForm();
 		} else {
-			// Handle error responses
 			let errorData;
 			try {
 				errorData = await response.json();
@@ -238,7 +250,6 @@ async function submitEmails() {
 	} catch (err) {
 		console.error('Submit error:', err);
 		
-		// Handle different types of errors
 		if (err.name === 'SyntaxError' && err.message.includes('JSON')) {
 			error.value = 'Server response was invalid. Please try again or contact support.';
 		} else if (err.name === 'TypeError' && err.message.includes('fetch')) {
@@ -321,6 +332,9 @@ function viewReport() {
 				On this form, please enter email(s), training date, training location, trainings completed, and training equipment information for the 
 				newly trained samplers. If the bulk of samplers have the same information, you can submit their emails in bulk 
 				(separate emails with commas, semicolons, or spaces). Otherwise, each sampler can be entered seperately.<br><br>
+				This form assumes all the trainings were conducted by you, the logged-in trainer, and were all done on the same date and at the same location. 
+				For multiple dates or locations, please submit separate forms for each date/location combination.
+				<br><br>
 				This will send an email invitation to each volunteer with a link to sign up for the data portal.
 			</p>
   
@@ -343,7 +357,6 @@ function viewReport() {
 					'border-red-500': training_date && !dateValidation.isValid,
 					'opacity-50': !isDateLocationRequired
 				}"
-				:required="isDateLocationRequired"
 				:disabled="!isDateLocationRequired"
 			/>
 			<div v-if="training_date && !dateValidation.isValid" class="text-sm text-red-500 mt-1">
@@ -360,7 +373,6 @@ function viewReport() {
 				class="w-full p-2 border rounded-lg"
 				:class="{ 'opacity-50': !isDateLocationRequired }"
 				placeholder="Enter training location"
-				:required="isDateLocationRequired"
 				:disabled="!isDateLocationRequired"
 			/>
 			<div v-if="!isDateLocationRequired" class="text-sm text-gray-500 mt-1">
@@ -378,14 +390,17 @@ function viewReport() {
 			  	:disabled="training_no_training"
 			  />
 			</div>
-			<div class="form-group checkbox-group">
-			  <label>R-Card:</label>
+			<div class="form-group checkbox-group ml-8">
+			  <label :class="{ 'text-gray-400': !training_field_chemistry }">R-Card (requires Field Chemistry):</label>
 			  <input 
 			  	type="checkbox" 
 			  	v-model="training_r_card" 
 			  	@change="onTrainingTypeChange"
-			  	:disabled="training_no_training"
+			  	:disabled="training_no_training || !training_field_chemistry"
 			  />
+			</div>
+			<div v-if="!training_field_chemistry && training_r_card" class="text-sm text-orange-500 ml-8 -mt-2">
+				Note: R-Card requires Field Chemistry training
 			</div>
 			<div class="form-group checkbox-group">
 			  <label>Habitat:</label>
@@ -563,13 +578,13 @@ function viewReport() {
 	padding: 20px;
 	border-radius: 8px;
 	text-align: center;
-	max-width: 400px; /* Set a max width */
-	width: 90%; /* Responsive width */
+	max-width: 400px;
+	width: 90%;
 	}
   .modal-content p {
 	margin-bottom: 20px;
 	font-size: 1.1rem;
-	color: #4CAF50; /* Green success color */
+	color: #4CAF50;
   }
   .gap-4 {
 	gap: 1rem;
@@ -599,7 +614,6 @@ function viewReport() {
 		align-items: center;
 	}
 
-	/* Add hover states for better UX */
 	input[type="checkbox"] {
 		cursor: pointer;
 	}
@@ -608,7 +622,6 @@ function viewReport() {
 		outline: 2px solid #e2e8f0;
 	}
 
-	/* Style disabled submit button */
 	button:disabled {
 		opacity: 0.5;
 		cursor: not-allowed;
@@ -646,7 +659,6 @@ function viewReport() {
 		background-color: #4b5563;
 	}
 
-	/* Additional styles for date validation */
 	.border-red-500 {
 		border-color: #ef4444 !important;
 	}
@@ -659,8 +671,24 @@ function viewReport() {
 		color: #6b7280;
 	}
 
+	.text-gray-400 {
+		color: #9ca3af;
+	}
+
+	.text-orange-500 {
+		color: #f97316;
+	}
+
 	.mt-1 {
 		margin-top: 0.25rem;
+	}
+
+	.-mt-2 {
+		margin-top: -0.5rem;
+	}
+
+	.ml-8 {
+		margin-left: 2rem;
 	}
 
 	.opacity-50 {

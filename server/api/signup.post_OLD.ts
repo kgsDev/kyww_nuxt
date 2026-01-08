@@ -10,8 +10,6 @@ const config = getApiConfig();
 sendgrid.setApiKey(config.SENDGRID_API_KEY);
 
 export default eventHandler(async (event) => {
-  let userId = null; // Track for rollback
-  
   try {
     const {
       captchaToken,
@@ -35,7 +33,6 @@ export default eventHandler(async (event) => {
       training_r_card,
       training_habitat,
       training_biological,
-      training_no_training,
       equip_ph,
       equip_do,
       equip_cond,
@@ -148,8 +145,9 @@ export default eventHandler(async (event) => {
     }
 
     // Create user and sampler data
+    let userId;
     try {
-      // Prepare user request body
+      // First prepare both request bodies
       const userRequestBody = {
         email,
         password,
@@ -174,6 +172,45 @@ export default eventHandler(async (event) => {
         status: 'active',
       };
 
+      const samplerDataBody = {
+        status: 'active',  // required field
+        user_id: null, // Will be set after user creation
+        last_name: lastName,
+        hub_id: desiredHub,
+        kitOption,
+        training_location_original: trainingLocation,
+        training_location_latest: trainingLocation,
+        training_field_chemistry,
+        training_r_card,
+        training_habitat,
+        training_biological,
+        equip_ph,
+        equip_do,
+        equip_cond,
+        equip_thermo,
+        equip_waste,
+        equip_pan,
+        equip_flip,
+        equip_incubator,
+      };
+
+      //only add dates if set
+      if (originalTrainingDate && originalTrainingDate.trim() !== '' && originalTrainingDate !== 'undefined' && originalTrainingDate !== 'N/A') {
+        samplerDataBody.original_training_date = originalTrainingDate;
+      }
+
+      if (trainingDateLatest && trainingDateLatest.trim() !== '' && trainingDateLatest !== 'undefined' && trainingDateLatest !== 'N/A') {
+        samplerDataBody.training_date_latest = trainingDateLatest;
+      }
+
+      // Only add expiration dates if they're set
+      if (DO_expire && DO_expire.trim() !== '' && DO_expire !== 'undefined' && DO_expire !== 'N/A') {
+        samplerDataBody.DO_expire = DO_expire;
+      }
+      if (PH_expire && PH_expire.trim() !== '' && PH_expire !== 'undefined' && PH_expire !== 'N/A') {
+        samplerDataBody.PH_expire = PH_expire;
+      }
+    
       // Create user
       const userResponse = await fetch(`${config.public.directusUrl}/users`, {
         method: 'POST',
@@ -182,6 +219,7 @@ export default eventHandler(async (event) => {
       });
 
       if (!userResponse.ok) {
+        // After the request
         const errorText = await userResponse.text();
         console.error('User creation error response:', errorText);
         throw new Error('Failed to create user: ' + errorText);
@@ -190,17 +228,10 @@ export default eventHandler(async (event) => {
       const userData = await userResponse.json();
       userId = userData.data.id;
 
-      // Create sampler_data WITHOUT training fields
-      const samplerDataBody = {
-        status: 'active',
-        user_id: userId,
-        last_name: lastName,
-        hub_id: desiredHub,
-        original_training_date: originalTrainingDate || null,
-        training_location_original: trainingLocation || null,
-        allow_connections: true,
-      };
+      // Update sampler data body with user ID
+      samplerDataBody.user_id = userId;
 
+      // Create sampler data
       const samplerDataResponse = await fetch(`${config.public.directusUrl}/items/sampler_data`, {
         method: 'POST',
         headers: getDirectusHeaders(config),
@@ -214,135 +245,29 @@ export default eventHandler(async (event) => {
           statusText: samplerDataResponse.statusText,
           body: errorText
         });
+
+        // Cleanup: delete the user since sampler data failed
+        console.log('Cleaning up user due to sampler data creation failure');
+        const deleteResponse = await fetch(`${config.public.directusUrl}/users/${userId}`, {
+          method: 'DELETE',
+          headers: getDirectusHeaders(config),
+        });
+
+        if (!deleteResponse.ok) {
+          console.error('Failed to clean up user after sampler data error:', await deleteResponse.text());
+        }
+
         throw new Error(`Failed to create sampler data: ${errorText}`);
       }
 
-      // CREATE TRAINING HISTORY RECORD (only if training was conducted)
-      if (!training_no_training) {
-        // Get training data from invite if not provided directly
-        const trainingDate = originalTrainingDate || inviteData.data[0].training_date;
-        const trainingLoc = trainingLocation || inviteData.data[0].training_location;
-        
-        const trainingHistoryBody = {
-          user_id: userId,
-          trainer_id: trainer_id || inviteData.data[0].trainer_id,
-          trainer_name: trainer_name || inviteData.data[0].trainer_name,
-          training_date: trainingDate,
-          training_location: trainingLoc,
-          training_field_chemistry: training_field_chemistry ?? inviteData.data[0].training_field_chemistry ?? false,
-          training_r_card: training_r_card ?? inviteData.data[0].training_r_card ?? false,
-          training_habitat: training_habitat ?? inviteData.data[0].training_habitat ?? false,
-          training_biological: training_biological ?? inviteData.data[0].training_biological ?? false,
-          status: 'published',
-          verified: true,
-          user_created: userId,
-          user_updated: userId,
-          notes: `Initial training during registration on ${new Date().toISOString().split('T')[0]}`
-        };
-
-        const trainingHistoryResponse = await fetch(`${config.public.directusUrl}/items/training_history`, {
-          method: 'POST',
-          headers: {
-            ...getDirectusHeaders(config),
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(trainingHistoryBody),
-        });
-
-        if (!trainingHistoryResponse.ok) {
-          const errorText = await trainingHistoryResponse.text();
-          console.error('Training history creation failed:', {
-            status: trainingHistoryResponse.status,
-            statusText: trainingHistoryResponse.statusText,
-            body: errorText
-          });
-          throw new Error(`Failed to create training history: ${errorText}`);
-        } else {
-          console.log(`Training history record created for user ${userId}`);
-        }
-      }
-
-      // CREATE EQUIPMENT HISTORY RECORD (if any equipment was issued)
-      const hasEquipment = equip_ph || equip_do || equip_cond || equip_thermo || 
-                          equip_waste || equip_pan || equip_flip || equip_incubator;
-
-      if (hasEquipment) {
-        try {
-          
-          const equipmentHistoryBody = {
-            user_id: userId,
-            equip_ph: equip_ph ?? inviteData.data[0].equip_ph ?? false,
-            equip_do: equip_do ?? inviteData.data[0].equip_do ?? false,
-            equip_cond: equip_cond ?? inviteData.data[0].equip_cond ?? false,
-            equip_thermo: equip_thermo ?? inviteData.data[0].equip_thermo ?? false,
-            equip_waste: equip_waste ?? inviteData.data[0].equip_waste ?? false,
-            equip_pan: equip_pan ?? inviteData.data[0].equip_pan ?? false,
-            equip_flip: equip_flip ?? inviteData.data[0].equip_flip ?? false,
-            equip_incubator: equip_incubator ?? inviteData.data[0].equip_incubator ?? false,
-            ph_expire: PH_expire || null,
-            do_expire: DO_expire || null,
-            kit_option: kitOption || null,
-            status: 'published',
-            returned: false,
-            user_created: userId,
-            user_updated: userId,
-            notes: `Initial equipment issued / verified during registration on ${new Date().toISOString().split('T')[0]}`
-          };
-
-          const equipmentHistoryResponse = await fetch(`${config.public.directusUrl}/items/equipment_history`, {
-            method: 'POST',
-            headers: {
-              ...getDirectusHeaders(config),
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(equipmentHistoryBody),
-          });
-
-          if (!equipmentHistoryResponse.ok) {
-            const errorText = await equipmentHistoryResponse.text();
-            console.error('Equipment history creation failed:', {
-              status: equipmentHistoryResponse.status,
-              statusText: equipmentHistoryResponse.statusText,
-              body: errorText
-            });
-            throw new Error(`Failed to create equipment history: ${errorText}`);
-          } else {
-            console.log(`Equipment history record created for user ${userId}`);
-          }
-        } catch (equipmentError) {
-          console.error('Failed to create equipment history:', equipmentError);
-          throw equipmentError; // Rollback entire signup
-        }
-      }
-
-      } catch (error) {
-        console.error('User/Sampler/Training/Equipment creation error:', error);
-        
-        // ROLLBACK: Delete user if it was created
-        if (userId) {
-          console.log('Rolling back - deleting user due to error:', userId);
-          try {
-            const deleteResponse = await fetch(`${config.public.directusUrl}/users/${userId}`, {
-              method: 'DELETE',
-              headers: getDirectusHeaders(config),
-            });
-
-            if (!deleteResponse.ok) {
-              console.error('Failed to rollback user deletion:', await deleteResponse.text());
-            } else {
-              console.log('User successfully rolled back');
-            }
-          } catch (rollbackError) {
-            console.error('Rollback error:', rollbackError);
-          }
-        }
-        
-        return respondWithStatus(event, createApiResponse(
-          'error',
-          'Unable to complete registration. Please try again or contact support.',
-          'REGISTRATION_FAILED'
-        ), 500);
-      }
+    } catch (error) {
+      console.error('User/Sampler creation error:', error);
+      return respondWithStatus(event, createApiResponse(
+        'error',
+        'Unable to complete registration. Please try again or contact support.',
+        'REGISTRATION_FAILED'
+      ), 500);
+    }
 
     // Delete the invite
     try {
@@ -355,13 +280,16 @@ export default eventHandler(async (event) => {
       });
 
       if (!deleteInviteResponse.ok) {
-        const errorText = await deleteInviteResponse.text();
-        console.error('Failed to delete invite:', errorText);
-        // Don't throw - account was created successfully
+        throw new Error(`Failed to delete invite: ${await deleteInviteResponse.text()}`);
       }
     } catch (error) {
       console.error('Failed to delete invite:', error);
-      // Don't throw - account was created successfully
+      // We've created the user and sampler data, but couldn't delete the invite
+      return respondWithStatus(event, createApiResponse(
+        'error',
+        'Account created but there was an issue completing the process. Please contact support.',
+        'CLEANUP_ERROR'
+      ), 500);
     }
 
     // Send welcome email with proper error handling
