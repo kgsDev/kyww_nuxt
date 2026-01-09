@@ -14,103 +14,23 @@
   const users = ref([])
   const showHubInfo = ref({})
   const currentYear = ref(new Date().getFullYear())
-  const samplersWithPlans = ref(0) // Track samplers with plans
-  const actualSamplingData = ref([]) // Track actual sampling sites
+  const samplersWithPlans = ref(0)
+  const actualSamplingData = ref([])
+  const equipmentData = ref({}) // Map of userId -> equipment info
+  const trainingHistoryData = ref({}) // Map of userId -> training history
 
   // Search and filter states
   const searchQuery = ref('')
   const selectedStatus = ref('all')
   const selectedHub = ref('all')
   const selectedTraining = ref('all')
-  const selectedRole = ref('all') // NEW: Role/Group filter
+  const selectedRole = ref('all')
   const selectedSamplingActivity = ref('all')
   const siteSearchQuery = ref('')
   const sortBy = ref('name')
   const sortDirection = ref('asc')
 
-  // NEW: Collapsible cards functionality
-  const expandedUsers = ref(new Set()) // Track which user cards are expanded
-  const allExpanded = ref(true) // Track if all are expanded by default
-  const showScrollTop = ref(false) // Track scroll position for back-to-top button
-
-  // NEW: Initialize all users as expanded by default
-  watch(users, (newUsers) => {
-    if (newUsers.length > 0 && expandedUsers.value.size === 0) {
-      newUsers.forEach(user => {
-        expandedUsers.value.add(user.id)
-      })
-    }
-  }, { immediate: true })
-
-  // NEW: Scroll handling
-  const handleScroll = () => {
-    showScrollTop.value = window.scrollY > 300
-  }
-
-  // NEW: Scroll to top function
-  const scrollToTop = () => {
-    window.scrollTo({
-      top: 0,
-      behavior: 'smooth'
-    })
-  }
-
-  // NEW: Toggle individual user card
-  const toggleUserCard = (userId) => {
-    if (expandedUsers.value.has(userId)) {
-      expandedUsers.value.delete(userId)
-    } else {
-      expandedUsers.value.add(userId)
-    }
-  }
-
-  // NEW: Expand all user cards
-  const expandAllCards = () => {
-    filteredAndSortedUsers.value.forEach(user => {
-      expandedUsers.value.add(user.id)
-    })
-    allExpanded.value = true
-  }
-
-  // NEW: Collapse all user cards
-  const collapseAllCards = () => {
-    expandedUsers.value.clear()
-    allExpanded.value = false
-  }
-
-  // NEW: Toggle all cards
-  const toggleAllCards = () => {
-    if (allExpanded.value) {
-      collapseAllCards()
-    } else {
-      expandAllCards()
-    }
-  }
-
-  // Get unique hubs for filter dropdown
-  const uniqueHubs = computed(() => {
-    const hubs = new Set(users.value.map(user => user.sampler_data?.hub_id?.Description).filter(Boolean))
-    return ['all', ...Array.from(hubs)]
-  })
-
-  const samplingActivityOptions = [
-    { value: 'all', label: 'All Users' },
-    { value: 'active_samplers', label: 'Active Samplers (Has Samples)' },
-    { value: 'inactive_samplers', label: 'No Samples Yet' },
-    { value: 'high_activity', label: 'High Activity (5+ Samples)' },
-    { value: 'multiple_sites', label: 'Multiple Sites (2+ Sites)' }
-  ]
-
-  // Training options
-  const trainingOptions = [
-    { value: 'all', label: 'All Training' },
-    { value: 'field_chemistry', label: 'Field Chemistry' },
-    { value: 'r_card', label: 'R-Card' },
-    { value: 'habitat', label: 'Habitat' },
-    { value: 'biological', label: 'Biological' }
-  ]
-
-  // Group definitions with icons and descriptions
+  // Group definitions with icons and descriptions - MUST BE DEFINED FIRST
   const userGroups = {
     wwkyadmin: {
       title: 'WWKY Administrators',
@@ -144,7 +64,92 @@
     }
   }
 
-  // NEW: Role options based on userGroups
+  // NEW: Collapsible sections state - NOW userGroups is defined
+  const collapsedSections = ref(Object.keys(userGroups).reduce((acc, key) => {
+    acc[key] = true; // All sections collapsed by default
+    return acc;
+  }, {}));
+
+  const toggleSection = (groupKey) => {
+    collapsedSections.value[groupKey] = !collapsedSections.value[groupKey];
+  };
+
+  // NEW: Modal for user details
+  const showUserModal = ref(false);
+  const selectedUser = ref(null);
+
+  const openUserModal = (user) => {
+    selectedUser.value = user;
+    showUserModal.value = true;
+  };
+
+  const closeUserModal = () => {
+    showUserModal.value = false;
+    selectedUser.value = null;
+  };
+
+  // Table columns configuration - Compact design with stacked info
+  const tableColumns = [
+    { key: 'user', label: 'User Info' },
+    { key: 'location', label: 'Location' },
+    { key: 'training', label: 'Training' },
+    { key: 'activity', label: 'Activity' },
+    { key: 'actions', label: '' }
+  ];
+
+  // Sort field mapping for stacked columns
+  const tableSortBy = ref('user');
+  const tableSortDirection = ref('asc');
+
+  const sortTable = (column) => {
+    if (column === tableSortBy.value) {
+      tableSortDirection.value = tableSortDirection.value === 'asc' ? 'desc' : 'asc';
+    } else {
+      tableSortBy.value = column;
+      tableSortDirection.value = 'asc';
+    }
+  };
+
+  const getSortValueForTable = (user, field) => {
+    switch (field) {
+      case 'user':
+        // Sort by last name, then first name
+        return `${user.last_name?.toLowerCase() || 'zzz'}_${user.first_name?.toLowerCase() || ''}`;
+      case 'location':
+        return user.city?.toLowerCase() || '';
+      case 'hub':
+        return user.sampler_data?.hub_id?.Description?.toLowerCase() || 'zzz';
+      case 'activity':
+        return getUserSamplingCount(user.id);
+      default:
+        return '';
+    }
+  };
+
+  // Get unique hubs for filter dropdown
+  const uniqueHubs = computed(() => {
+    const hubs = new Set(users.value.map(user => user.sampler_data?.hub_id?.Description).filter(Boolean))
+    return ['all', ...Array.from(hubs)]
+  })
+
+  const samplingActivityOptions = [
+    { value: 'all', label: 'All Users' },
+    { value: 'active_samplers', label: 'Active Samplers (Has Samples)' },
+    { value: 'inactive_samplers', label: 'No Samples Yet' },
+    { value: 'high_activity', label: 'High Activity (5+ Samples)' },
+    { value: 'multiple_sites', label: 'Multiple Sites (2+ Sites)' }
+  ]
+
+  // Training options
+  const trainingOptions = [
+    { value: 'all', label: 'All Training' },
+    { value: 'field_chemistry', label: 'Field Chemistry' },
+    { value: 'r_card', label: 'R-Card' },
+    { value: 'habitat', label: 'Habitat' },
+    { value: 'biological', label: 'Biological' }
+  ]
+
+  // Role options based on userGroups
   const roleOptions = computed(() => [
     { value: 'all', label: 'All Roles' },
     ...Object.entries(userGroups).map(([key, group]) => ({
@@ -164,6 +169,12 @@
         return user.sampler_data?.hub_id?.Description?.toLowerCase() || ''
       case 'status':
         return user.status || ''
+      case 'city':
+        return user.city?.toLowerCase() || ''
+      case 'sites':
+        return getUserUniqueSites(user.id).length
+      case 'samples':
+        return getUserSamplingCount(user.id)
       default:
         return ''
     }
@@ -172,7 +183,6 @@
   // Filter and sort users
   const filteredAndSortedUsers = computed(() => {
     return users.value.filter(user => {
-      // Existing filters
       const matchesSearch = searchQuery.value === '' ||
         formatName(user).toLowerCase().includes(searchQuery.value.toLowerCase()) ||
         user.email?.toLowerCase().includes(searchQuery.value.toLowerCase())
@@ -185,7 +195,6 @@
       const matchesTraining = selectedTraining.value === 'all' || 
         user.sampler_data?.[`training_${selectedTraining.value}`]
 
-      // NEW: Role/Group filter
       const matchesRole = selectedRole.value === 'all' || 
         user.policies?.some(p => p.policy?.id === userGroups[selectedRole.value]?.policyId)
 
@@ -212,7 +221,6 @@
           matchesSamplingActivity = true
       }
 
-      // Site search filter
       const matchesSiteSearch = siteSearchQuery.value === '' || 
         getUserUniqueSites(user.id).some(site => 
           site.toLowerCase().includes(siteSearchQuery.value.toLowerCase())
@@ -223,9 +231,15 @@
     }).sort((a, b) => {
       const aValue = getSortValue(a, sortBy.value)
       const bValue = getSortValue(b, sortBy.value)
+      
+      // Handle numeric sorting for sites and samples
+      if (sortBy.value === 'sites' || sortBy.value === 'samples') {
+        return sortDirection.value === 'asc' ? aValue - bValue : bValue - aValue
+      }
+      
       return sortDirection.value === 'asc' 
-        ? aValue.localeCompare(bValue)
-        : bValue.localeCompare(aValue)
+        ? String(aValue).localeCompare(String(bValue))
+        : String(bValue).localeCompare(String(aValue))
     })
   })
 
@@ -255,7 +269,7 @@
     selectedStatus.value = 'all'
     selectedHub.value = 'all'
     selectedTraining.value = 'all'
-    selectedRole.value = 'all' // NEW: Clear role filter
+    selectedRole.value = 'all'
     selectedSamplingActivity.value = 'all'
     siteSearchQuery.value = ''
     sortBy.value = 'name'
@@ -270,7 +284,6 @@
   // Function to fetch samplers with plans count
   const fetchSamplersWithPlansCount = async () => {
     try {
-      // Query the sampling_intent table to count unique users with plans for the current year
       const response = await useDirectus(readItems('sampling_intent', {
         filter: {
           year: { _eq: currentYear.value }
@@ -279,7 +292,6 @@
         limit: -1
       }));
       
-      // Count unique user IDs
       const uniqueUserIds = new Set(response.map(plan => plan.user_id));
       samplersWithPlans.value = uniqueUserIds.size;
     } catch (err) {
@@ -299,7 +311,7 @@
           }
         },
         fields: [
-          'volunteer_id.id',  // Get the actual ID
+          'volunteer_id.id',
           'volunteer_id.first_name',
           'volunteer_id.last_name', 
           'wwky_id.description',
@@ -316,19 +328,62 @@
     }
   };
 
-  // Update the getUserSamplingCount function:
+  // Fetch equipment history for all users
+  const fetchEquipmentData = async () => {
+    try {
+      const response = await useDirectus(readItems('equipment_history', {
+        fields: ['user_id', 'kit_option', 'date_created'],
+        sort: ['-date_created'],
+        limit: -1
+      }));
+      
+      // Get most recent equipment for each user
+      const equipmentMap = {};
+      response.forEach(item => {
+        if (!equipmentMap[item.user_id]) {
+          equipmentMap[item.user_id] = item;
+        }
+      });
+      equipmentData.value = equipmentMap;
+    } catch (err) {
+      console.error('Error fetching equipment data:', err);
+      equipmentData.value = {};
+    }
+  };
+
+  // Fetch training history for all users
+  const fetchTrainingHistoryData = async () => {
+    try {
+      const response = await useDirectus(readItems('training_history', {
+        fields: ['user_id', 'training_date', 'training_field_chemistry', 'training_r_card', 'training_habitat', 'training_biological'],
+        sort: ['-training_date'],
+        limit: -1
+      }));
+      
+      // Group by user and get latest training
+      const trainingMap = {};
+      response.forEach(item => {
+        if (!trainingMap[item.user_id]) {
+          trainingMap[item.user_id] = [];
+        }
+        trainingMap[item.user_id].push(item);
+      });
+      trainingHistoryData.value = trainingMap;
+    } catch (err) {
+      console.error('Error fetching training history:', err);
+      trainingHistoryData.value = {};
+    }
+  };
+
   const getUserSamplingCount = (userId) => {
     return actualSamplingData.value.filter(sample => {
-      // Handle both cases: volunteer_id as object or direct ID
       const sampleVolunteerId = sample.volunteer_id?.id || sample.volunteer_id;
       return sampleVolunteerId === userId;
     }).length;
   };
 
-  // Fixed: getUserUniqueSites function  
   const getUserUniqueSites = (userId) => {
     const userSamples = actualSamplingData.value.filter(sample => {
-      // Handle both cases: volunteer_id as object or direct ID
       const sampleVolunteerId = sample.volunteer_id?.id || sample.volunteer_id;
       return sampleVolunteerId === userId;
     });
@@ -348,7 +403,6 @@
 
   const getUserUniqueSiteIds = (userId) => {
     const userSamples = actualSamplingData.value.filter(sample => {
-      // Handle both cases: volunteer_id as object or direct ID
       const sampleVolunteerId = sample.volunteer_id?.id || sample.volunteer_id;
       return sampleVolunteerId === userId;
     });
@@ -361,9 +415,55 @@
     return Array.from(uniqueSiteIds);
   };
 
-  // Export to CSV function with sampling intent data AND actual sampling data
+  // Get training status summary for table display
+  const getTrainingStatusSummary = (user) => {
+    const userId = user.id;
+    const history = trainingHistoryData.value[userId];
+    
+    if (!history || history.length === 0) {
+      return { status: 'None', lastDate: null, types: [] };
+    }
+    
+    // Aggregate ALL training types from ALL history records
+    const allTypes = new Set();
+    let mostRecentDate = null;
+    
+    history.forEach(record => {
+      if (record.training_field_chemistry) allTypes.add('FC');
+      if (record.training_r_card) allTypes.add('R');
+      if (record.training_habitat) allTypes.add('H');
+      if (record.training_biological) allTypes.add('B');
+      
+      // Track most recent date
+      const recordDate = new Date(record.training_date);
+      if (!mostRecentDate || recordDate > mostRecentDate) {
+        mostRecentDate = recordDate;
+      }
+    });
+    
+    const types = Array.from(allTypes);
+    
+    return {
+      status: types.length > 0 ? types.join(', ') : 'None',
+      lastDate: mostRecentDate,
+      types: types
+    };
+  };
+
+  // Get equipment kit option for table display
+  const getEquipmentKitOption = (user) => {
+    const userId = user.id;
+    const equipment = equipmentData.value[userId];
+    
+    if (!equipment || !equipment.kit_option) {
+      return 'N/A';
+    }
+    
+    return equipment.kit_option.charAt(0).toUpperCase() + equipment.kit_option.slice(1);
+  };
+
+  // Export to CSV function
   const exportToCSV = async () => {
-    // Define months for consistency
     const months = [
       { name: 'January', abbr: 'Jan', key: 'jan' },
       { name: 'February', abbr: 'Feb', key: 'feb' },
@@ -379,7 +479,6 @@
       { name: 'December', abbr: 'Dec', key: 'dec' }
     ];
     
-    // Set up headers
     const headers = [
       'First Name',
       'Last Name',
@@ -387,7 +486,7 @@
       'Phone',
       'Status',
       'Hub',
-      'Roles', // NEW: Add roles column
+      'Roles',
       'Street',
       'City',
       'State',
@@ -403,13 +502,11 @@
       'Sites List'
     ];
 
-    // Add sampling intent columns for each month
     months.forEach(month => {
       headers.push(`${month.abbr} Sites (Planned)`);
       headers.push(`${month.abbr} E.coli Cards (Planned)`);
     });
 
-    // First, fetch all sampling intent data for the current year in one query
     let samplingIntentData = [];
     try {
       const response = await useDirectus(readItems('sampling_intent', {
@@ -422,16 +519,13 @@
       samplingIntentData = response;
     } catch (err) {
       console.error('Error fetching sampling intent data for CSV:', err);
-      // Continue with what we have
     }
 
-    // Create a lookup map for quicker access
     const intentByUserId = {};
     samplingIntentData.forEach(intent => {
       intentByUserId[intent.user_id] = intent;
     });
 
-    // NEW: Helper function to get user roles
     const getUserRoles = (user) => {
       const userRoles = [];
       Object.entries(userGroups).forEach(([key, group]) => {
@@ -442,9 +536,7 @@
       return userRoles.join(' | ');
     };
 
-    // Process user data and combine with sampling intent and actual sampling
     const csvData = filteredAndSortedUsers.value.map(user => {
-      // Basic user data
       const userData = [
         user.first_name,
         user.last_name,
@@ -452,21 +544,24 @@
         formatPhoneNumber(user.phone),
         user.status,
         user.sampler_data?.hub_id?.Description,
-        getUserRoles(user), // NEW: Add user roles
+        getUserRoles(user),
         user.street,
         user.city,
         user.state,
         user.zip,
+        user.sampler_data?.training_field_chemistry ? 'Yes' : 'No',
+        user.sampler_data?.training_r_card ? 'Yes' : 'No',
+        user.sampler_data?.training_habitat ? 'Yes' : 'No',
+        user.sampler_data?.training_biological ? 'Yes' : 'No',
         formatDate(user.sampler_data?.original_training_date),
+        formatDate(user.sampler_data?.latest_training_date),
         getUserSamplingCount(user.id),
         getUserUniqueSites(user.id).length,
-        getUserUniqueSiteIds(user.id).join(' | ') // Changed to use site IDs with pipe separation
+        getUserUniqueSiteIds(user.id).join(' | ')
       ];
 
-      // Get sampling intent data for this user
       const userIntent = intentByUserId[user.id] || null;
       
-      // Add sampling intent data for each month
       months.forEach(month => {
         const key = month.key;
         userData.push(userIntent ? (userIntent[`${key}_sites`] || 0) : 0);
@@ -476,12 +571,10 @@
       return userData;
     });
 
-    // Create CSV content
     const csvContent = [headers, ...csvData]
       .map(row => row.map(cell => `"${(cell !== undefined && cell !== null) ? cell : ''}"`).join(','))
       .join('\n');
 
-    // Create and trigger download
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
@@ -492,7 +585,7 @@
   };
 
   const visibleGroups = ref(Object.keys(userGroups).reduce((acc, key) => {
-    acc[key] = true; // All groups visible by default
+    acc[key] = true;
     return acc;
   }, {}));
 
@@ -519,18 +612,22 @@
         limit: -1,
       }));
 
-      // Transform the response to handle user_id structure
       const transformedUsers = response
-        .filter(item => item.user_id) // Filter items with user data
+        .filter(item => item.user_id)
         .map(item => ({
-          ...item.user_id,  // Spread the user_id data
+          ...item.user_id,
           id: item.user_id.id,
           policies: item.user_id.policies,
           sampler_data: {
             hub_id: item.hub_id,
             status: item.status,
             id: item.id,
-            original_training_date: item.original_training_date
+            original_training_date: item.original_training_date,
+            training_field_chemistry: item.training_field_chemistry,
+            training_r_card: item.training_r_card,
+            training_habitat: item.training_habitat,
+            training_biological: item.training_biological,
+            kit_option: item.kit_option
          }
         }));
       
@@ -543,16 +640,23 @@
     }
   };
 
-  // Update the getUsersByPolicy computed function:
   const getUsersByPolicy = (policyId) => {
     return computed(() => {
-      return filteredAndSortedUsers.value.filter(user => 
-        user.policies?.some(p => p.policy?.id === policyId)
-      ).sort((a, b) => {
-        const lastNameA = a.last_name?.toLowerCase() || '';
-        const lastNameB = b.last_name?.toLowerCase() || '';
-        return lastNameA.localeCompare(lastNameB);
-      });
+      return filteredAndSortedUsers.value
+        .filter(user => user.policies?.some(p => p.policy?.id === policyId))
+        .sort((a, b) => {
+          const aValue = getSortValueForTable(a, tableSortBy.value);
+          const bValue = getSortValueForTable(b, tableSortBy.value);
+          
+          // Handle numeric sorting for activity
+          if (tableSortBy.value === 'activity') {
+            return tableSortDirection.value === 'asc' ? aValue - bValue : bValue - aValue;
+          }
+          
+          return tableSortDirection.value === 'asc' 
+            ? String(aValue).localeCompare(String(bValue))
+            : String(bValue).localeCompare(String(aValue));
+        });
     });
   };
 
@@ -572,24 +676,19 @@
 
   const formatPhoneNumber = (phone: string | null) => {
     if (!phone) return 'Not specified';
-    // Remove all non-numeric characters
     const cleaned = phone.replace(/\D/g, '');
-    // Check if we have the right number of digits
     if (cleaned.length !== 10) {
-      return phone; // Return original if not valid
+      return phone;
     }
-    // Format as (XXX) XXX-XXXX
     return `(${cleaned.slice(0,3)}) ${cleaned.slice(3,6)}-${cleaned.slice(6)}`;
   };
 
-  // Get count of samplers (users with the sampler policy)
   const samplerCount = computed(() => {
     return users.value.filter(user => 
       user.policies?.some(p => p.policy?.id === config.public.SAMPLER_POLICY_ID)
     ).length;
   });
 
-  // Navigate to sampling dashboard
   const goToSamplingIntentDashboard = () => {
     navigateTo('/portal/SamplingIntentDashboard');
   };
@@ -599,16 +698,10 @@
     fetchUsers();
     fetchSamplersWithPlansCount();
     fetchActualSamplingData();
-    
-    // Add scroll event listener
-    window.addEventListener('scroll', handleScroll);
+    fetchEquipmentData();
+    fetchTrainingHistoryData();
   });
-
-  // Cleanup scroll listener
-  onUnmounted(() => {
-    window.removeEventListener('scroll', handleScroll);
-  });
-  </script>
+</script>
 
 <template>
   <PolicyGuard path="/portal/users">
@@ -620,7 +713,6 @@
           { title: 'Users', href: '/portal/users' }
         ]"
       />
-
 
       <div class="container mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
         <ULoadingBlock v-if="loading" class="h-64" />
@@ -634,176 +726,135 @@
        
         <template v-else>
           <!-- Filter Controls -->
-         <UCard>
-          <div class="space-y-3 sm:space-y-4">
-            <div class="flex flex-col space-y-2 sm:space-y-0 sm:flex-row sm:justify-between sm:items-start">
-              <div class="flex flex-col space-y-2 sm:space-y-0 sm:flex-row sm:items-center sm:gap-4">
-                <h3 class="text-base sm:text-lg font-semibold">Filters</h3>
-                <UBadge color="blue" variant="soft" size="sm">
-                  {{ filteredAndSortedUsers.length }} of {{ users.length }} users
-                </UBadge>
-              </div>
-              
-              <!-- Year selection -->
-              <div class="flex flex-col space-y-2 sm:space-y-0 sm:flex-row sm:items-center sm:gap-2">
-                <span class="text-xs sm:text-sm text-gray-600">Current Year:</span>
-                <UButtonGroup size="sm" class="flex">
-                  <UButton
-                    :color="currentYear === currentYear - 1 ? 'primary' : 'gray'"
-                    @click="changeYear(currentYear - 1)"
-                    size="sm"
-                    class="text-xs"
-                  >
-                    {{ currentYear - 1 }}
-                  </UButton>
-                  <UButton
-                    :color="currentYear === currentYear ? 'primary' : 'gray'"
-                    @click="changeYear(currentYear)"
-                    size="sm"
-                    class="text-xs"
-                  >
-                    {{ currentYear }}
-                  </UButton>
-                  <UButton
-                    :color="currentYear === currentYear + 1 ? 'primary' : 'gray'"
-                    :disabled="currentYear + 1 > new Date().getFullYear() + 1"
-                    @click="changeYear(currentYear + 1)"
-                    size="sm"
-                    class="text-xs"
-                  >
-                    {{ currentYear + 1 }}
-                  </UButton>
-                </UButtonGroup>
-              </div>
-            </div>
-
-            <!-- Filter Statistics -->
-            <div class="bg-gray-50 p-3 rounded-lg">
-              <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 text-sm">
-                <div class="text-center p-2 bg-white rounded shadow-sm">
-                  <div class="text-2xl font-bold text-green-600">{{ filterStats.activeSamplers }}</div>
-                  <div class="text-gray-600 text-xs">Active Samplers</div>
+          <UCard>
+            <div class="space-y-4">
+              <div class="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
+                <div class="flex flex-col sm:flex-row sm:items-center sm:gap-4">
+                  <h3 class="text-lg font-semibold">Filters</h3>
+                  <UBadge color="blue" variant="soft" size="sm">
+                    {{ filteredAndSortedUsers.length }} of {{ users.length }} users
+                  </UBadge>
                 </div>
-                <div class="text-center p-2 bg-white rounded shadow-sm">
-                  <div class="text-2xl font-bold text-gray-600">{{ filterStats.inactiveSamplers }}</div>
-                  <div class="text-gray-600 text-xs">No Samples Yet</div>
-                </div>
-                <div class="text-center p-2 bg-white rounded shadow-sm">
-                  <div class="text-2xl font-bold text-blue-600">{{ filterStats.highActivitySamplers }}</div>
-                  <div class="text-gray-600 text-xs">High Activity (5+)</div>
-                </div>
-                <div class="text-center p-2 bg-white rounded shadow-sm">
-                  <div class="text-2xl font-bold text-purple-600">{{ filterStats.multipleSiteSamplers }}</div>
-                  <div class="text-gray-600 text-xs">Multiple Sites</div>
-                </div>
-                <div class="text-center p-2 bg-white rounded shadow-sm">
-                  <div class="text-2xl font-bold text-orange-600">{{ users.length }}</div>
-                  <div class="text-gray-600 text-xs">Total Users</div>
+                
+                <!-- Year selection -->
+                <div class="flex flex-col sm:flex-row sm:items-center sm:gap-2">
+                  <span class="text-sm text-gray-600">Current Year:</span>
+                  <UButtonGroup size="sm">
+                    <UButton
+                      :color="currentYear === new Date().getFullYear() - 1 ? 'primary' : 'gray'"
+                      @click="changeYear(new Date().getFullYear() - 1)"
+                      size="sm"
+                    >
+                      {{ new Date().getFullYear() - 1 }}
+                    </UButton>
+                    <UButton
+                      :color="currentYear === new Date().getFullYear() ? 'primary' : 'gray'"
+                      @click="changeYear(new Date().getFullYear())"
+                      size="sm"
+                    >
+                      {{ new Date().getFullYear() }}
+                    </UButton>
+                    <UButton
+                      :color="currentYear === new Date().getFullYear() + 1 ? 'primary' : 'gray'"
+                      :disabled="new Date().getFullYear() + 1 > new Date().getFullYear() + 1"
+                      @click="changeYear(new Date().getFullYear() + 1)"
+                      size="sm"
+                    >
+                      {{ new Date().getFullYear() + 1 }}
+                    </UButton>
+                  </UButtonGroup>
                 </div>
               </div>
-            </div>
 
-<!-- Main Filters - First Row -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-              <!-- Search -->
-              <div class="sm:col-span-2 lg:col-span-1">
-                <UInput
-                  v-model="searchQuery"
-                  icon="i-heroicons-magnifying-glass"
-                  placeholder="Search users..."
-                />
+              <!-- Filter Statistics -->
+              <div class="bg-gray-50 p-4 rounded-lg">
+                <div class="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
+                  <div class="text-center p-2 bg-white rounded shadow-sm">
+                    <div class="text-2xl font-bold text-green-600">{{ filterStats.activeSamplers }}</div>
+                    <div class="text-gray-600 text-xs">Active Samplers</div>
+                  </div>
+                  <div class="text-center p-2 bg-white rounded shadow-sm">
+                    <div class="text-2xl font-bold text-gray-600">{{ filterStats.inactiveSamplers }}</div>
+                    <div class="text-gray-600 text-xs">No Samples Yet</div>
+                  </div>
+                  <div class="text-center p-2 bg-white rounded shadow-sm">
+                    <div class="text-2xl font-bold text-blue-600">{{ filterStats.highActivitySamplers }}</div>
+                    <div class="text-gray-600 text-xs">High Activity (5+)</div>
+                  </div>
+                  <div class="text-center p-2 bg-white rounded shadow-sm">
+                    <div class="text-2xl font-bold text-purple-600">{{ filterStats.multipleSiteSamplers }}</div>
+                    <div class="text-gray-600 text-xs">Multiple Sites</div>
+                  </div>
+                  <div class="text-center p-2 bg-white rounded shadow-sm">
+                    <div class="text-2xl font-bold text-orange-600">{{ users.length }}</div>
+                    <div class="text-gray-600 text-xs">Total Users</div>
+                  </div>
+                </div>
               </div>
 
-              <!-- Status Filter -->
-              <USelect
-                v-model="selectedStatus"
-                :options="[
-                  { value: 'all', label: 'All Statuses' },
-                  { value: 'active', label: 'Active' },
-                  { value: 'inactive', label: 'Inactive' }
-                ]"
-              />
+              <!-- Main Filters - First Row -->
+              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                <!-- Search -->
+                <div class="md:col-span-2 lg:col-span-1">
+                  <UInput
+                    v-model="searchQuery"
+                    icon="i-heroicons-magnifying-glass"
+                    placeholder="Search users..."
+                  />
+                </div>
 
-              <!-- Hub Filter -->
-              <USelect
-                v-model="selectedHub"
-                :options="uniqueHubs.map(hub => ({
-                  value: hub,
-                  label: hub === 'all' ? 'All Hubs' : hub
-                }))"
-              />
-
-              <!-- Role/Group Filter -->
-              <USelect
-                v-model="selectedRole"
-                :options="roleOptions"
-                placeholder="Filter by role"
-              >
-                <template #label>
-                  <UIcon name="i-heroicons-user-group" class="w-4 h-4 mr-1" />
-                  Role
-                </template>
-              </USelect>
-
-              <!-- Training Filter -->
-              <USelect
-                v-model="selectedTraining"
-                :options="trainingOptions"
-              />
-            </div>
-
-            <!-- Second Row - Sampling Filters -->
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <!-- Sampling Activity Filter -->
-              <USelect
-                v-model="selectedSamplingActivity"
-                :options="samplingActivityOptions"
-                placeholder="Filter by sampling activity"
-              >
-                <template #label>
-                  <UIcon name="i-heroicons-beaker" class="w-4 h-4 mr-1" />
-                  Sampling Activity
-                </template>
-              </USelect>
-
-              <!-- Site Search -->
-              <UInput
-                v-model="siteSearchQuery"
-                icon="i-heroicons-map-pin"
-                placeholder="Search by site ID or description..."
-              >
-                <template #label>
-                  Site Search
-                </template>
-              </UInput>
-            </div>
-
-            <!-- Controls Row -->
-            <div class="flex flex-col space-y-3 sm:space-y-0 sm:flex-row sm:justify-between sm:items-start">
-              <!-- Sort Controls -->
-              <div class="flex flex-col space-y-2 sm:space-y-0 sm:flex-row sm:items-center sm:gap-2">
+                <!-- Status Filter -->
                 <USelect
-                  v-model="sortBy"
+                  v-model="selectedStatus"
                   :options="[
-                    { value: 'name', label: 'Sort by Name' },
-                    { value: 'email', label: 'Sort by Email' },
-                    { value: 'hub', label: 'Sort by Hub' },
-                    { value: 'status', label: 'Sort by Status' }
+                    { value: 'all', label: 'All Statuses' },
+                    { value: 'active', label: 'Active' },
+                    { value: 'inactive', label: 'Inactive' }
                   ]"
-                  size="sm"
-                  class="w-full sm:w-36"
                 />
-                <UButton
-                  @click="sortDirection = sortDirection === 'asc' ? 'desc' : 'asc'"
-                  :icon="sortDirection === 'asc' ? 'i-heroicons-arrow-up' : 'i-heroicons-arrow-down'"
-                  color="gray"
-                  variant="ghost"
-                  size="sm"
+
+                <!-- Hub Filter -->
+                <USelect
+                  v-model="selectedHub"
+                  :options="uniqueHubs.map(hub => ({
+                    value: hub,
+                    label: hub === 'all' ? 'All Hubs' : hub
+                  }))"
+                />
+
+                <!-- Role/Group Filter -->
+                <USelect
+                  v-model="selectedRole"
+                  :options="roleOptions"
+                  placeholder="Filter by role"
+                />
+
+                <!-- Training Filter -->
+                <USelect
+                  v-model="selectedTraining"
+                  :options="trainingOptions"
                 />
               </div>
 
-              <!-- Action Buttons -->
-              <div class="flex flex-col space-y-2 sm:space-y-0 sm:flex-row sm:items-center sm:gap-2">
+              <!-- Second Row - Sampling Filters -->
+              <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <!-- Sampling Activity Filter -->
+                <USelect
+                  v-model="selectedSamplingActivity"
+                  :options="samplingActivityOptions"
+                  placeholder="Filter by sampling activity"
+                />
+
+                <!-- Site Search -->
+                <UInput
+                  v-model="siteSearchQuery"
+                  icon="i-heroicons-map-pin"
+                  placeholder="Search by site ID or description..."
+                />
+              </div>
+
+              <!-- Controls Row -->
+              <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
                 <!-- Clear Filters -->
                 <UButton
                   @click="clearAllFilters"
@@ -811,7 +862,6 @@
                   variant="outline"
                   size="sm"
                   icon="i-heroicons-x-mark"
-                  class="text-xs"
                 >
                   Clear Filters
                 </UButton>
@@ -822,47 +872,46 @@
                   icon="i-heroicons-arrow-down-tray"
                   color="primary"
                   size="sm"
-                  class="text-xs"
                 >
                   Export CSV
                 </UButton>
               </div>
-            </div>
 
-            <!-- Active Filters Display -->
-            <div v-if="searchQuery || selectedStatus !== 'all' || selectedHub !== 'all' || selectedTraining !== 'all' || selectedRole !== 'all' || selectedSamplingActivity !== 'all' || siteSearchQuery" class="flex flex-wrap gap-1 sm:gap-2">
-              <span class="text-xs sm:text-sm text-gray-600 mr-1">Active filters:</span>
-              
-              <UBadge v-if="searchQuery" color="blue" variant="soft" @click="searchQuery = ''" class="cursor-pointer text-xs" size="sm">
-                Search: "{{ searchQuery.length > 10 ? searchQuery.substring(0, 10) + '...' : searchQuery }}" ×
-              </UBadge>
-              
-              <UBadge v-if="selectedStatus !== 'all'" color="green" variant="soft" @click="selectedStatus = 'all'" class="cursor-pointer text-xs" size="sm">
-                Status: {{ selectedStatus }} ×
-              </UBadge>
-              
-              <UBadge v-if="selectedHub !== 'all'" color="purple" variant="soft" @click="selectedHub = 'all'" class="cursor-pointer text-xs" size="sm">
-                Hub: {{ selectedHub.length > 15 ? selectedHub.substring(0, 15) + '...' : selectedHub }} ×
-              </UBadge>
-              
-              <UBadge v-if="selectedRole !== 'all'" color="indigo" variant="soft" @click="selectedRole = 'all'" class="cursor-pointer text-xs" size="sm">
-                Role: {{ userGroups[selectedRole]?.title }} ×
-              </UBadge>
-              
-              <UBadge v-if="selectedTraining !== 'all'" color="orange" variant="soft" @click="selectedTraining = 'all'" class="cursor-pointer text-xs" size="sm">
-                Training: {{ trainingOptions.find(t => t.value === selectedTraining)?.label }} ×
-              </UBadge>
-              
-              <UBadge v-if="selectedSamplingActivity !== 'all'" color="red" variant="soft" @click="selectedSamplingActivity = 'all'" class="cursor-pointer text-xs" size="sm">
-                Activity: {{ samplingActivityOptions.find(a => a.value === selectedSamplingActivity)?.label.length > 12 ? samplingActivityOptions.find(a => a.value === selectedSamplingActivity)?.label.substring(0, 12) + '...' : samplingActivityOptions.find(a => a.value === selectedSamplingActivity)?.label }} ×
-              </UBadge>
-              
-              <UBadge v-if="siteSearchQuery" color="gray" variant="soft" @click="siteSearchQuery = ''" class="cursor-pointer text-xs" size="sm">
-                Site: "{{ siteSearchQuery.length > 10 ? siteSearchQuery.substring(0, 10) + '...' : siteSearchQuery }}" ×
-              </UBadge>
+              <!-- Active Filters Display -->
+              <div v-if="searchQuery || selectedStatus !== 'all' || selectedHub !== 'all' || selectedTraining !== 'all' || selectedRole !== 'all' || selectedSamplingActivity !== 'all' || siteSearchQuery" 
+                   class="flex flex-wrap gap-2">
+                <span class="text-sm text-gray-600 mr-2">Active filters:</span>
+                
+                <UBadge v-if="searchQuery" color="blue" variant="soft" @click="searchQuery = ''" class="cursor-pointer">
+                  Search: "{{ searchQuery }}" ×
+                </UBadge>
+                
+                <UBadge v-if="selectedStatus !== 'all'" color="green" variant="soft" @click="selectedStatus = 'all'" class="cursor-pointer">
+                  Status: {{ selectedStatus }} ×
+                </UBadge>
+                
+                <UBadge v-if="selectedHub !== 'all'" color="purple" variant="soft" @click="selectedHub = 'all'" class="cursor-pointer">
+                  Hub: {{ selectedHub }} ×
+                </UBadge>
+                
+                <UBadge v-if="selectedRole !== 'all'" color="indigo" variant="soft" @click="selectedRole = 'all'" class="cursor-pointer">
+                  Role: {{ userGroups[selectedRole]?.title }} ×
+                </UBadge>
+                
+                <UBadge v-if="selectedTraining !== 'all'" color="orange" variant="soft" @click="selectedTraining = 'all'" class="cursor-pointer">
+                  Training: {{ trainingOptions.find(t => t.value === selectedTraining)?.label }} ×
+                </UBadge>
+                
+                <UBadge v-if="selectedSamplingActivity !== 'all'" color="red" variant="soft" @click="selectedSamplingActivity = 'all'" class="cursor-pointer">
+                  Activity: {{ samplingActivityOptions.find(a => a.value === selectedSamplingActivity)?.label }} ×
+                </UBadge>
+                
+                <UBadge v-if="siteSearchQuery" color="gray" variant="soft" @click="siteSearchQuery = ''" class="cursor-pointer">
+                  Site: "{{ siteSearchQuery }}" ×
+                </UBadge>
+              </div>
             </div>
-          </div>
-        </UCard>
+          </UCard>
 
           <!-- Sampling Intent Summary -->
           <UCard>
@@ -870,75 +919,65 @@
               <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                 <div class="flex items-center gap-2">
                   <UIcon name="i-heroicons-chart-bar" class="w-5 h-5" />
-                  <h2 class="text-base sm:text-lg lg:text-xl font-semibold">{{ currentYear }} Sampling Plans</h2>
+                  <h2 class="text-xl font-semibold">{{ currentYear }} Sampling Plans</h2>
                 </div>
               </div>
-              <p class="text-xs sm:text-sm text-gray-600 mt-1">
+              <p class="text-sm text-gray-600 mt-1">
                 Overview for {{ filteredAndSortedUsers.length }} users
               </p>
             </template>
             
-            <!-- Mobile: Hide the table on very small screens -->
-            <div class="hidden sm:block overflow-x-auto">
+            <div class="overflow-x-auto">
               <SamplingIntentSummary
                 :user-ids="filteredUserIds"
                 :year="currentYear"
                 @update:count="updateSamplersCount"
               />
             </div>
-            
-            <!-- Mobile: Show simplified view -->
-            <div class="sm:hidden">
-              <div class="text-center py-8 text-gray-500">
-                <UIcon name="i-heroicons-device-phone-mobile" class="w-12 h-12 mx-auto mb-2" />
-                <p class="text-sm">Detailed sampling plans available on larger screens</p>
-                <p class="text-xs mt-1">{{ samplersWithPlans }} samplers have plans for {{ currentYear }}</p>
-              </div>
-            </div>
           </UCard>
 
-                      <!-- Stats Overview -->
-           <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-              <div 
-                v-for="(group, key) in userGroups" 
-                :key="key" 
-                class="p-4 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors"
-                @click="toggleGroupVisibility(key)"
-              >
-                <div class="flex items-center justify-between mb-2">
-                  <UIcon :name="group.icon" class="w-6 h-6 sm:w-8 sm:h-8 text-primary-500" />
-                  <UIcon 
-                    :name="visibleGroups[key] ? 'i-heroicons-eye' : 'i-heroicons-eye-slash'" 
-                    class="w-4 h-4 sm:w-5 sm:h-5 text-gray-500"
-                  />
-                </div>
-                <div class="text-xl sm:text-2xl font-bold">
-                  {{ getUsersByPolicy(group.policyId).value.length }}
-                </div>
-                <div class="text-xs sm:text-sm text-gray-600 break-words">{{ group.title }}</div>
+          <!-- Stats Overview -->
+          <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+            <div 
+              v-for="(group, key) in userGroups" 
+              :key="key" 
+              class="p-4 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors"
+              @click="toggleGroupVisibility(key)"
+            >
+              <div class="flex items-center justify-between mb-2">
+                <UIcon :name="group.icon" class="w-8 h-8 text-primary-500" />
+                <UIcon 
+                  :name="visibleGroups[key] ? 'i-heroicons-eye' : 'i-heroicons-eye-slash'" 
+                  class="w-5 h-5 text-gray-500"
+                />
               </div>
-              
-              <!-- Sampling plan summary card -->
-              <div class="p-4 bg-gray-50 rounded-lg">
-                <div class="mb-2">
-                  <UIcon name="i-heroicons-document-chart-bar" class="w-6 h-6 sm:w-8 sm:h-8 text-blue-500" />
-                </div>
-                <div class="text-xl sm:text-2xl font-bold text-blue-600">
-                  {{ samplersWithPlans }}
-                </div>
-                <div class="text-xs sm:text-sm text-gray-600 break-words">Samplers with Plans</div>
-                <div class="text-xs text-gray-500 mt-1" v-if="samplersWithPlans > 0">
-                  For {{ currentYear }}
-                </div>
+              <div class="text-2xl font-bold">
+                {{ getUsersByPolicy(group.policyId).value.length }}
+              </div>
+              <div class="text-sm text-gray-600">{{ group.title }}</div>
+            </div>
+            
+            <!-- Sampling plan summary card -->
+            <div class="p-4 bg-gray-50 rounded-lg">
+              <div class="mb-2">
+                <UIcon name="i-heroicons-document-chart-bar" class="w-8 h-8 text-blue-500" />
+              </div>
+              <div class="text-2xl font-bold text-blue-600">
+                {{ samplersWithPlans }}
+              </div>
+              <div class="text-sm text-gray-600">Samplers with Plans</div>
+              <div class="text-xs text-gray-500 mt-1" v-if="samplersWithPlans > 0">
+                For {{ currentYear }}
               </div>
             </div>
+          </div>
 
           <!-- Connections Dashboard -->
           <UCard>
             <template #header>
               <div class="flex items-center gap-2">
                 <UIcon name="i-heroicons-chat-bubble-left-right" class="w-5 h-5" />
-                <h2 class="text-lg sm:text-xl font-semibold">Sampler Connections Analytics</h2>
+                <h2 class="text-xl font-semibold">Sampler Connections Analytics</h2>
               </div>
               <p class="text-sm text-gray-600 mt-1">Visualizing collaboration between samplers for {{ currentYear }}</p>
             </template>
@@ -949,322 +988,372 @@
             />
           </UCard>
 
-          <!-- NEW: Card Control Section -->
+          <!-- Training Key Legend -->
           <UCard>
             <template #header>
-              <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-                <div class="flex items-center gap-2">
-                  <UIcon name="i-heroicons-rectangle-group" class="w-5 h-5" />
-                  <h2 class="text-lg sm:text-xl font-semibold">User Details</h2>
-                  <UBadge color="gray" variant="soft">
-                    {{ Object.values(userGroups).reduce((total, group) => total + getUsersByPolicy(group.policyId).value.length, 0) }} total cards
-                  </UBadge>
-                </div>
-                <div class="flex flex-col sm:flex-row gap-2">
-                  <UButton
-                    @click="expandAllCards"
-                    icon="i-heroicons-chevron-down"
-                    color="green"
-                    variant="outline"
-                    size="sm"
-                    class="w-full sm:w-auto"
-                  >
-                    Expand All
-                  </UButton>
-                  <UButton
-                    @click="collapseAllCards"
-                    icon="i-heroicons-chevron-up"
-                    color="red"
-                    variant="outline"
-                    size="sm"
-                    class="w-full sm:w-auto"
-                  >
-                    Collapse All
-                  </UButton>
-                </div>
+              <div class="flex items-center gap-2">
+                <UIcon name="i-heroicons-academic-cap" class="w-5 h-5" />
+                <h2 class="text-lg font-semibold">Training Abbreviations Key</h2>
               </div>
             </template>
-            <div class="text-sm text-gray-600">
-              Click on individual user cards to expand or collapse them. Use the buttons above to control all cards at once.
+            
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div class="flex items-center gap-2">
+                <UBadge color="blue" variant="soft" size="sm">FC</UBadge>
+                <span class="text-sm text-gray-700">Field Chemistry</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <UBadge color="blue" variant="soft" size="sm">R</UBadge>
+                <span class="text-sm text-gray-700">R-Card</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <UBadge color="blue" variant="soft" size="sm">H</UBadge>
+                <span class="text-sm text-gray-700">Habitat Assessment</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <UBadge color="blue" variant="soft" size="sm">B</UBadge>
+                <span class="text-sm text-gray-700">Biological Assessment</span>
+              </div>
+            </div>
+            
+            <div class="mt-4 pt-4 border-t border-gray-200">
+              <p class="text-xs text-gray-600">
+                <UIcon name="i-heroicons-information-circle" class="inline w-4 h-4" />
+                Training badges show all certifications a user has received across their training history. The "Last" date indicates the most recent training session.
+              </p>
             </div>
           </UCard>
 
-          <!-- User Lists by Type -->
+          <!-- User Lists by Type with Tables -->
           <div v-for="(group, key) in userGroups" :key="key">
             <UCard 
               v-if="getUsersByPolicy(group.policyId).value.length && visibleGroups[key]"
               class="transition-all duration-300"
             >
               <template #header>
-                <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+                <div 
+                  class="flex justify-between items-center cursor-pointer"
+                  @click="toggleSection(key)"
+                >
                   <div class="flex items-center gap-2">
                     <UIcon :name="group.icon" class="w-5 h-5" />
-                    <h2 class="text-lg sm:text-xl font-semibold">{{ group.title }}</h2>
-                  </div>
-                  <div class="flex items-center gap-2">
+                    <h2 class="text-xl font-semibold">{{ group.title }}</h2>
                     <UBadge>{{ getUsersByPolicy(group.policyId).value.length }}</UBadge>
-                    <UButton
-                      icon="i-heroicons-eye-slash"
-                      color="gray"
-                      variant="ghost"
-                      size="sm"
-                      @click="toggleGroupVisibility(key)"
-                    />
                   </div>
+                  <UIcon 
+                    :name="collapsedSections[key] ? 'i-heroicons-chevron-down' : 'i-heroicons-chevron-up'"
+                    class="w-5 h-5 text-gray-500 transition-transform"
+                  />
                 </div>
                 <p class="text-sm text-gray-600 mt-1">{{ group.description }}</p>
               </template>
 
-              <div class="grid gap-3 sm:gap-4">
-                <div v-for="user in getUsersByPolicy(group.policyId).value"
-                  :key="user.id"
-                  class="bg-gray-50 rounded-lg hover:bg-gray-100 transition-all duration-200 border border-gray-200 hover:border-gray-300">
-                  
-                  <!-- NEW: Collapsible Header -->
-                  <div 
-                    class="p-3 sm:p-4 cursor-pointer select-none"
-                    @click="toggleUserCard(user.id)"
+              <!-- Collapsible Table Content -->
+              <div v-show="!collapsedSections[key]">
+                <!-- Sort Controls -->
+                <div class="flex flex-wrap gap-2 mb-4 px-2">
+                  <span class="text-sm text-gray-600 mr-2">Sort by:</span>
+                  <UButton
+                    size="xs"
+                    :color="tableSortBy === 'user' ? 'primary' : 'gray'"
+                    :variant="tableSortBy === 'user' ? 'solid' : 'outline'"
+                    @click="sortTable('user')"
                   >
-                    <div class="flex justify-between items-center">
-                      <!-- Basic Info -->
-                      <div class="flex-1 min-w-0">
-                        <div class="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4">
-                          <h3 class="font-medium text-lg truncate">{{ formatName(user) }}</h3>
-                          <div class="flex flex-wrap items-center gap-2">
-                            <UBadge :color="user.status === 'active' ? 'green' : 'yellow'">
-                              {{ user.status }}
-                            </UBadge>
-                            <span class="text-sm text-gray-600 hidden sm:inline">{{ user.email }}</span>
-                          </div>
+                    Name
+                    <UIcon 
+                      v-if="tableSortBy === 'user'"
+                      :name="tableSortDirection === 'asc' ? 'i-heroicons-arrow-up' : 'i-heroicons-arrow-down'"
+                      class="ml-1"
+                    />
+                  </UButton>
+                  <UButton
+                    size="xs"
+                    :color="tableSortBy === 'location' ? 'primary' : 'gray'"
+                    :variant="tableSortBy === 'location' ? 'solid' : 'outline'"
+                    @click="sortTable('location')"
+                  >
+                    Location
+                    <UIcon 
+                      v-if="tableSortBy === 'location'"
+                      :name="tableSortDirection === 'asc' ? 'i-heroicons-arrow-up' : 'i-heroicons-arrow-down'"
+                      class="ml-1"
+                    />
+                  </UButton>
+                  <UButton
+                    size="xs"
+                    :color="tableSortBy === 'hub' ? 'primary' : 'gray'"
+                    :variant="tableSortBy === 'hub' ? 'solid' : 'outline'"
+                    @click="sortTable('hub')"
+                  >
+                    Hub
+                    <UIcon 
+                      v-if="tableSortBy === 'hub'"
+                      :name="tableSortDirection === 'asc' ? 'i-heroicons-arrow-up' : 'i-heroicons-arrow-down'"
+                      class="ml-1"
+                    />
+                  </UButton>
+                  <UButton
+                    size="xs"
+                    :color="tableSortBy === 'activity' ? 'primary' : 'gray'"
+                    :variant="tableSortBy === 'activity' ? 'solid' : 'outline'"
+                    @click="sortTable('activity')"
+                  >
+                    Samples
+                    <UIcon 
+                      v-if="tableSortBy === 'activity'"
+                      :name="tableSortDirection === 'asc' ? 'i-heroicons-arrow-up' : 'i-heroicons-arrow-down'"
+                      class="ml-1"
+                    />
+                  </UButton>
+                </div>
+
+                <!-- Responsive Table -->
+                <div class="overflow-hidden">
+                  <UTable
+                    :columns="tableColumns"
+                    :rows="getUsersByPolicy(group.policyId).value"
+                    :ui="{
+                      wrapper: 'overflow-visible',
+                      base: 'w-full',
+                      divide: 'divide-y divide-gray-200',
+                      thead: 'bg-gray-50',
+                      tbody: 'divide-y divide-gray-200 bg-white',
+                      tr: {
+                        base: 'hover:bg-gray-50'
+                      },
+                      th: { 
+                        base: 'px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider',
+                        padding: 'px-3 py-3'
+                      },
+                      td: { 
+                        base: 'px-3 py-4',
+                        padding: 'px-3 py-4'
+                      }
+                    }"
+                  >
+                    <!-- User Info Column - Stacked -->
+                    <template #user-data="{ row }">
+                      <div class="space-y-1">
+                        <div class="font-medium text-gray-900">{{ formatName(row) }}</div>
+                        <div class="text-xs text-gray-500 flex items-center gap-1">
+                          <UIcon name="i-heroicons-envelope" class="w-3 h-3" />
+                          {{ row.email }}
                         </div>
-                        <div class="text-sm text-gray-600 mt-1 sm:hidden">{{ user.email }}</div>
-                        
-                        <!-- Quick stats for collapsed view -->
-                        <div class="flex flex-wrap gap-4 text-xs text-gray-500 mt-2">
-                          <span>{{ getUserSamplingCount(user.id) }} samples</span>
-                          <span>{{ getUserUniqueSites(user.id).length }} sites</span>
-                          <span v-if="user.sampler_data?.hub_id?.Description">{{ user.sampler_data.hub_id.Description }}</span>
+                        <div class="text-xs text-gray-500 flex items-center gap-1">
+                          <UIcon name="i-heroicons-phone" class="w-3 h-3" />
+                          {{ formatPhoneNumber(row.phone) }}
                         </div>
                       </div>
-                      
-                      <!-- Expand/Collapse Icon -->
-                      <div class="flex-shrink-0 ml-4">
-                        <UIcon 
-                          :name="expandedUsers.has(user.id) ? 'i-heroicons-chevron-up' : 'i-heroicons-chevron-down'" 
-                          class="w-5 h-5 text-gray-400 transition-transform duration-200"
-                          :class="{ 'transform rotate-180': !expandedUsers.has(user.id) }"
-                        />
-                      </div>
-                    </div>
-                  </div>
+                    </template>
 
-                  <!-- NEW: Collapsible Content -->
-                  <Transition
-                    name="slide-fade"
-                    enter-active-class="transition-all duration-300 ease-out"
-                    leave-active-class="transition-all duration-300 ease-in"
-                    enter-from-class="opacity-0 max-h-0"
-                    enter-to-class="opacity-100 max-h-[2000px]"
-                    leave-from-class="opacity-100 max-h-[2000px]"
-                    leave-to-class="opacity-0 max-h-0"
-                  >
-                    <div v-if="expandedUsers.has(user.id)" class="px-3 sm:px-4 pb-3 sm:pb-4 border-t border-gray-200 overflow-hidden">
-                      <div class="space-y-3 sm:space-y-4 pt-3 sm:pt-4">
-                        <!-- Contact Info -->
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 text-sm">
-                          <div>
-                            <p class="text-gray-900 font-medium">Contact:</p>
-                            <p class="text-gray-600">{{ formatPhoneNumber(user.phone) }}</p>
-                          </div>
-                          <div>
-                            <p class="text-gray-900 font-medium">Address:</p>
-                            <p class="text-gray-600">{{ user.street }}</p>
-                            <p class="text-gray-600">{{ user.city }}, {{ user.state }} {{ user.zip }}</p>
-                          </div>
+                    <!-- Location Column - Stacked -->
+                    <template #location-data="{ row }">
+                      <div class="space-y-1">
+                        <div class="text-sm font-medium text-gray-900">
+                          {{ row.city || 'N/A' }}, {{ row.state || '' }}
                         </div>
-
-                        <!-- Role and Hub -->
-                        <div class="text-sm">
-                          <p class="text-gray-900 font-medium">
-                            User Type: {{ user?.role?.name }}
-                          </p>
-                          <p class="text-gray-900 font-medium">
-                            Role(s): {{ user?.policies?.map(p => p.policy?.name).filter(Boolean).join(', ') || 'No Role' }}
-                          </p>
-                          <div class="mt-1 flex flex-col sm:flex-row sm:items-center gap-2">
-                            <p class="text-gray-900 font-medium">
-                              Preferred Hub: {{ user.sampler_data?.hub_id?.Description || 'None' }}
-                            </p>
-                            <!-- Show info button only if there's a hub -->
-                            <UButton
-                              v-if="user.sampler_data?.hub_id?.Description"
-                              icon="i-heroicons-information-circle"
-                              color="gray"
-                              variant="ghost"
-                              size="xs"
-                              @click.stop="showHubInfo[user.id] = true"
-                            />
-                          </div>
+                        <div class="text-xs text-gray-500 flex items-center gap-1">
+                          <UIcon name="material-symbols:hub-outline" class="w-3 h-3" />
+                          {{ row.sampler_data?.hub_id?.Description || 'No Hub' }}
                         </div>
-
-                        <!-- Hub Info Modal -->
-                        <UModal
-                          v-if="user.sampler_data?.hub_id?.Description"
-                          v-model="showHubInfo[user.id]"
-                          :ui="{
-                            overlay: {
-                              background: 'bg-gray-300/50',
-                              transition: {
-                                enter: 'ease-out duration-300',
-                                enterFrom: 'opacity-0',
-                                enterTo: 'opacity-100',
-                                leave: 'ease-in duration-200',
-                                leaveFrom: 'opacity-100',
-                                leaveTo: 'opacity-0'
-                              }
-                            },
-                            width: 'sm:max-w-lg'
-                          }"
+                        <UBadge 
+                          :color="row.status === 'active' ? 'green' : 'yellow'" 
+                          size="xs"
+                          variant="soft"
                         >
-                          <UCard>
-                            <template #header>
-                              <div class="flex justify-between items-center">
-                                <h3 class="text-lg font-medium">Hub Information</h3>
-                                <UButton
-                                  icon="i-heroicons-x-mark"
-                                  color="gray"
-                                  variant="ghost"
-                                  @click="showHubInfo[user.id] = false"
-                                />
-                              </div>
-                            </template>
+                          {{ row.status }}
+                        </UBadge>
+                      </div>
+                    </template>
 
-                            <div class="space-y-4">
-                              <div>
-                                <h4 class="font-medium text-lg">{{ user.sampler_data.hub_id.Description }}</h4>
-                                <p class="text-sm text-gray-600">{{ user.sampler_data.hub_id.Full_Address }}</p>
-                              </div>
+                    <!-- Training Column - Stacked -->
+                    <template #training-data="{ row }">
+                      <div class="space-y-1">
+                        <div class="flex flex-wrap gap-1">
+                          <UBadge 
+                            v-if="getTrainingStatusSummary(row).types.length > 0"
+                            v-for="type in getTrainingStatusSummary(row).types"
+                            :key="type"
+                            color="blue" 
+                            variant="soft" 
+                            size="xs"
+                          >
+                            {{ type }}
+                          </UBadge>
+                          <UBadge v-else color="gray" variant="soft" size="xs">
+                            None
+                          </UBadge>
+                        </div>
+                        <div v-if="getTrainingStatusSummary(row).lastDate" class="text-xs text-gray-500">
+                          Last: {{ new Date(getTrainingStatusSummary(row).lastDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) }}
+                        </div>
+                        <div class="text-xs text-gray-500 flex items-center gap-1">
+                          <UIcon name="i-heroicons-wrench-screwdriver" class="w-3 h-3" />
+                          Kit: 
+                          <UBadge 
+                            v-if="getEquipmentKitOption(row) !== 'N/A'"
+                            color="purple" 
+                            variant="soft" 
+                            size="xs"
+                          >
+                            {{ getEquipmentKitOption(row) }}
+                          </UBadge>
+                          <span v-else>N/A</span>
+                        </div>
+                      </div>
+                    </template>
 
-                              <div class="text-sm space-y-2">
-                                <p><span class="font-medium">Contact:</span> {{ user.sampler_data.hub_id.Contact_Person }}</p>
-                                <p><span class="font-medium">Phone:</span> {{ user.sampler_data.hub_id.Phone }}</p>
-                                <p><span class="font-medium">Email:</span> {{ user.sampler_data.hub_id.Email }}</p>
-                              </div>
-
-                              <div v-if="user.sampler_data.hub_id.Availability" class="text-sm">
-                                <p class="font-medium">Availability:</p>
-                                <p>{{ user.sampler_data.hub_id.Availability }}</p>
-                              </div>
-                            </div>
-                          </UCard>
-                        </UModal>
-                        
-                        <!-- Sampler Information -->
-                        <div v-if="user.sampler_data" class="text-sm border-t pt-3 mt-3 space-y-3">
-                          <p class="font-medium">Sampler Information:</p>
-                          
-                          <!-- Original Training Info (still from sampler_data) -->
-                          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                            <div>
-                              <p class="text-gray-900 font-medium">Original Training:</p>
-                              <p class="text-gray-600">
-                                {{ formatDate(user.sampler_data.original_training_date) }}
-                                <span v-if="user.sampler_data.training_location_original">
-                                  at {{ user.sampler_data.training_location_original }}
-                                </span>
-                              </p>
-                            </div>
+                    <!-- Activity Column - Stacked -->
+                    <template #activity-data="{ row }">
+                      <div class="space-y-2">
+                        <div class="flex items-center gap-2">
+                          <div class="text-center">
+                            <UBadge color="blue" variant="soft">
+                              {{ getUserSamplingCount(row.id) }}
+                            </UBadge>
+                            <div class="text-xs text-gray-500 mt-1">Samples</div>
                           </div>
-
-                          <!-- NEW: Training History -->
-                          <div class="border-t pt-3 mt-3">
-                            <h4 class="font-medium text-gray-900 mb-3">Complete Training History</h4>
-                            <TrainingHistoryPanel
-                              :user-id="user.id"
-                              :editable="isWWKYAdmin || isFullAdmin"
-                              :is-trainer="isPolicyTrainer || isWWKYAdmin || isFullAdmin"
-                              @training-updated="fetchUsers"
-                            />
-                          </div>
-
-                          <!-- NEW: Equipment History -->
-                          <div class="border-t pt-3 mt-3">
-                            <h4 class="font-medium text-gray-900 mb-3">Equipment Status</h4>
-                            <EquipmentHistoryPanel
-                              :user-id="user.id"
-                              :editable="isWWKYAdmin || isFullAdmin"
-                              @equipment-updated="fetchUsers"
-                            />
-                          </div>
-
-                          <!-- Actual Sampling Activity -->
-                          <div>
-                            <p class="text-gray-900 font-medium">{{ currentYear }} Sampling Activity:</p>
-                            <div class="bg-blue-50 p-3 rounded mt-1">
-                              <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                <p class="text-blue-800 font-medium">
-                                  Samples Collected: {{ getUserSamplingCount(user.id) }}
-                                </p>
-                                <p class="text-blue-700">
-                                  Unique Sites: {{ getUserUniqueSites(user.id).length }}
-                                </p>
-                              </div>
-                              <div v-if="getUserUniqueSites(user.id).length > 0" class="mt-2">
-                                <p class="text-blue-700 text-xs font-medium">Sites:</p>
-                                <div class="text-blue-600 text-xs grid grid-cols-1 lg:grid-cols-2 gap-1 mt-1">
-                                  <div v-for="site in getUserUniqueSites(user.id)" :key="site">
-                                    {{ site }}
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                          
-                          <!-- Sampling Plans -->
-                          <div>
-                            <p class="text-gray-900 font-medium">Sampling Plans:</p>
-                            <div class="mt-1 border-l-4 border-blue-200 pl-3 py-1">
-                              <UserSamplingIntent 
-                                :user-id="user.id"
-                                :year="currentYear"
-                              />
-                            </div>
+                          <div class="text-center">
+                            <UBadge color="green" variant="soft">
+                              {{ getUserUniqueSites(row.id).length }}
+                            </UBadge>
+                            <div class="text-xs text-gray-500 mt-1">Sites</div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  </Transition>
+                    </template>
+
+                    <!-- Actions Column -->
+                    <template #actions-data="{ row }">
+                      <UButton
+                        icon="i-heroicons-eye"
+                        size="sm"
+                        color="primary"
+                        variant="ghost"
+                        @click="openUserModal(row)"
+                      />
+                    </template>
+                  </UTable>
                 </div>
               </div>
             </UCard>
           </div>
         </template>
       </div>
-      
-    <!-- Scroll to Top Button -->
-      <Transition
-        name="fade"
-        enter-active-class="transition-opacity duration-300"
-        leave-active-class="transition-opacity duration-300"
-        enter-from-class="opacity-0"
-        enter-to-class="opacity-100"
-        leave-from-class="opacity-100"
-        leave-to-class="opacity-0"
-      >
-        <div
-          v-if="showScrollTop"
-          class="fixed bottom-4 right-4 z-50"
-        >
-          <UButton
-            @click="scrollToTop"
-            icon="i-heroicons-arrow-up"
-            color="primary"
-            variant="solid"
-            size="lg"
-            class="rounded-full shadow-lg hover:shadow-xl transition-all duration-200"
-          />
-        </div>
-      </Transition>
+
+      <!-- User Detail Modal -->
+      <UModal v-model="showUserModal" :ui="{ width: 'sm:max-w-4xl' }">
+        <UCard v-if="selectedUser">
+          <template #header>
+            <div class="flex justify-between items-center">
+              <div>
+                <h3 class="text-lg font-semibold">{{ formatName(selectedUser) }}</h3>
+                <p class="text-sm text-gray-600">{{ selectedUser.email }}</p>
+              </div>
+              <UButton
+                icon="i-heroicons-x-mark"
+                color="gray"
+                variant="ghost"
+                @click="closeUserModal"
+              />
+            </div>
+          </template>
+
+          <div class="space-y-6">
+            <!-- Basic Info -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <h4 class="font-medium text-gray-900 mb-2">Contact Information</h4>
+                <div class="text-sm space-y-1">
+                  <p><span class="font-medium">Phone:</span> {{ formatPhoneNumber(selectedUser.phone) }}</p>
+                  <p><span class="font-medium">Email:</span> {{ selectedUser.email }}</p>
+                </div>
+              </div>
+              <div>
+                <h4 class="font-medium text-gray-900 mb-2">Address</h4>
+                <div class="text-sm space-y-1">
+                  <p>{{ selectedUser.street }}</p>
+                  <p>{{ selectedUser.city }}, {{ selectedUser.state }} {{ selectedUser.zip }}</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Role and Hub -->
+            <div>
+              <h4 class="font-medium text-gray-900 mb-2">Role & Hub</h4>
+              <div class="text-sm space-y-2">
+                <p>
+                  <span class="font-medium">Role(s):</span>
+                  {{ selectedUser.policies?.map(p => p.policy?.name).filter(Boolean).join(', ') || 'No Role' }}
+                </p>
+                <p>
+                  <span class="font-medium">Status:</span>
+                  <UBadge :color="selectedUser.status === 'active' ? 'green' : 'yellow'" size="xs" class="ml-2">
+                    {{ selectedUser.status }}
+                  </UBadge>
+                </p>
+                <p>
+                  <span class="font-medium">Preferred Hub:</span>
+                  {{ selectedUser.sampler_data?.hub_id?.Description || 'None' }}
+                </p>
+              </div>
+            </div>
+
+            <!-- Sampling Activity -->
+            <div>
+              <h4 class="font-medium text-gray-900 mb-2">{{ currentYear }} Sampling Activity</h4>
+              <div class="bg-blue-50 p-4 rounded">
+                <div class="grid grid-cols-2 gap-4 mb-3">
+                  <div>
+                    <p class="text-blue-800 font-medium">Samples Collected</p>
+                    <p class="text-2xl font-bold text-blue-600">{{ getUserSamplingCount(selectedUser.id) }}</p>
+                  </div>
+                  <div>
+                    <p class="text-blue-800 font-medium">Unique Sites</p>
+                    <p class="text-2xl font-bold text-blue-600">{{ getUserUniqueSites(selectedUser.id).length }}</p>
+                  </div>
+                </div>
+                <div v-if="getUserUniqueSites(selectedUser.id).length > 0">
+                  <p class="text-blue-700 text-sm font-medium mb-1">Sites:</p>
+                  <div class="text-blue-600 text-sm space-y-1">
+                    <div v-for="site in getUserUniqueSites(selectedUser.id)" :key="site">
+                      {{ site }}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Training History -->
+            <div>
+              <h4 class="font-medium text-gray-900 mb-3">Training History</h4>
+              <TrainingHistoryPanel
+                :user-id="selectedUser.id"
+                :editable="false"
+                :is-trainer="false"
+              />
+            </div>
+
+            <!-- Equipment History -->
+            <div>
+              <h4 class="font-medium text-gray-900 mb-3">Equipment Status</h4>
+              <EquipmentHistoryPanel
+                :user-id="selectedUser.id"
+                :editable="false"
+              />
+            </div>
+
+            <!-- Sampling Plans -->
+            <div>
+              <h4 class="font-medium text-gray-900 mb-3">Sampling Plans</h4>
+              <UserSamplingIntent 
+                :user-id="selectedUser.id"
+                :year="currentYear"
+              />
+            </div>
+          </div>
+        </UCard>
+      </UModal>
     </div>
   </PolicyGuard>
 </template>
@@ -1274,39 +1363,8 @@
   max-width: 1400px;
 }
 
-/* Custom transitions for collapsible content */
-.slide-fade-enter-active,
-.slide-fade-leave-active {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.slide-fade-enter-from {
-  opacity: 0;
-  max-height: 0;
-  transform: translateY(-10px);
-}
-
-.slide-fade-leave-to {
-  opacity: 0;
-  max-height: 0;
-  transform: translateY(-10px);
-}
-
-.slide-fade-enter-to,
-.slide-fade-leave-from {
-  opacity: 1;
-  max-height: 2000px;
-  transform: translateY(0);
-}
-
-/* Smooth scroll behavior */
 html {
   scroll-behavior: smooth;
-}
-
-/* Improved hover effects */
-.bg-gray-50:hover {
-  background-color: rgb(249 250 251);
 }
 
 /* Mobile-specific improvements */
@@ -1316,21 +1374,14 @@ html {
     padding-right: 0.75rem;
   }
   
-  /* Better touch targets on mobile */
-  .cursor-pointer {
-    min-height: 44px;
+  /* Make table cells more compact on mobile */
+  :deep(td) {
+    padding: 0.75rem !important;
   }
   
-  /* Prevent horizontal overflow */
-  .truncate {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  
-  /* Mobile-friendly modal */
-  :deep(.modal) {
-    margin: 1rem;
+  :deep(th) {
+    padding: 0.75rem !important;
+    font-size: 0.75rem;
   }
 }
 
@@ -1347,88 +1398,6 @@ html {
   .container {
     padding-left: 1.5rem;
     padding-right: 1.5rem;
-  }
-}
-
-/* Focus states for accessibility */
-.cursor-pointer:focus {
-  outline: 2px solid rgb(59 130 246);
-  outline-offset: 2px;
-}
-
-/* Loading state improvements */
-.transition-all {
-  transition-property: all;
-  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-/* Card border animations */
-.border-gray-200:hover {
-  border-color: rgb(209 213 219);
-}
-
-/* Improved scroll area for long lists */
-.max-h-32 {
-  scrollbar-width: thin;
-  scrollbar-color: rgb(156 163 175) transparent;
-}
-
-.max-h-32::-webkit-scrollbar {
-  width: 4px;
-}
-
-.max-h-32::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.max-h-32::-webkit-scrollbar-thumb {
-  background-color: rgb(156 163 175);
-  border-radius: 2px;
-}
-
-/* Button scaling for different screen sizes */
-@media (max-width: 640px) {
-  .fixed .rounded-full {
-    transform: scale(0.9);
-  }
-}
-
-@media (min-width: 1024px) {
-  .fixed .rounded-full {
-    transform: scale(1.1);
-  }
-}
-
-/* Enhanced spacing for better visual hierarchy */
-.space-y-3 > * + * {
-  margin-top: 0.75rem;
-}
-
-.space-y-4 > * + * {
-  margin-top: 1rem;
-}
-
-/* Custom grid gaps for responsive design */
-.gap-2 {
-  gap: 0.5rem;
-}
-
-.gap-3 {
-  gap: 0.75rem;
-}
-
-.gap-4 {
-  gap: 1rem;
-}
-
-/* Ensure proper text wrapping on small screens */
-@media (max-width: 480px) {
-  .text-xs {
-    font-size: 0.7rem;
-  }
-  
-  .leading-tight {
-    line-height: 1.25;
   }
 }
 </style>
