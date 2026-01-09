@@ -4,6 +4,7 @@
 
 import { useGreetings } from '~/composables/useGreetings';
 import { useKYWWMap } from '~/composables/useKYWWMap';
+import TrainingExpirationAlert from '~/components/TrainingExpirationAlert.vue';
 
 const { loading: messagesLoading, error: messagesError, messages: greetingMessages } = useGreetings();
 
@@ -248,6 +249,10 @@ onMounted(async () => {
     <!-- Handle loading and error states for messages -->
     <TypographyTitle class="normal-case">{{ greetUser() }} {{ user?.first_name ?? 'friend' }},</TypographyTitle>
     
+    <div v-if="user?.id" class="mb-6">
+      <TrainingExpirationAlert :user-id="user.id" />
+    </div>
+
     <!-- Handle loading and error states for messages -->
     <div v-if="messagesLoading" class="animate-pulse">
       <div class="h-6 w-3/4 bg-gray-200 rounded"></div>

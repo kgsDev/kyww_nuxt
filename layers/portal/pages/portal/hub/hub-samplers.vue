@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import PolicyGuard from '../../components/PolicyGuard.vue';
+import TrainingHistoryPanel from '~/components/TrainingHistoryPanel.vue';
+import EquipmentHistoryPanel from '~/components/EquipmentHistoryPanel.vue';
 import { ref, computed, onMounted } from 'vue'
 
 const config = useRuntimeConfig()
@@ -104,13 +106,8 @@ const exportToCSV = () => {
     user.city,
     user.state,
     user.zip,
-    user.sampler_data?.training_field_chemistry ? 'Yes' : 'No',
-    user.sampler_data?.training_r_card ? 'Yes' : 'No',
-    user.sampler_data?.training_habitat ? 'Yes' : 'No',
-    user.sampler_data?.training_biological ? 'Yes' : 'No',
     formatDate(user.sampler_data?.original_training_date),
-    formatDate(user.sampler_data?.training_date_latest)
-  ])
+   ])
 
   const csvContent = [headers, ...csvData]
     .map(row => row.map(cell => `"${cell || ''}"`).join(','))
@@ -171,26 +168,11 @@ const fetchUsers = async () => {
         id: item.user_id.id,
         policies: item.user_id.policies,
         sampler_data: {
-          training_field_chemistry: item.training_field_chemistry,
-          training_r_card: item.training_r_card,
-          training_habitat: item.training_habitat,
-          training_biological: item.training_biological,
           hub_id: item.hub_id,
           status: item.status,
           id: item.id,
           original_training_date: item.original_training_date,
           training_date_latest: item.training_date_latest,
-          equip_ph: item.equip_ph,
-          equip_do: item.equip_do,
-          equip_cond: item.equip_cond,
-          equip_thermo: item.equip_thermo,
-          equip_waste: item.equip_waste,
-          equip_pan: item.equip_pan,
-          equip_flip: item.equip_flip,
-          equip_incubator: item.equip_incubator,
-          kitOption: item.kitOption,
-          DO_expire: item.DO_expire,
-          PH_expire: item.PH_expire
         }
       }))
     
@@ -502,51 +484,36 @@ onMounted(() => {
                         </UCard>
                         </UModal>
                         <!-- Sampler Information -->
-                        <div v-if="user.sampler_data" class="text-sm border-t pt-3 mt-3">
-                        <p class="font-medium mb-2">Sampler Information:</p>
-                        
-                        <!-- Training -->
-                        <div class="mb-2">
-                            <p class="text-gray-900">Training Completed:</p>
-                            <ul class="list-disc list-inside text-gray-600 ml-2">
-                            <li v-if="user.sampler_data.training_field_chemistry">Field Chemistry</li>
-                            <li v-if="user.sampler_data.training_r_card">R-Card</li>
-                            <li v-if="user.sampler_data.training_habitat">Habitat</li>
-                            <li v-if="user.sampler_data.training_biological">Biological</li>
-                            </ul>
-                            <p class="text-gray-600 mt-1">
-                            Original Training: {{ formatDate(user.sampler_data.original_training_date) }}
-                            </p>
+                        <div v-if="user.sampler_data" class="text-sm border-t pt-3 mt-3 space-y-3">
+                          <p class="font-medium mb-2">Sampler Information:</p>
+                          
+                          <!-- Original Training Info -->
+                          <div class="mb-2">
+                            <p class="text-gray-900">Original Training:</p>
                             <p class="text-gray-600">
-                            Latest Training: {{ formatDate(user.sampler_data.training_date_latest) }}
+                              {{ formatDate(user.sampler_data.original_training_date) }}
+                              <span v-if="user.sampler_data.training_location_original">
+                                at {{ user.sampler_data.training_location_original }}
+                              </span>
                             </p>
-                        </div>
+                          </div>
 
-                        <!-- Equipment -->
-                        <div class="mb-2">
-                            <p class="text-gray-900">Equipment:</p>
-                            <ul class="list-disc list-inside text-gray-600 ml-2">
-                            <li v-if="user.sampler_data.equip_ph">pH Meter</li>
-                            <li v-if="user.sampler_data.equip_do">DO Meter</li>
-                            <li v-if="user.sampler_data.equip_cond">Conductivity Meter</li>
-                            <li v-if="user.sampler_data.equip_thermo">Thermometer</li>
-                            <li v-if="user.sampler_data.equip_waste">Waste Container</li>
-                            <li v-if="user.sampler_data.equip_pan">Pan</li>
-                            <li v-if="user.sampler_data.equip_flip">Flip</li>
-                            <li v-if="user.sampler_data.equip_incubator">Incubator</li>
-                            </ul>
-                        </div>
+                          <!-- Training History -->
+                          <div class="border-t pt-3">
+                            <TrainingHistoryPanel
+                              :user-id="user.id"
+                              :editable="false"
+                              :is-trainer="false"
+                            />
+                          </div>
 
-                        <!-- Kit Information -->
-                        <div>
-                            <p class="text-gray-900">Kit Option: {{ user.sampler_data.kitOption || 'None' }}</p>
-                            <p v-if="user.sampler_data.DO_expire" class="text-gray-600">
-                            DO Expiration: {{ formatDate(user.sampler_data.DO_expire) }}
-                            </p>
-                            <p v-if="user.sampler_data.PH_expire" class="text-gray-600">
-                            pH Expiration: {{ formatDate(user.sampler_data.PH_expire) }}
-                            </p>
-                        </div>
+                          <!-- Equipment History -->
+                          <div class="border-t pt-3 mt-3">
+                            <EquipmentHistoryPanel
+                              :user-id="user.id"
+                              :editable="false"
+                            />
+                          </div>
                         </div>
                     </div>
                 </div>

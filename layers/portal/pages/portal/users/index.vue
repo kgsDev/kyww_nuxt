@@ -5,6 +5,8 @@
   import SamplingIntentSummary from '~/components/SamplingIntentSummary.vue'
   import UserSamplingIntent from '~/components/UserSamplingIntent.vue'
   import ConnectionsDashboard from '~/components/ConnectionsDashboard.vue'
+  import TrainingHistoryPanel from '~/components/TrainingHistoryPanel.vue';
+  import EquipmentHistoryPanel from '~/components/EquipmentHistoryPanel.vue';
 
   const config = useRuntimeConfig()
   const loading = ref(true)
@@ -455,12 +457,7 @@
         user.city,
         user.state,
         user.zip,
-        user.sampler_data?.training_field_chemistry ? 'Yes' : 'No',
-        user.sampler_data?.training_r_card ? 'Yes' : 'No',
-        user.sampler_data?.training_habitat ? 'Yes' : 'No',
-        user.sampler_data?.training_biological ? 'Yes' : 'No',
         formatDate(user.sampler_data?.original_training_date),
-        formatDate(user.sampler_data?.training_date_latest),
         getUserSamplingCount(user.id),
         getUserUniqueSites(user.id).length,
         getUserUniqueSiteIds(user.id).join(' | ') // Changed to use site IDs with pipe separation
@@ -530,27 +527,11 @@
           id: item.user_id.id,
           policies: item.user_id.policies,
           sampler_data: {
-            training_field_chemistry: item.training_field_chemistry,
-            training_r_card: item.training_r_card,
-            training_habitat: item.training_habitat,
-            training_biological: item.training_biological,
             hub_id: item.hub_id,
             status: item.status,
             id: item.id,
-            original_training_date: item.original_training_date,
-            training_date_latest: item.training_date_latest,
-            equip_ph: item.equip_ph,
-            equip_do: item.equip_do,
-            equip_cond: item.equip_cond,
-            equip_thermo: item.equip_thermo,
-            equip_waste: item.equip_waste,
-            equip_pan: item.equip_pan,
-            equip_flip: item.equip_flip,
-            equip_incubator: item.equip_incubator,
-            kitOption: item.kitOption,
-            DO_expire: item.DO_expire,
-            PH_expire: item.PH_expire
-          }
+            original_training_date: item.original_training_date
+         }
         }));
       
       users.value = transformedUsers;
@@ -1182,54 +1163,38 @@
                         <div v-if="user.sampler_data" class="text-sm border-t pt-3 mt-3 space-y-3">
                           <p class="font-medium">Sampler Information:</p>
                           
-                          <!-- Training -->
+                          <!-- Original Training Info (still from sampler_data) -->
                           <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
                             <div>
-                              <p class="text-gray-900 font-medium">Training Completed:</p>
-                              <ul class="list-disc list-inside text-gray-600 ml-2 space-y-1">
-                                <li v-if="user.sampler_data.training_field_chemistry">Field Chemistry</li>
-                                <li v-if="user.sampler_data.training_r_card">R-Card</li>
-                                <li v-if="user.sampler_data.training_habitat">Habitat</li>
-                                <li v-if="user.sampler_data.training_biological">Biological</li>
-                              </ul>
-                              <div class="mt-2 space-y-1">
-                                <p class="text-gray-600">
-                                  Original Training: {{ formatDate(user.sampler_data.original_training_date) }}
-                                </p>
-                                <p class="text-gray-600">
-                                  Latest Training: {{ formatDate(user.sampler_data.training_date_latest) }}
-                                </p>
-                              </div>
-                            </div>
-
-                            <!-- Equipment -->
-                            <div>
-                              <p class="text-gray-900 font-medium">Equipment:</p>
-                              <ul class="list-disc list-inside text-gray-600 ml-2 space-y-1">
-                                <li v-if="user.sampler_data.equip_ph">pH Meter</li>
-                                <li v-if="user.sampler_data.equip_do">DO Meter</li>
-                                <li v-if="user.sampler_data.equip_cond">Conductivity Meter</li>
-                                <li v-if="user.sampler_data.equip_thermo">Thermometer</li>
-                                <li v-if="user.sampler_data.equip_waste">Waste Container</li>
-                                <li v-if="user.sampler_data.equip_pan">Pan</li>
-                                <li v-if="user.sampler_data.equip_flip">Flip</li>
-                                <li v-if="user.sampler_data.equip_incubator">Incubator</li>
-                              </ul>
+                              <p class="text-gray-900 font-medium">Original Training:</p>
+                              <p class="text-gray-600">
+                                {{ formatDate(user.sampler_data.original_training_date) }}
+                                <span v-if="user.sampler_data.training_location_original">
+                                  at {{ user.sampler_data.training_location_original }}
+                                </span>
+                              </p>
                             </div>
                           </div>
 
-                          <!-- Kit Information -->
-                          <div>
-                            <p class="text-gray-900 font-medium">Kit Information:</p>
-                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 text-gray-600">
-                              <p>Kit Option: {{ user.sampler_data.kitOption || 'None' }}</p>
-                              <p v-if="user.sampler_data.DO_expire">
-                                DO Expiration: {{ formatDate(user.sampler_data.DO_expire) }}
-                              </p>
-                              <p v-if="user.sampler_data.PH_expire">
-                                pH Expiration: {{ formatDate(user.sampler_data.PH_expire) }}
-                              </p>
-                            </div>
+                          <!-- NEW: Training History -->
+                          <div class="border-t pt-3 mt-3">
+                            <h4 class="font-medium text-gray-900 mb-3">Complete Training History</h4>
+                            <TrainingHistoryPanel
+                              :user-id="user.id"
+                              :editable="isWWKYAdmin || isFullAdmin"
+                              :is-trainer="isPolicyTrainer || isWWKYAdmin || isFullAdmin"
+                              @training-updated="fetchUsers"
+                            />
+                          </div>
+
+                          <!-- NEW: Equipment History -->
+                          <div class="border-t pt-3 mt-3">
+                            <h4 class="font-medium text-gray-900 mb-3">Equipment Status</h4>
+                            <EquipmentHistoryPanel
+                              :user-id="user.id"
+                              :editable="isWWKYAdmin || isFullAdmin"
+                              @equipment-updated="fetchUsers"
+                            />
                           </div>
 
                           <!-- Actual Sampling Activity -->
