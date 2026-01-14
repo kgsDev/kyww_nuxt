@@ -1,4 +1,3 @@
-<!--this is the improved training report page train/report-->
 <script setup lang="ts">
 import PolicyGuard from '../../components/PolicyGuard.vue';
 import TrainerTraineesManager from '~/components/TrainerTraineesManager.vue';
@@ -8,33 +7,28 @@ const { user } = useDirectusAuth();
 
 const loading = ref(true);
 const loadingOtherInvites = ref(true);
-const loadingOtherCompleted = ref(true);
 const error = ref(null);
 
 // Data arrays
 const invites = ref([]);
-const registeredUsers = ref([]);
 const otherTraineesInvites = ref([]);
-const otherTrainersCompleted = ref([]);
 
 // Collapsible section states
 const sectionsExpanded = ref({
   myPending: true,
-  myCompleted: true,
-  othersPending: false,
-  othersCompleted: false
+  manageTrainees: true,
+  othersPending: false
 });
 
 // Sorting states
 const sortBy = ref('');
 const sortDirection = ref('asc');
 
-// Filter states
+// Filter states - these will be passed to child component
 const globalSearch = ref('');
 const selectedDateRange = ref('all');
 const selectedLocation = ref('all');
 const selectedTrainingType = ref('all');
-const selectedStatus = ref('all');
 
 // Modal states
 const processingId = ref(null);
@@ -64,12 +58,6 @@ const dateRangeOptions = [
   { value: 'this_year', label: 'This Year' }
 ];
 
-const statusOptions = [
-  { value: 'all', label: 'All Statuses' },
-  { value: 'pending', label: 'Pending Invites' },
-  { value: 'completed', label: 'Completed Signups' }
-];
-
 const trainingTypeOptions = [
   { value: 'all', label: 'All Training Types' },
   { value: 'field_chemistry', label: 'Field Chemistry' },
@@ -83,7 +71,7 @@ const locationOptions = computed(() => {
   const locations = new Set();
   locations.add('all');
   
-  [...invites.value, ...registeredUsers.value, ...otherTraineesInvites.value, ...otherTrainersCompleted.value]
+  [...invites.value, ...otherTraineesInvites.value]
     .forEach(item => {
       if (item.training_location) {
         locations.add(item.training_location);
@@ -116,23 +104,6 @@ const responsiveOtherInviteColumns = [
   { key: 'actions', label: 'Actions' }
 ];
 
-const responsiveRegisteredColumns = [
-  { key: 'display_name', label: 'Name', sortable: true },
-  { key: 'email', label: 'Email', sortable: true },
-  { key: 'training_date', label: 'Latest Training', sortable: true },
-  { key: 'training_location', label: 'Location', sortable: true },
-  { key: 'training_types', label: 'Current Certifications' }
-];
-
-const responsiveOtherCompletedColumns = [
-  { key: 'display_name', label: 'Name', sortable: true },
-  { key: 'email', label: 'Email', sortable: true },
-  { key: 'training_date', label: 'Latest Training', sortable: true },
-  { key: 'training_location', label: 'Location', sortable: true },
-  { key: 'trainer', label: 'Trainer', sortable: true },
-  { key: 'training_types', label: 'Current Certifications' }
-];
-
 // Sorting function
 const sortData = (data, key) => {
   if (!key) return data;
@@ -156,10 +127,6 @@ const sortData = (data, key) => {
       case 'trainer':
         aValue = a.trainer ? `${a.trainer.first_name} ${a.trainer.last_name}` : a.trainer_name || '';
         bValue = b.trainer ? `${b.trainer.first_name} ${b.trainer.last_name}` : b.trainer_name || '';
-        break;
-      case 'display_name':
-        aValue = `${a.first_name} ${a.last_name}`;
-        bValue = `${b.first_name} ${b.last_name}`;
         break;
       case 'invite_sent_at':
         aValue = new Date(a.invite_sent_at || 0);
@@ -214,13 +181,6 @@ const matchesDateRange = (date) => {
 
 const matchesTrainingType = (item) => {
   if (selectedTrainingType.value === 'all') return true;
-  
-  // For completed users, check current certifications
-  if (item.current_certifications) {
-    return item.current_certifications[selectedTrainingType.value] === true;
-  }
-  
-  // For invites, check the invite training types
   return item[`training_${selectedTrainingType.value}`] === true;
 };
 
@@ -231,8 +191,6 @@ const matchesGlobalSearch = (item) => {
   return (
     item.email?.toLowerCase().includes(search) ||
     item.training_location?.toLowerCase().includes(search) ||
-    item.first_name?.toLowerCase().includes(search) ||
-    item.last_name?.toLowerCase().includes(search) ||
     item.trainer_name?.toLowerCase().includes(search) ||
     (item.trainer && `${item.trainer.first_name} ${item.trainer.last_name}`.toLowerCase().includes(search))
   );
@@ -241,30 +199,15 @@ const matchesGlobalSearch = (item) => {
 // Filtering logic
 const filteredInvites = computed(() => {
   return invites.value.filter(invite => {
-    if (selectedStatus.value === 'completed') return false;
-    
     return matchesDateRange(invite.training_date) &&
            (selectedLocation.value === 'all' || invite.training_location === selectedLocation.value) &&
            matchesTrainingType(invite) &&
            matchesGlobalSearch(invite);
-  });
-});
-
-const filteredUsers = computed(() => {
-  return registeredUsers.value.filter(user => {
-    if (selectedStatus.value === 'pending') return false;
-    
-    return matchesDateRange(user.training_date) &&
-           (selectedLocation.value === 'all' || user.training_location === selectedLocation.value) &&
-           matchesTrainingType(user) &&
-           matchesGlobalSearch(user);
   });
 });
 
 const filteredOtherInvites = computed(() => {
   return otherTraineesInvites.value.filter(invite => {
-    if (selectedStatus.value === 'completed') return false;
-    
     return matchesDateRange(invite.training_date) &&
            (selectedLocation.value === 'all' || invite.training_location === selectedLocation.value) &&
            matchesTrainingType(invite) &&
@@ -272,36 +215,19 @@ const filteredOtherInvites = computed(() => {
   });
 });
 
-const filteredOtherCompleted = computed(() => {
-  return otherTrainersCompleted.value.filter(user => {
-    if (selectedStatus.value === 'pending') return false;
-    
-    return matchesDateRange(user.training_date) &&
-           (selectedLocation.value === 'all' || user.training_location === selectedLocation.value) &&
-           matchesTrainingType(user) &&
-           matchesGlobalSearch(user);
-  });
-});
-
 // Sorted filtered data
 const sortedFilteredInvites = computed(() => sortData(filteredInvites.value, sortBy.value));
-const sortedFilteredUsers = computed(() => sortData(filteredUsers.value, sortBy.value));
 const sortedFilteredOtherInvites = computed(() => sortData(filteredOtherInvites.value, sortBy.value));
-const sortedFilteredOtherCompleted = computed(() => sortData(filteredOtherCompleted.value, sortBy.value));
 
 // Stats computations
 const stats = computed(() => ({
-  totalInvites: invites.value.length + registeredUsers.value.length,
-  pendingInvites: invites.value.length,
-  completedSignups: registeredUsers.value.length
+  myPendingInvites: invites.value.length,
+  othersPendingInvites: otherTraineesInvites.value.length
 }));
 
 // Total filtered records
 const totalFilteredRecords = computed(() => {
-  return filteredInvites.value.length + 
-         filteredUsers.value.length + 
-         filteredOtherInvites.value.length + 
-         filteredOtherCompleted.value.length;
+  return filteredInvites.value.length + filteredOtherInvites.value.length;
 });
 
 // Check if any filters are active
@@ -309,8 +235,7 @@ const hasActiveFilters = computed(() => {
   return globalSearch.value !== '' ||
          selectedDateRange.value !== 'all' ||
          selectedLocation.value !== 'all' ||
-         selectedTrainingType.value !== 'all' ||
-         selectedStatus.value !== 'all';
+         selectedTrainingType.value !== 'all';
 });
 
 // Count active filters
@@ -320,7 +245,6 @@ const activeFilterCount = computed(() => {
   if (selectedDateRange.value !== 'all') count++;
   if (selectedLocation.value !== 'all') count++;
   if (selectedTrainingType.value !== 'all') count++;
-  if (selectedStatus.value !== 'all') count++;
   return count;
 });
 
@@ -330,7 +254,6 @@ const clearAllFilters = () => {
   selectedDateRange.value = 'all';
   selectedLocation.value = 'all';
   selectedTrainingType.value = 'all';
-  selectedStatus.value = 'all';
   sortBy.value = '';
   sortDirection.value = 'asc';
 };
@@ -343,7 +266,7 @@ const toggleSection = (section) => {
 // Export to CSV function
 const exportToCSV = () => {
   const headers = [
-    'Type', 'Name', 'Email', 'Latest Training Date', 'Training Location', 'Trainer', 'Status',
+    'Type', 'Email', 'Training Date', 'Training Location', 'Trainer',
     'Field Chemistry', 'R-Card', 'Habitat', 'Biological', 'Invite Sent'
   ];
   
@@ -351,49 +274,21 @@ const exportToCSV = () => {
     ...filteredInvites.value.map(item => ({
       ...item,
       type: 'My Pending Invite',
-      name: item.email,
-      trainer: 'Me',
-      status: 'Pending'
-    })),
-    ...filteredUsers.value.map(item => ({
-      ...item,
-      type: 'My Completed Signup',
-      name: `${item.first_name} ${item.last_name}`,
-      trainer: 'Me',
-      status: 'Completed',
-      training_field_chemistry: item.current_certifications?.field_chemistry,
-      training_r_card: item.current_certifications?.r_card,
-      training_habitat: item.current_certifications?.habitat,
-      training_biological: item.current_certifications?.biological
+      trainer: 'Me'
     })),
     ...filteredOtherInvites.value.map(item => ({
       ...item,
       type: 'Other Trainer Pending',
-      name: item.email,
-      trainer: item.trainer ? `${item.trainer.first_name} ${item.trainer.last_name}` : 'Unknown',
-      status: 'Pending'
-    })),
-    ...filteredOtherCompleted.value.map(item => ({
-      ...item,
-      type: 'Other Trainer Completed',
-      name: `${item.first_name} ${item.last_name}`,
-      trainer: item.trainer_name || 'Unknown',
-      status: 'Completed',
-      training_field_chemistry: item.current_certifications?.field_chemistry,
-      training_r_card: item.current_certifications?.r_card,
-      training_habitat: item.current_certifications?.habitat,
-      training_biological: item.current_certifications?.biological
+      trainer: item.trainer ? `${item.trainer.first_name} ${item.trainer.last_name}` : 'Unknown'
     }))
   ];
   
   const csvData = allData.map(row => [
     row.type,
-    row.name,
     row.email,
     formatCompactDate(row.training_date),
     row.training_location || '',
     row.trainer,
-    row.status,
     row.training_field_chemistry ? 'Yes' : 'No',
     row.training_r_card ? 'Yes' : 'No',
     row.training_habitat ? 'Yes' : 'No',
@@ -577,26 +472,6 @@ const scrollToTop = () => {
   });
 };
 
-// Helper function to get current certifications from training history
-const getCurrentCertifications = (trainingHistory) => {
-  if (!trainingHistory || !trainingHistory.length) {
-    return {
-      field_chemistry: false,
-      r_card: false,
-      habitat: false,
-      biological: false
-    };
-  }
-  
-  // Check ALL training history (no longer filtering by verified)
-  return {
-    field_chemistry: trainingHistory.some(t => t.training_field_chemistry),
-    r_card: trainingHistory.some(t => t.training_r_card),
-    habitat: trainingHistory.some(t => t.training_habitat),
-    biological: trainingHistory.some(t => t.training_biological)
-  };
-};
-
 // Data fetching function (extracted so it can be called from child components)
 const fetchTrainingData = async () => {
   loading.value = true;
@@ -624,125 +499,6 @@ const fetchTrainingData = async () => {
     
     invites.value = invitesResponse;
 
-    // Get users data
-    const { data: reportData } = await useFetch('/api/trainer-report', {
-      query: {
-        trainerId: user.value.id,
-        includeOtherTrainers: 'true'
-      }
-    });
-
-    // Process my completed signups
-    if (!reportData.value?.users || reportData.value.users.length === 0) {
-      registeredUsers.value = [];
-    } else {
-      const userIds = reportData.value.users.map(user => user.id);
-      
-      if (userIds.length > 0) {
-        const trainingHistoryResponse = await useDirectus(readItems('training_history', {
-          filter: {
-            user_id: { _in: userIds }
-          },
-          fields: [
-            'user_id',
-            'training_date',
-            'training_location',
-            'training_field_chemistry',
-            'training_r_card',
-            'training_habitat',
-            'training_biological',
-            'verified'
-          ],
-          sort: ['-training_date'],
-          limit: -1
-        }));
-
-        const trainingByUser = {};
-        trainingHistoryResponse.forEach(training => {
-          if (!trainingByUser[training.user_id]) {
-            trainingByUser[training.user_id] = [];
-          }
-          trainingByUser[training.user_id].push(training);
-        });
-
-        registeredUsers.value = reportData.value.users.map(user => {
-          const userTraining = trainingByUser[user.id] || [];
-          const latestTraining = userTraining[0];
-          const currentCerts = getCurrentCertifications(userTraining);
-          
-          return {
-            id: user.id,
-            email: user.email,
-            first_name: user.first_name,
-            last_name: user.last_name,
-            display_name: user.display_name || `${user.first_name} ${user.last_name}`,
-            training_date: latestTraining?.training_date,
-            training_location: latestTraining?.training_location,
-            current_certifications: currentCerts,
-            training_history: userTraining
-          };
-        });
-      } else {
-        registeredUsers.value = [];
-      }
-    }
-
-    // Process other trainers' completed signups
-    if (reportData.value?.otherTrainersUsers && reportData.value.otherTrainersUsers.length > 0) {
-      const otherUserIds = reportData.value.otherTrainersUsers.map(user => user.id);
-      
-      try {
-        const otherTrainingHistoryResponse = await useDirectus(readItems('training_history', {
-          filter: {
-            user_id: { _in: otherUserIds }
-          },
-          fields: [
-            'user_id',
-            'training_date',
-            'training_location',
-            'training_field_chemistry',
-            'training_r_card',
-            'training_habitat',
-            'training_biological',
-            'verified'
-          ],
-          sort: ['-training_date'],
-          limit: -1
-        }));
-
-        const otherTrainingByUser = {};
-        otherTrainingHistoryResponse.forEach(training => {
-          if (!otherTrainingByUser[training.user_id]) {
-            otherTrainingByUser[training.user_id] = [];
-          }
-          otherTrainingByUser[training.user_id].push(training);
-        });
-
-        otherTrainersCompleted.value = reportData.value.otherTrainersUsers.map(user => {
-          const userTraining = otherTrainingByUser[user.id] || [];
-          const latestTraining = userTraining[0];
-          const currentCerts = getCurrentCertifications(userTraining);
-          
-          return {
-            id: user.id,
-            email: user.email,
-            first_name: user.first_name,
-            last_name: user.last_name,
-            training_date: latestTraining?.training_date,
-            training_location: latestTraining?.training_location,
-            trainer_name: user.trainer_name,
-            current_certifications: currentCerts,
-            training_history: userTraining
-          };
-        });
-      } catch (err) {
-        console.error('Error fetching other trainers\' training data:', err);
-        otherTrainersCompleted.value = [];
-      }
-    } else {
-      otherTrainersCompleted.value = [];
-    }
-
     // Fetch other trainers' invites
     loadingOtherInvites.value = true;
     
@@ -759,7 +515,6 @@ const fetchTrainingData = async () => {
     }
     
     loadingOtherInvites.value = false;
-    loadingOtherCompleted.value = false;
 
   } catch (err) {
     error.value = 'Failed to load training data';
@@ -769,8 +524,14 @@ const fetchTrainingData = async () => {
   }
 };
 
-// Provide refresh function to child components
+// Provide refresh function and filters to child components
 provide('refreshTrainingData', fetchTrainingData);
+provide('filters', {
+  globalSearch,
+  selectedDateRange,
+  selectedLocation,
+  selectedTrainingType
+});
 
 // Data fetching
 onMounted(async () => {
@@ -811,6 +572,32 @@ onUnmounted(() => {
       />
 
       <template v-else>
+        <!-- Training Type Key -->
+        <UCard>
+          <template #header>
+            <h3 class="text-base sm:text-lg font-semibold">Training Type Key</h3>
+          </template>
+          
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div class="flex items-center gap-2">
+              <UBadge size="sm" color="blue">FC</UBadge>
+              <span class="text-sm text-gray-700">Field Chemistry</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <UBadge size="sm" color="green">RC</UBadge>
+              <span class="text-sm text-gray-700">R-Card</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <UBadge size="sm" color="purple">H</UBadge>
+              <span class="text-sm text-gray-700">Habitat</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <UBadge size="sm" color="orange">B</UBadge>
+              <span class="text-sm text-gray-700">Biological</span>
+            </div>
+          </div>
+        </UCard>
+
         <!-- Compact Summary Stats Card -->
         <UCard>
           <template #header>
@@ -841,26 +628,14 @@ onUnmounted(() => {
             </div>
           </template>
           
-          <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3">
-            <div class="text-center p-2 sm:p-3 bg-gray-50 rounded">
-              <p class="text-base sm:text-lg font-bold">{{ stats.totalInvites }}</p>
-              <label class="text-xs text-gray-500">My Total</label>
-            </div>
-            <div class="text-center p-2 sm:p-3 bg-green-50 rounded">
-              <p class="text-base sm:text-lg font-bold text-green-600">{{ stats.completedSignups }}</p>
-              <label class="text-xs text-gray-500">My Completed</label>
-            </div>
+          <div class="grid grid-cols-2 gap-2 sm:gap-3">
             <div class="text-center p-2 sm:p-3 bg-yellow-50 rounded">
-              <p class="text-base sm:text-lg font-bold text-yellow-600">{{ stats.pendingInvites }}</p>
-              <label class="text-xs text-gray-500">My Pending</label>
+              <p class="text-base sm:text-lg font-bold text-yellow-600">{{ stats.myPendingInvites }}</p>
+              <label class="text-xs text-gray-500">My Pending Invites</label>
             </div>
             <div class="text-center p-2 sm:p-3 bg-blue-50 rounded">
-              <p class="text-base sm:text-lg font-bold text-blue-600">{{ otherTraineesInvites.length }}</p>
-              <label class="text-xs text-gray-500">Others' Pending</label>
-            </div>
-            <div class="text-center p-2 sm:p-3 bg-purple-50 rounded col-span-2 sm:col-span-1">
-              <p class="text-base sm:text-lg font-bold text-purple-600">{{ otherTrainersCompleted.length }}</p>
-              <label class="text-xs text-gray-500">Others' Completed</label>
+              <p class="text-base sm:text-lg font-bold text-blue-600">{{ stats.othersPendingInvites }}</p>
+              <label class="text-xs text-gray-500">Others' Pending Invites</label>
             </div>
           </div>
         </UCard>
@@ -871,7 +646,7 @@ onUnmounted(() => {
             <div class="flex flex-col space-y-1 sm:space-y-0 sm:flex-row sm:justify-between sm:items-center">
               <h3 class="text-base sm:text-lg font-semibold">Filters</h3>
               <UBadge color="blue" variant="soft" size="sm">
-                {{ totalFilteredRecords }} total records
+                Applies to all sections
               </UBadge>
             </div>
           </template>
@@ -907,13 +682,6 @@ onUnmounted(() => {
                 placeholder="Training Type"
               />
 
-              <USelect
-                v-model="selectedStatus"
-                :options="statusOptions"
-                size="sm"
-                placeholder="Status"
-              />
-
               <div class="text-center">
                 <UBadge v-if="hasActiveFilters" color="orange" variant="soft" size="sm">
                   {{ activeFilterCount }} active filters
@@ -923,13 +691,12 @@ onUnmounted(() => {
             </div>
 
             <!-- Desktop: Responsive grid -->
-            <div class="hidden sm:grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
+            <div class="hidden sm:grid sm:grid-cols-2 lg:grid-cols-5 gap-3">
               <UInput
                 v-model="globalSearch"
                 icon="i-heroicons-magnifying-glass"
                 placeholder="Search..."
                 size="sm"
-                class="col-span-2 lg:col-span-1"
               />
               
               <USelect
@@ -951,13 +718,6 @@ onUnmounted(() => {
                 :options="trainingTypeOptions"
                 size="sm"
                 placeholder="Training Type"
-              />
-
-              <USelect
-                v-model="selectedStatus"
-                :options="statusOptions"
-                size="sm"
-                placeholder="Status"
               />
 
               <div class="flex items-center justify-center">
@@ -984,10 +744,6 @@ onUnmounted(() => {
               
               <UBadge v-if="selectedTrainingType !== 'all'" color="orange" variant="soft" @click="selectedTrainingType = 'all'" class="cursor-pointer text-xs">
                 {{ trainingTypeOptions.find(t => t.value === selectedTrainingType)?.label }} ×
-              </UBadge>
-              
-              <UBadge v-if="selectedStatus !== 'all'" color="red" variant="soft" @click="selectedStatus = 'all'" class="cursor-pointer text-xs">
-                {{ statusOptions.find(s => s.value === selectedStatus)?.label }} ×
               </UBadge>
             </div>
           </div>
@@ -1023,7 +779,7 @@ onUnmounted(() => {
                     <div class="font-medium text-sm truncate">{{ invite.email }}</div>
                     <div class="text-xs text-gray-600">{{ formatCompactDate(invite.training_date) }}</div>
                   </div>
-                  <div class="flex gap-1 ml-2">
+                  <div class="flex gap-1 ml-2 flex-shrink-0">
                     <UButton
                       size="2xs"
                       color="primary"
@@ -1126,112 +882,31 @@ onUnmounted(() => {
           </div>
         </UCard>
 
-        <!-- My Completed Signups Card (Collapsible) -->
-        <UCard>
+        <!-- Manage Trainees Card (Moved under My Pending Invites) -->
+        <UCard v-if="user?.id">
           <template #header>
             <button 
-              @click="toggleSection('myCompleted')"
+              @click="toggleSection('manageTrainees')"
               class="w-full flex justify-between items-center gap-2 text-left hover:bg-gray-50 -m-4 p-4 rounded-t-lg transition-colors"
             >
               <div class="flex items-center gap-2">
                 <UIcon 
-                  :name="sectionsExpanded.myCompleted ? 'i-heroicons-chevron-down' : 'i-heroicons-chevron-right'"
+                  :name="sectionsExpanded.manageTrainees ? 'i-heroicons-chevron-down' : 'i-heroicons-chevron-right'"
                   class="w-5 h-5 transition-transform"
                 />
                 <div>
-                  <h2 class="text-lg font-semibold">My Completed Signups</h2>
-                  <p class="text-xs text-gray-600 mt-1">Shows current certifications from training history</p>
+                  <h2 class="text-lg font-semibold">Manage Trainees</h2>
+                  <p class="text-xs text-gray-600 mt-1">
+                    View and update training records for all trainees
+                  </p>
                 </div>
-                <UBadge color="green" variant="soft">
-                  {{ filteredUsers.length }}
-                </UBadge>
               </div>
             </button>
           </template>
-
-          <div v-show="sectionsExpanded.myCompleted">
-            <!-- Mobile: Card Layout -->
-            <div class="block sm:hidden space-y-3">
-              <div v-for="user in sortedFilteredUsers" :key="user.id" 
-                  class="bg-gray-50 p-3 rounded-lg border">
-                <div class="flex justify-between items-start mb-2">
-                  <div class="flex-1 min-w-0">
-                    <div class="font-medium text-sm">{{ user.first_name }} {{ user.last_name }}</div>
-                    <div class="text-xs text-gray-600 truncate">{{ user.email }}</div>
-                  </div>
-                </div>
-                <div class="text-xs text-gray-600 mb-2">
-                  {{ formatCompactDate(user.training_date) }} • {{ user.training_location }}
-                </div>
-                <div class="flex flex-wrap gap-1">
-                  <UBadge v-if="user.current_certifications?.field_chemistry" size="xs" color="blue">FC</UBadge>
-                  <UBadge v-if="user.current_certifications?.r_card" size="xs" color="green">RC</UBadge>
-                  <UBadge v-if="user.current_certifications?.habitat" size="xs" color="purple">H</UBadge>
-                  <UBadge v-if="user.current_certifications?.biological" size="xs" color="orange">B</UBadge>
-                </div>
-              </div>
-            </div>
-
-            <!-- Desktop: Table Layout -->
-            <div class="hidden sm:block overflow-x-auto">
-              <UTable 
-                :columns="responsiveRegisteredColumns" 
-                :rows="sortedFilteredUsers" 
-                :loading="loading"
-                class="min-w-full"
-              >
-                <template #display_name-data="{ row }">
-                  <div class="truncate max-w-[200px]" :title="`${row.first_name} ${row.last_name}`">
-                    {{ row.first_name }} {{ row.last_name }}
-                  </div>
-                </template>
-                
-                <template #email-data="{ row }">
-                  <div class="truncate max-w-[200px]" :title="row.email">
-                    {{ row.email }}
-                  </div>
-                </template>
-                
-                <template #training_date-data="{ row }">
-                  <span class="text-xs whitespace-nowrap">{{ formatCompactDate(row.training_date) }}</span>
-                </template>
-                
-                <template #training_location-data="{ row }">
-                  <div class="truncate max-w-[150px]" :title="row.training_location">
-                    {{ row.training_location }}
-                  </div>
-                </template>
-                
-                <template #training_types-data="{ row }">
-                  <div class="flex flex-wrap gap-1">
-                    <UBadge v-if="row.current_certifications?.field_chemistry" size="xs" color="blue">FC</UBadge>
-                    <UBadge v-if="row.current_certifications?.r_card" size="xs" color="green">RC</UBadge>
-                    <UBadge v-if="row.current_certifications?.habitat" size="xs" color="purple">H</UBadge>
-                    <UBadge v-if="row.current_certifications?.biological" size="xs" color="orange">B</UBadge>
-                  </div>
-                </template>
-              </UTable>
-            </div>
-
-            <div v-if="!loading && filteredUsers.length === 0" class="text-center text-gray-500 py-8">
-              {{ hasActiveFilters ? 'No matching completed signups found.' : 'No completed signups found.' }}
-            </div>
-          </div>
-        </UCard>
-
-        <!-- Manage Trainees Card (MOVED HERE - Under My Completed) -->
-        <UCard v-if="user?.id">
-          <template #header>
-            <div class="flex items-center gap-2">
-              <UIcon name="i-heroicons-users" class="w-5 h-5" />
-              <h2 class="text-lg font-semibold">Manage My Trainees</h2>
-            </div>
-            <p class="text-sm text-gray-600 mt-1">
-              View and update training records for your trainees
-            </p>
-          </template>
           
-          <TrainerTraineesManager :trainer-id="user.id" />
+          <div v-show="sectionsExpanded.manageTrainees">
+            <TrainerTraineesManager :trainer-id="user.id" />
+          </div>
         </UCard>
 
         <!-- Other Trainers' Pending Invites Card (Collapsible) -->
@@ -1275,6 +950,7 @@ onUnmounted(() => {
                     :disabled="!!processingId"
                     @click="resendOtherInvite(invite)"
                     icon="i-heroicons-envelope"
+                    class="flex-shrink-0 ml-2"
                   />
                 </div>
                 <div class="text-xs text-gray-600 mb-2 truncate">{{ invite.training_location }}</div>
@@ -1354,114 +1030,10 @@ onUnmounted(() => {
             </div>
           </div>
         </UCard>
-
-        <!-- Other Trainers' Completed Signups Card (Collapsible) -->
-        <UCard>
-          <template #header>
-            <button 
-              @click="toggleSection('othersCompleted')"
-              class="w-full flex justify-between items-center gap-2 text-left hover:bg-gray-50 -m-4 p-4 rounded-t-lg transition-colors"
-            >
-              <div class="flex items-center gap-2">
-                <UIcon 
-                  :name="sectionsExpanded.othersCompleted ? 'i-heroicons-chevron-down' : 'i-heroicons-chevron-right'"
-                  class="w-5 h-5 transition-transform"
-                />
-                <div>
-                  <h2 class="text-lg font-semibold">Other Trainers' Completed Signups</h2>
-                  <p class="text-xs text-gray-600 mt-1">Shows current certifications from training history</p>
-                </div>
-                <UBadge color="purple" variant="soft">
-                  {{ filteredOtherCompleted.length }}
-                </UBadge>
-              </div>
-            </button>
-          </template>
-
-          <div v-show="sectionsExpanded.othersCompleted">
-            <!-- Mobile: Card Layout -->
-            <div class="block sm:hidden space-y-3">
-              <div v-for="user in sortedFilteredOtherCompleted" :key="user.id" 
-                  class="bg-gray-50 p-3 rounded-lg border">
-                <div class="flex justify-between items-start mb-2">
-                  <div class="flex-1 min-w-0">
-                    <div class="font-medium text-sm">{{ user.first_name }} {{ user.last_name }}</div>
-                    <div class="text-xs text-gray-600 truncate">{{ user.email }}</div>
-                  </div>
-                </div>
-                <div class="text-xs text-gray-600 mb-2">
-                  {{ formatCompactDate(user.training_date) }} • {{ user.training_location }}
-                </div>
-                <div class="flex justify-between items-center">
-                  <div class="flex flex-wrap gap-1">
-                    <UBadge v-if="user.current_certifications?.field_chemistry" size="xs" color="blue">FC</UBadge>
-                    <UBadge v-if="user.current_certifications?.r_card" size="xs" color="green">RC</UBadge>
-                    <UBadge v-if="user.current_certifications?.habitat" size="xs" color="purple">H</UBadge>
-                    <UBadge v-if="user.current_certifications?.biological" size="xs" color="orange">B</UBadge>
-                  </div>
-                  <span class="text-xs text-gray-500">
-                    Trainer: {{ user.trainer_name || 'Unknown' }}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <!-- Desktop: Table Layout -->
-            <div class="hidden sm:block overflow-x-auto">
-              <UTable 
-                :columns="responsiveOtherCompletedColumns" 
-                :rows="sortedFilteredOtherCompleted" 
-                :loading="loadingOtherCompleted"
-                class="min-w-full"
-              >
-                <template #display_name-data="{ row }">
-                  <div class="truncate max-w-[180px]" :title="`${row.first_name} ${row.last_name}`">
-                    {{ row.first_name }} {{ row.last_name }}
-                  </div>
-                </template>
-                
-                <template #email-data="{ row }">
-                  <div class="truncate max-w-[180px]" :title="row.email">
-                    {{ row.email }}
-                  </div>
-                </template>
-                
-                <template #training_date-data="{ row }">
-                  <span class="text-xs whitespace-nowrap">{{ formatCompactDate(row.training_date) }}</span>
-                </template>
-                
-                <template #training_location-data="{ row }">
-                  <div class="truncate max-w-[120px]" :title="row.training_location">
-                    {{ row.training_location }}
-                  </div>
-                </template>
-                
-                <template #trainer-data="{ row }">
-                  <div class="truncate max-w-[120px]" v-if="row.trainer_name" :title="row.trainer_name">
-                    <span class="text-xs">{{ row.trainer_name }}</span>
-                  </div>
-                  <span v-else class="text-gray-500 italic text-xs">Unknown</span>
-                </template>
-                
-                <template #training_types-data="{ row }">
-                  <div class="flex flex-wrap gap-1">
-                    <UBadge v-if="row.current_certifications?.field_chemistry" size="xs" color="blue">FC</UBadge>
-                    <UBadge v-if="row.current_certifications?.r_card" size="xs" color="green">RC</UBadge>
-                    <UBadge v-if="row.current_certifications?.habitat" size="xs" color="purple">H</UBadge>
-                    <UBadge v-if="row.current_certifications?.biological" size="xs" color="orange">B</UBadge>
-                  </div>
-                </template>
-              </UTable>
-            </div>
-
-            <div v-if="!loadingOtherCompleted && filteredOtherCompleted.length === 0" class="text-center text-gray-500 py-8">
-              {{ hasActiveFilters ? 'No matching other trainers\' completed signups found.' : 'No other trainers\' completed signups found.' }}
-            </div>
-          </div>
-        </UCard>
       </template>
     </div>
     
+    <!-- Modals remain the same... -->
     <!-- Delete Confirmation Modal -->
     <UModal v-model="showDeleteModal" :ui="{ width: 'sm:max-w-md', rounded: 'rounded-lg' }">
       <UCard>

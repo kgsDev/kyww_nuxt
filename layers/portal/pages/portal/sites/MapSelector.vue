@@ -154,12 +154,24 @@ const renderHubPopupContent = (properties: any) => {
           <span class="service-value">${getCheckmark(properties.sampling_kits)}</span>
         </div>
         <div class="hub-row">
+          <span class="service-label">Kit Count:</span>
+          <span class="service-value">${properties.kit_count || 0}</span>
+        </div>
+        <div class="hub-row">
           <span class="service-label">Incubator:</span>
           <span class="service-value">${getCheckmark(properties.incubator)}</span>
         </div>
         <div class="hub-row">
+          <span class="service-label">Incubator Count:</span>
+          <span class="service-value">${properties.incubator_count || 0}</span>
+        </div>
+        <div class="hub-row">
           <span class="service-label">Biological Kit:</span>
           <span class="service-value">${getCheckmark(properties.biological_kit)}</span>
+        </div>
+        <div class="hub-row">
+          <span class="service-label">Biological Kit Count:</span>
+          <span class="service-value">${properties.biokit_count || 0}</span>
         </div>
         <div class="hub-row">
           <span class="service-label">Events & Meetings:</span>
@@ -322,8 +334,11 @@ const fetchHubs = async () => {
           email: hub.Email,
           availability: hub.Availability,
           sampling_kits: hub.Sampling_kits,
+          kit_count: hub.kit_count,
           incubator: hub.Incubator,
+          incubator_count: hub.incubator_count,
           biological_kit: hub.Biological_kit,
+          biokit_count: hub.biokit_count,
           events_meetings: hub.Events_and_meetings,
           site_selection: hub.Site_selection_assist,
           data_entry: hub.Data_entry_assistance,

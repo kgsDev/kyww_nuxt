@@ -36,8 +36,8 @@ const allNavigationItems = {
   top: [
     {name: 'Dashboard', href: '/portal', icon: 'material-symbols:home-outline-rounded'},
     {name: 'View All Users', href: '/portal/users', icon: 'mdi:account-group'}, 
-    {name: 'Add Trainees', href: '/portal/train', icon: 'oui:training'},  
-    {name: 'Training Report', href: '/portal/train/report', icon: 'mdi:file-document-outline'},
+    {name: 'Add New Trainees', href: '/portal/train', icon: 'oui:training'},  
+    {name: 'Training Management', href: '/portal/train/report', icon: 'mdi:file-document-outline'},
     {name: 'Add / Edit Hub', href: '/portal/hub/hub-add', icon: 'material-symbols:hub-outline'},
     //{name: 'Add Hub Managers', href: '/portal/leader/hub-manager-invite', icon: 'material-symbols:guardian'},   
     {name: 'Hub Users', href: '/portal/hub/hub-samplers', icon: 'material-symbols:person-celebrate'},
@@ -111,7 +111,7 @@ const { showCommandPalette: cmdPalette } = useCommandPalette();
 
     <div class="flex flex-1 h-0">
       <!-- Desktop sidebar -->
-      <div class="hidden md:flex md:flex-col md:w-24 md:fixed md:inset-y-0">
+      <div class="hidden md:flex md:flex-col md:w-32 md:fixed md:inset-y-0">
         <div class="flex flex-col flex-1 min-h-0 bg-gray-900">
           <div class="flex-1 flex flex-col pt-5 pb-4 overflow-y-auto">
             <div class="flex items-center flex-shrink-0 px-4">
@@ -290,7 +290,7 @@ const { showCommandPalette: cmdPalette } = useCommandPalette();
       </TransitionRoot>
 
       <!-- Main content -->
-      <main class="flex-1 md:pl-24">
+      <main class="flex-1 md:pl-32">
         <div class="h-full">
           <NuxtErrorBoundary>
             <template #error="{ error, clearError }">

@@ -208,7 +208,7 @@ export default eventHandler(async (event) => {
       }
       
       // Log summary for admin monitoring
-      console.log('Invitation batch complete:', results);
+      //console.log('Invitation batch complete:', results);
       
       // Optionally notify admin of failures via email if there were many failures
       if (results.failed > 0 && results.failed / emails.length > 0.5) {

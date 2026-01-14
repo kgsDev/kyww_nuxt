@@ -186,19 +186,19 @@
 
           <div class="form-group read-group">
             <div class="form-group">
-              <label>pH kit: <input type="checkbox" :checked="equip_ph" v-model="equip_ph"/></label>
+              <label>Lamotte pH kit: <input type="checkbox" :checked="equip_ph" v-model="equip_ph"/></label>
             </div>
             <div v-if="equip_ph" class="form-group">
-              <label>pH Kit Expiration Date:
+              <label>Lamotte pH Kit Expiration Date:
               <input type="date" v-model="equip_ph_expiration" id="equip_ph_expiration" @input="validateEquipmentDate('ph')"/></label>
               <p v-if="equipmentDateErrors.ph" class="error-message">{{ equipmentDateErrors.ph }}</p>
             </div>
             <div class="form-group">
-              <label>Dissolved oxygen kit:
+              <label>Lamotte Dissolved oxygen kit:
               <input type="checkbox" :checked="equip_do" v-model="equip_do"/></label>
             </div>
             <div v-if="equip_do" class="form-group">
-              <label>DO Kit Expiration Date:
+              <label>Lamotte DO Kit Expiration Date:
               <input type="date" v-model="equip_do_expiration" id="equip_do_expiration" @input="validateEquipmentDate('do')"/></label>
               <p v-if="equipmentDateErrors.do" class="error-message">{{ equipmentDateErrors.do }}</p>
             </div>
@@ -211,23 +211,6 @@
             <div class="form-group">
               <label>Thermometer:
                 <input type="checkbox" v-model="equip_thermo" />
-              </label>
-            </div>
-            <div class="form-group">
-              <label>Waste container:
-                <input type="checkbox" v-model="equip_waste" />
-              </label>
-            </div>
-            <div class="form-group">
-              <label>
-                White pan:
-                <input type="checkbox" v-model="equip_pan" />
-              </label>
-            </div>
-            <div class="form-group">
-              <label>
-                Instructional flip cards:
-                <input type="checkbox" v-model="equip_flip" />
               </label>
             </div>
             <div class="form-group">
@@ -303,14 +286,16 @@
         <div v-if="isActualSampler">
           <label class="block font-bold mt-4">Sampling Kit:</label>
           <div class="form-group">
-            <label>
-              <input type="radio" v-model="kitOption" value="personal" />
-              I have been issued my own kit to use until I no longer participate in sampling.
-            </label>
-            <label>
-              <input type="radio" v-model="kitOption" value="borrow" />
-              I plan to borrow a kit from a nearby Support Hub.
-            </label>
+            <div class="form-group">
+              <label>Kit Ownership/Status:</label>
+              <select v-model="kitOption" required>
+              <option value="">Select kit ownership/status</option>
+              <option value="own">KYWW issued kit (you own it)</option>
+              <option value="other">Borrow (borrow from friend/other sampler)</option>
+              <option value="personal">Personal (personally bought/acquired not from KYWW)</option>
+              <option value="borrow">Borrowed kit from Hub</option>
+              </select>
+            </div>
           </div>
         </div>
 

@@ -23,6 +23,7 @@
   const searchQuery = ref('')
   const selectedStatus = ref('all')
   const selectedHub = ref('all')
+  const selectedBasin = ref('all')
   const selectedTraining = ref('all')
   const selectedRole = ref('all')
   const selectedSamplingActivity = ref('all')
@@ -90,10 +91,10 @@
 
   // Table columns configuration - Compact design with stacked info
   const tableColumns = [
-    { key: 'user', label: 'User Info' },
-    { key: 'location', label: 'Location' },
-    { key: 'training', label: 'Training' },
-    { key: 'activity', label: 'Activity' },
+    { key: 'user', label: 'User Info', sortable: false },
+    { key: 'location', label: 'Location', sortable: false },
+    { key: 'training', label: 'Training', sortable: false },
+    { key: 'activity', label: 'Activity', sortable: false },
     { key: 'actions', label: '' }
   ];
 
@@ -117,8 +118,16 @@
         return `${user.last_name?.toLowerCase() || 'zzz'}_${user.first_name?.toLowerCase() || ''}`;
       case 'location':
         return user.city?.toLowerCase() || '';
+      case 'county':
+        return user.sampler_data?.hub_id?.County?.toLowerCase() || 'zzz';
+      case 'city':
+        return user.city?.toLowerCase() || 'zzz';
+      case 'basin':
+        return user.sampler_data?.hub_id?.Basin?.toLowerCase() || 'zzz';
       case 'hub':
         return user.sampler_data?.hub_id?.Description?.toLowerCase() || 'zzz';
+      case 'sites':
+        return getUserUniqueSites(user.id).length;
       case 'activity':
         return getUserSamplingCount(user.id);
       default:
@@ -130,6 +139,12 @@
   const uniqueHubs = computed(() => {
     const hubs = new Set(users.value.map(user => user.sampler_data?.hub_id?.Description).filter(Boolean))
     return ['all', ...Array.from(hubs)]
+  })
+
+  // Get unique basins for filter dropdown
+  const uniqueBasins = computed(() => {
+    const basins = new Set(users.value.map(user => user.sampler_data?.hub_id?.Basin).filter(Boolean))
+    return ['all', ...Array.from(basins).sort()]
   })
 
   const samplingActivityOptions = [
@@ -192,6 +207,9 @@
       const matchesHub = selectedHub.value === 'all' || 
         user.sampler_data?.hub_id?.Description === selectedHub.value
       
+      const matchesBasin = selectedBasin.value === 'all' || 
+        user.sampler_data?.hub_id?.Basin === selectedBasin.value
+      
       const matchesTraining = selectedTraining.value === 'all' || 
         user.sampler_data?.[`training_${selectedTraining.value}`]
 
@@ -226,7 +244,7 @@
           site.toLowerCase().includes(siteSearchQuery.value.toLowerCase())
         )
       
-      return matchesSearch && matchesStatus && matchesHub && matchesTraining && 
+      return matchesSearch && matchesStatus && matchesHub && matchesBasin && matchesTraining && 
             matchesRole && matchesSamplingActivity && matchesSiteSearch
     }).sort((a, b) => {
       const aValue = getSortValue(a, sortBy.value)
@@ -268,6 +286,7 @@
     searchQuery.value = ''
     selectedStatus.value = 'all'
     selectedHub.value = 'all'
+    selectedBasin.value = 'all'
     selectedTraining.value = 'all'
     selectedRole.value = 'all'
     selectedSamplingActivity.value = 'all'
@@ -454,12 +473,23 @@
   const getEquipmentKitOption = (user) => {
     const userId = user.id;
     const equipment = equipmentData.value[userId];
-    
+
     if (!equipment || !equipment.kit_option) {
       return 'N/A';
-    }
-    
-    return equipment.kit_option.charAt(0).toUpperCase() + equipment.kit_option.slice(1);
+    }else {
+      switch (equipment.kit_option.toLowerCase()) {
+        case 'own':
+          return 'KYWW issued kit (you own it)';
+        case 'other':
+          return 'Borrow (borrow from friend/other sampler)';
+        case 'personal':
+          return 'Personal (personally bought/acquired not from KYWW)';
+        case 'borrow':
+          return 'Borrowed kit from Hub';
+        default:
+          return 'N/A';
+      }
+    } 
   };
 
   // Export to CSV function
@@ -607,6 +637,8 @@
           '*',
           'user_id.*.*',
           'hub_id.*.*',
+          'hub_id.Basin',
+          'hub_id.County',
           'user_id.policies.*.*'
         ],
         limit: -1,
@@ -648,8 +680,8 @@
           const aValue = getSortValueForTable(a, tableSortBy.value);
           const bValue = getSortValueForTable(b, tableSortBy.value);
           
-          // Handle numeric sorting for activity
-          if (tableSortBy.value === 'activity') {
+          // Handle numeric sorting for activity and sites
+          if (tableSortBy.value === 'activity' || tableSortBy.value === 'sites') {
             return tableSortDirection.value === 'asc' ? aValue - bValue : bValue - aValue;
           }
           
@@ -822,13 +854,26 @@
                   }))"
                 />
 
+                <!-- Basin Filter -->
+                <USelect
+                  v-model="selectedBasin"
+                  :options="uniqueBasins.map(basin => ({
+                    value: basin,
+                    label: basin === 'all' ? 'All Basins' : basin
+                  }))"
+                  placeholder="Filter by basin"
+                />
+
                 <!-- Role/Group Filter -->
                 <USelect
                   v-model="selectedRole"
                   :options="roleOptions"
                   placeholder="Filter by role"
                 />
+              </div>
 
+              <!-- Second Row - Training Filter -->
+              <div class="grid grid-cols-1 lg:grid-cols-1 gap-4">
                 <!-- Training Filter -->
                 <USelect
                   v-model="selectedTraining"
@@ -836,7 +881,7 @@
                 />
               </div>
 
-              <!-- Second Row - Sampling Filters -->
+              <!-- Third Row - Sampling Filters -->
               <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <!-- Sampling Activity Filter -->
                 <USelect
@@ -878,7 +923,7 @@
               </div>
 
               <!-- Active Filters Display -->
-              <div v-if="searchQuery || selectedStatus !== 'all' || selectedHub !== 'all' || selectedTraining !== 'all' || selectedRole !== 'all' || selectedSamplingActivity !== 'all' || siteSearchQuery" 
+              <div v-if="searchQuery || selectedStatus !== 'all' || selectedHub !== 'all' || selectedBasin !== 'all' || selectedTraining !== 'all' || selectedRole !== 'all' || selectedSamplingActivity !== 'all' || siteSearchQuery" 
                    class="flex flex-wrap gap-2">
                 <span class="text-sm text-gray-600 mr-2">Active filters:</span>
                 
@@ -892,6 +937,10 @@
                 
                 <UBadge v-if="selectedHub !== 'all'" color="purple" variant="soft" @click="selectedHub = 'all'" class="cursor-pointer">
                   Hub: {{ selectedHub }} ×
+                </UBadge>
+                
+                <UBadge v-if="selectedBasin !== 'all'" color="teal" variant="soft" @click="selectedBasin = 'all'" class="cursor-pointer">
+                  Basin: {{ selectedBasin }} ×
                 </UBadge>
                 
                 <UBadge v-if="selectedRole !== 'all'" color="indigo" variant="soft" @click="selectedRole = 'all'" class="cursor-pointer">
@@ -1068,13 +1117,39 @@
                   </UButton>
                   <UButton
                     size="xs"
-                    :color="tableSortBy === 'location' ? 'primary' : 'gray'"
-                    :variant="tableSortBy === 'location' ? 'solid' : 'outline'"
-                    @click="sortTable('location')"
+                    :color="tableSortBy === 'county' ? 'primary' : 'gray'"
+                    :variant="tableSortBy === 'county' ? 'solid' : 'outline'"
+                    @click="sortTable('county')"
                   >
-                    Location
+                    County
                     <UIcon 
-                      v-if="tableSortBy === 'location'"
+                      v-if="tableSortBy === 'county'"
+                      :name="tableSortDirection === 'asc' ? 'i-heroicons-arrow-up' : 'i-heroicons-arrow-down'"
+                      class="ml-1"
+                    />
+                  </UButton>
+                  <UButton
+                    size="xs"
+                    :color="tableSortBy === 'city' ? 'primary' : 'gray'"
+                    :variant="tableSortBy === 'city' ? 'solid' : 'outline'"
+                    @click="sortTable('city')"
+                  >
+                    City
+                    <UIcon 
+                      v-if="tableSortBy === 'city'"
+                      :name="tableSortDirection === 'asc' ? 'i-heroicons-arrow-up' : 'i-heroicons-arrow-down'"
+                      class="ml-1"
+                    />
+                  </UButton>
+                  <UButton
+                    size="xs"
+                    :color="tableSortBy === 'basin' ? 'primary' : 'gray'"
+                    :variant="tableSortBy === 'basin' ? 'solid' : 'outline'"
+                    @click="sortTable('basin')"
+                  >
+                    Basin
+                    <UIcon 
+                      v-if="tableSortBy === 'basin'"
                       :name="tableSortDirection === 'asc' ? 'i-heroicons-arrow-up' : 'i-heroicons-arrow-down'"
                       class="ml-1"
                     />
@@ -1088,6 +1163,19 @@
                     Hub
                     <UIcon 
                       v-if="tableSortBy === 'hub'"
+                      :name="tableSortDirection === 'asc' ? 'i-heroicons-arrow-up' : 'i-heroicons-arrow-down'"
+                      class="ml-1"
+                    />
+                  </UButton>
+                  <UButton
+                    size="xs"
+                    :color="tableSortBy === 'sites' ? 'primary' : 'gray'"
+                    :variant="tableSortBy === 'sites' ? 'solid' : 'outline'"
+                    @click="sortTable('sites')"
+                  >
+                    Sites
+                    <UIcon 
+                      v-if="tableSortBy === 'sites'"
                       :name="tableSortDirection === 'asc' ? 'i-heroicons-arrow-up' : 'i-heroicons-arrow-down'"
                       class="ml-1"
                     />
@@ -1150,7 +1238,14 @@
                     <template #location-data="{ row }">
                       <div class="space-y-1">
                         <div class="text-sm font-medium text-gray-900">
+                          {{ row.sampler_data?.hub_id?.County || 'No County' }}
+                        </div>
+                        <div class="text-xs text-gray-600">
                           {{ row.city || 'N/A' }}, {{ row.state || '' }}
+                        </div>
+                        <div class="text-xs text-gray-500 flex items-center gap-1">
+                          <UIcon name="i-heroicons-map" class="w-3 h-3" />
+                          Basin: {{ row.sampler_data?.hub_id?.Basin || 'N/A' }}
                         </div>
                         <div class="text-xs text-gray-500 flex items-center gap-1">
                           <UIcon name="material-symbols:hub-outline" class="w-3 h-3" />

@@ -27,8 +27,11 @@ const formData = reactive({
   basin: [],
   city: [],
   sampling_kits: false,
+  kit_count: 0,
   incubator: false,
+  incubator_count: 0,
   biological_kit: false,
+  biokit_count: 0,
   events_and_meetings: false,
   site_selection_assist: false,
   data_entry_assist: false,
@@ -110,8 +113,11 @@ async function loadHubData(hubId) {
     formData.county = hubData.County ? hubData.County.split(', ') : [];
     formData.city = hubData.City;
     formData.sampling_kits = hubData.Sampling_kits;
+    formData.kit_count = hubData.kit_count;
     formData.incubator = hubData.Incubator;
+    formData.incubator_count = hubData.incubator_count;
     formData.biological_kit = hubData.Biological_kit;
+    formData.biokit_count = hubData.biokit_count;
     formData.events_and_meetings = hubData.Events_and_meetings;
     formData.site_selection_assist = hubData.Site_selection_assist;
     formData.data_entry_assist = hubData.Data_entry_assistance;
@@ -378,6 +384,9 @@ async function resetForm() {
   formData.availability = '';
   formData.sampling_kits = false;
   formData.incubator = false;
+  formData.kit_count = 0;
+  formData.biokit_count = 0;
+  formData.incubator_count = 0;
   formData.biological_kit = false;
   formData.events_and_meetings = false;
   formData.site_selection_assist = false;
@@ -413,6 +422,9 @@ async function submitData() {
       Availability: formData.availability,
       Sampling_kits: formData.sampling_kits,
       Incubator: formData.incubator,
+      kit_count: formData.kit_count,
+      incubator_count: formData.incubator_count,
+      biokit_count: formData.biokit_count,
       Biological_kit: formData.biological_kit,
       Events_and_meetings: formData.events_and_meetings,
       Site_selection_assist: formData.site_selection_assist,
@@ -741,10 +753,47 @@ const viewHubList = () => {
 			<h2 class="text-lg font-medium mb-4">Services Offered</h2>
 			<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
 			<UFormGroup class="p-2 basis-1/3">
-				<UCheckbox v-model="formData.sampling_kits" label="Host sampling kits for check-out" />
-				<UCheckbox v-model="formData.incubator" label="Incubator for E. coli analysis" />
-				<UCheckbox v-model="formData.biological_kit" label="Host biological sampling kits" />
-        <UCheckbox v-model="formData.provide_sampler_training" label="Provide Sampler Training" />
+        <UFormGroup class="p-2 basis-1/3">
+          <UCheckbox v-model="formData.provide_sampler_training" label="Provide Sampler Training" />
+          <div class="space-y-4">
+            <UCheckbox v-model="formData.sampling_kits" label="Host sampling kits for check-out" />
+            <UFormGroup label="Number of Sampling Kits" class="space-y-1">
+              <UInput
+                v-model.number="formData.kit_count"
+                type="number"
+                min="0"
+                placeholder="0"
+              />
+            </UFormGroup>
+          </div>
+        </UFormGroup>
+        
+        <UFormGroup class="p-2 basis-1/3">
+          <div class="space-y-4">
+            <UCheckbox v-model="formData.incubator" label="Incubator for E. coli analysis" />
+            <UFormGroup label="Number of Incubators" class="space-y-1">
+              <UInput
+                v-model.number="formData.incubator_count"
+                type="number"
+                min="0"
+                placeholder="0"
+              />
+            </UFormGroup>
+          </div>
+        </UFormGroup>
+        <UFormGroup class="p-2 basis-1/3">
+          <div class="space-y-4">
+     				<UCheckbox v-model="formData.biological_kit" label="Host biological sampling kits" />
+            <UFormGroup label="Number of Biological Kits" class="space-y-1">
+              <UInput
+                v-model.number="formData.biokit_count"
+                type="number"
+                min="0"
+                placeholder="0"
+              />
+            </UFormGroup>
+          </div>
+        </UFormGroup>
       </UFormGroup>
 			<UFormGroup class="p-2 basis-1/3">
 				<UCheckbox v-model="formData.events_and_meetings" label="Host sampler training events and meetings" />
@@ -859,8 +908,11 @@ const viewHubList = () => {
                 <dd>
                   <ul class="list-disc list-inside">
                     <li v-if="formData.sampling_kits">Host sampling kits for check-out</li>
+                    <li v-if="formData.kit_count">Number of Sampling Kits: {{ formData.kit_count }}</li>
                     <li v-if="formData.incubator">Incubator for E. coli analysis</li>
+                    <li v-if="formData.incubator_count">Number of Incubators: {{ formData.incubator_count }}</li>
                     <li v-if="formData.biological_kit">Host biological sampling kits</li>
+                    <li v-if="formData.biokit_count">Number of Biological Kits: {{ formData.biokit_count }}</li>
                     <li v-if="formData.events_and_meetings">Host sampler training events and meetings</li>
                     <li v-if="formData.site_selection_assist">Assist with sampling site selection</li>
                     <li v-if="formData.data_entry_assist">Provide assistance with volunteer data entry</li>

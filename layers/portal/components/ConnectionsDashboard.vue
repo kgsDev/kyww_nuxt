@@ -175,7 +175,7 @@ const fetchConnections = async () => {
         // Add to our overall connections array
         connections.value = [...connections.value, ...batchResponse];
         
-        console.log(`Batch ${i+1}/${batches.length} completed, found ${batchResponse.length} connections`);
+       // console.log(`Batch ${i+1}/${batches.length} completed, found ${batchResponse.length} connections`);
       }
     } else {
       // For smaller user lists, just use the original approach

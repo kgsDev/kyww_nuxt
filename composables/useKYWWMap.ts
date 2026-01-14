@@ -29,8 +29,11 @@ interface Hub {
   Basin: string;
   County: string;
   Sampling_kits?: boolean;
+  kit_count?: number;
   Incubator?: boolean;
+  incubator_count?: number;
   Biological_kit?: boolean;
+  biokit_count?: number;
   Events_and_meetings?: boolean;
   Site_selection_assist?: boolean;
   Data_entry_assistance?: boolean;

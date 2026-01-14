@@ -25,9 +25,6 @@ const equipmentForm = ref({
   equip_do: false,
   equip_cond: false,
   equip_thermo: false,
-  equip_waste: false,
-  equip_pan: false,
-  equip_flip: false,
   equip_incubator: false,
   ph_expire: '',
   do_expire: '',
@@ -44,9 +41,6 @@ const activeEquipment = computed(() => {
     do: currentEquipment.value.equip_do,
     cond: currentEquipment.value.equip_cond,
     thermo: currentEquipment.value.equip_thermo,
-    waste: currentEquipment.value.equip_waste,
-    pan: currentEquipment.value.equip_pan,
-    flip: currentEquipment.value.equip_flip,
     incubator: currentEquipment.value.equip_incubator
   };
 });
@@ -130,19 +124,6 @@ const formatDateShort = (date) => {
   });
 };
 
-const getEquipmentList = (record) => {
-  const equipment = [];
-  if (record.equip_ph) equipment.push('pH Meter');
-  if (record.equip_do) equipment.push('DO Meter');
-  if (record.equip_cond) equipment.push('Conductivity');
-  if (record.equip_thermo) equipment.push('Thermometer');
-  if (record.equip_waste) equipment.push('Waste Container');
-  if (record.equip_pan) equipment.push('Sample Pan');
-  if (record.equip_flip) equipment.push('Flip Card');
-  if (record.equip_incubator) equipment.push('Incubator');
-  return equipment;
-};
-
 const openEditModal = () => {
   if (currentEquipment.value) {
     equipmentForm.value = {
@@ -150,9 +131,6 @@ const openEditModal = () => {
       equip_do: currentEquipment.value.equip_do,
       equip_cond: currentEquipment.value.equip_cond,
       equip_thermo: currentEquipment.value.equip_thermo,
-      equip_waste: currentEquipment.value.equip_waste,
-      equip_pan: currentEquipment.value.equip_pan,
-      equip_flip: currentEquipment.value.equip_flip,
       equip_incubator: currentEquipment.value.equip_incubator,
       ph_expire: currentEquipment.value.ph_expire || '',
       do_expire: currentEquipment.value.do_expire || '',
@@ -164,6 +142,25 @@ const openEditModal = () => {
   showEditModal.value = true;
 };
 
+  const getEquipmentKitOption = (val) => {
+    if (!val) {
+      return 'N/A';
+    }else {
+      switch (val.toLowerCase()) {
+        case 'own':
+          return 'KYWW issued kit (you own it)';
+        case 'other':
+          return 'Borrow (borrow from friend/other sampler)';
+        case 'personal':
+          return 'Personal (personally bought/acquired not from KYWW)';
+        case 'borrow':
+          return 'Borrowed kit from Hub';
+        default:
+          return 'N/A';
+      }
+    } 
+  };
+
 const saveEquipmentUpdate = async () => {
   isSubmitting.value = true;
   try {
@@ -173,9 +170,8 @@ const saveEquipmentUpdate = async () => {
     await useDirectus(createItem('equipment_history', {
       user_id: props.userId,
       ...equipmentForm.value,
-      date_created: new Date().toISOString(),
-      user_created: user.value.id
-    }));
+      status: 'published'
+    }), {});
     
     toast.add({
       title: 'Success',
@@ -205,9 +201,6 @@ const closeEditModal = () => {
     equip_do: false,
     equip_cond: false,
     equip_thermo: false,
-    equip_waste: false,
-    equip_pan: false,
-    equip_flip: false,
     equip_incubator: false,
     ph_expire: '',
     do_expire: '',
@@ -289,6 +282,8 @@ onMounted(() => {
                 {{ type === 'ph' ? 'pH Meter' : 
                    type === 'do' ? 'DO Meter' : 
                    type === 'cond' ? 'Conductivity' :
+                   type === 'thermo' ? 'Thermometer' :
+                   type === 'incubator' ? 'Incubator' :
                    type.replace('_', ' ') }}
               </div>
             </div>
@@ -321,8 +316,12 @@ onMounted(() => {
 
           <!-- Kit Option -->
           <div v-if="currentEquipment.kit_option" class="pt-3 border-t border-gray-200 text-sm">
-            <span class="text-gray-700 font-medium">Kit Option:</span>
-            <span class="ml-2 text-gray-900 capitalize">{{ currentEquipment.kit_option }}</span>
+            <span class="text-gray-700 font-medium">Kit Ownership/Status:</span>
+            <span class="ml-2 text-gray-900 capitalize">{{ getEquipmentKitOption(currentEquipment.kit_option) }}</span>
+          </div>
+          <div v-if="currentEquipment.notes" class="text-sm">
+            <span class="font-medium text-gray-700">Notes:</span>
+            <p class="mt-1 text-gray-600 text-sm">{{ currentEquipment.notes }}</p>
           </div>
 
           <!-- Last Updated -->
@@ -360,13 +359,10 @@ onMounted(() => {
           <!-- Equipment Checkboxes -->
           <UFormGroup label="Equipment">
             <div class="grid grid-cols-2 gap-3">
-              <UCheckbox v-model="equipmentForm.equip_ph" label="pH Meter" />
-              <UCheckbox v-model="equipmentForm.equip_do" label="DO Meter" />
+              <UCheckbox v-model="equipmentForm.equip_ph" label="Lamotte pH Meter" />
+              <UCheckbox v-model="equipmentForm.equip_do" label="Lamotte DO Meter" />
               <UCheckbox v-model="equipmentForm.equip_cond" label="Conductivity Meter" />
               <UCheckbox v-model="equipmentForm.equip_thermo" label="Thermometer" />
-              <UCheckbox v-model="equipmentForm.equip_waste" label="Waste Container" />
-              <UCheckbox v-model="equipmentForm.equip_pan" label="Sample Pan" />
-              <UCheckbox v-model="equipmentForm.equip_flip" label="Flip Card" />
               <UCheckbox v-model="equipmentForm.equip_incubator" label="Incubator" />
             </div>
           </UFormGroup>
@@ -375,7 +371,7 @@ onMounted(() => {
           <div class="grid grid-cols-2 gap-4">
             <UFormGroup 
               v-if="equipmentForm.equip_ph"
-              label="pH Meter Expiration"
+              label="Lamotte pH Meter Expiration"
             >
               <UInput
                 v-model="equipmentForm.ph_expire"
@@ -395,14 +391,17 @@ onMounted(() => {
           </div>
 
           <!-- Kit Option -->
-          <UFormGroup label="Kit Option">
+          <UFormGroup label="Kit Ownership/Status">
             <USelect
               v-model="equipmentForm.kit_option"
               :options="[
-                { value: 'borrow', label: 'Borrow' },
-                { value: 'own', label: 'Own' }
+                { value: 'own', label: 'KYWW issued kit (you own it)' },
+                { value: 'other', label: 'Borrow (borrow from friend/other sampler)' },
+                { value: 'personal', label: 'Personal (personally bought/acquired not from KYWW)' },
+                { value: 'borrow', label: 'Borrowed kit from Hub' },
+
               ]"
-              placeholder="Select kit option"
+              placeholder="Select kit ownership/status"
             />
           </UFormGroup>
 
