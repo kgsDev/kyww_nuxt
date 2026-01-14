@@ -126,6 +126,7 @@ const formatDateShort = (date) => {
 
 const openEditModal = () => {
   if (currentEquipment.value) {
+    // Populate form with existing values
     equipmentForm.value = {
       equip_ph: currentEquipment.value.equip_ph,
       equip_do: currentEquipment.value.equip_do,
@@ -135,6 +136,20 @@ const openEditModal = () => {
       ph_expire: currentEquipment.value.ph_expire || '',
       do_expire: currentEquipment.value.do_expire || '',
       kit_option: currentEquipment.value.kit_option || '',
+      notes: currentEquipment.value.notes || '',
+      status: 'published'
+    };
+  } else {
+    // Reset form for new entry
+    equipmentForm.value = {
+      equip_ph: false,
+      equip_do: false,
+      equip_cond: false,
+      equip_thermo: false,
+      equip_incubator: false,
+      ph_expire: '',
+      do_expire: '',
+      kit_option: '',
       notes: '',
       status: 'published'
     };
@@ -142,42 +157,54 @@ const openEditModal = () => {
   showEditModal.value = true;
 };
 
-  const getEquipmentKitOption = (val) => {
-    if (!val) {
-      return 'N/A';
-    }else {
-      switch (val.toLowerCase()) {
-        case 'own':
-          return 'KYWW issued kit (you own it)';
-        case 'other':
-          return 'Borrow (borrow from friend/other sampler)';
-        case 'personal':
-          return 'Personal (personally bought/acquired not from KYWW)';
-        case 'borrow':
-          return 'Borrowed kit from Hub';
-        default:
-          return 'N/A';
-      }
-    } 
-  };
+const getEquipmentKitOption = (val) => {
+  if (!val) {
+    return 'N/A';
+  } else {
+    switch (val.toLowerCase()) {
+      case 'personal':
+        return 'KYWW issued kit (you own it)';
+      case 'other':
+        return 'Borrow (borrow from friend/other sampler)';
+      case 'own':
+        return 'Personal (personally bought/acquired not from KYWW)';
+      case 'borrow':
+        return 'Borrowed kit from Hub';
+      default:
+        return 'N/A';
+    }
+  } 
+};
 
 const saveEquipmentUpdate = async () => {
   isSubmitting.value = true;
   try {
-    const { user } = useDirectusAuth();
-    
-    // Create new equipment record
-    await useDirectus(createItem('equipment_history', {
-      user_id: props.userId,
-      ...equipmentForm.value,
-      status: 'published'
-    }), {});
-    
-    toast.add({
-      title: 'Success',
-      description: 'Equipment updated successfully',
-      color: 'green'
-    });
+    if (currentEquipment.value?.id) {
+      // Update existing equipment record
+      await useDirectus(updateItem('equipment_history', currentEquipment.value.id, {
+        ...equipmentForm.value,
+        status: 'published'
+      }));
+      
+      toast.add({
+        title: 'Success',
+        description: 'Equipment updated successfully',
+        color: 'green'
+      });
+    } else {
+      // Create new equipment record if none exists
+      await useDirectus(createItem('equipment_history', {
+        user_id: props.userId,
+        ...equipmentForm.value,
+        status: 'published'
+      }));
+      
+      toast.add({
+        title: 'Success',
+        description: 'Equipment information added successfully',
+        color: 'green'
+      });
+    }
     
     showEditModal.value = false;
     await fetchCurrentEquipment();
@@ -264,7 +291,7 @@ onMounted(() => {
             size="xs"
             @click="openEditModal"
           >
-            Update Equipment
+            {{ currentEquipment ? 'Update Equipment' : 'Add Equipment' }}
           </UButton>
         </div>
 
@@ -319,15 +346,20 @@ onMounted(() => {
             <span class="text-gray-700 font-medium">Kit Ownership/Status:</span>
             <span class="ml-2 text-gray-900 capitalize">{{ getEquipmentKitOption(currentEquipment.kit_option) }}</span>
           </div>
-          <div v-if="currentEquipment.notes" class="text-sm">
+          
+          <!-- Notes -->
+          <div v-if="currentEquipment.notes" class="pt-3 border-t border-gray-200 text-sm">
             <span class="font-medium text-gray-700">Notes:</span>
             <p class="mt-1 text-gray-600 text-sm">{{ currentEquipment.notes }}</p>
           </div>
 
           <!-- Last Updated -->
           <div class="pt-3 border-t border-gray-200 text-xs text-gray-500">
-            Last updated: {{ formatDate(currentEquipment.date_created) }}
-            <span v-if="currentEquipment.user_created">
+            Last updated: {{ formatDate(currentEquipment.date_updated || currentEquipment.date_created) }}
+            <span v-if="currentEquipment.user_updated">
+              by {{ currentEquipment.user_updated.first_name }} {{ currentEquipment.user_updated.last_name }}
+            </span>
+            <span v-else-if="currentEquipment.user_created">
               by {{ currentEquipment.user_created.first_name }} {{ currentEquipment.user_created.last_name }}
             </span>
           </div>
@@ -336,6 +368,15 @@ onMounted(() => {
         <div v-else class="text-center py-4 text-gray-500">
           <UIcon name="i-heroicons-wrench-screwdriver" class="mx-auto mb-2" size="48" />
           <p>No equipment recorded yet</p>
+          <UButton
+            v-if="editable"
+            icon="i-heroicons-plus"
+            size="sm"
+            class="mt-3"
+            @click="openEditModal"
+          >
+            Add Equipment
+          </UButton>
         </div>
       </div>
     </template>
@@ -345,7 +386,9 @@ onMounted(() => {
       <UCard>
         <template #header>
           <div class="flex justify-between items-center">
-            <h3 class="text-lg font-semibold">Update Equipment</h3>
+            <h3 class="text-lg font-semibold">
+              {{ currentEquipment ? 'Update Equipment' : 'Add Equipment' }}
+            </h3>
             <UButton
               icon="i-heroicons-x-mark"
               color="gray"
@@ -395,11 +438,10 @@ onMounted(() => {
             <USelect
               v-model="equipmentForm.kit_option"
               :options="[
-                { value: 'own', label: 'KYWW issued kit (you own it)' },
+                { value: 'personal', label: 'KYWW issued kit (you own it)' },
                 { value: 'other', label: 'Borrow (borrow from friend/other sampler)' },
-                { value: 'personal', label: 'Personal (personally bought/acquired not from KYWW)' },
+                { value: 'own', label: 'Personal (personally bought/acquired not from KYWW)' },
                 { value: 'borrow', label: 'Borrowed kit from Hub' },
-
               ]"
               placeholder="Select kit ownership/status"
             />
@@ -410,7 +452,7 @@ onMounted(() => {
             <UTextarea
               v-model="equipmentForm.notes"
               :rows="3"
-              placeholder="Optional notes about this equipment update..."
+              placeholder="Optional notes about your equipment..."
             />
           </UFormGroup>
         </div>
@@ -429,7 +471,7 @@ onMounted(() => {
               :loading="isSubmitting"
               @click="saveEquipmentUpdate"
             >
-              Save Changes
+              {{ currentEquipment ? 'Save Changes' : 'Add Equipment' }}
             </UButton>
           </div>
         </template>
