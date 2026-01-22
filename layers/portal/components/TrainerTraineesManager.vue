@@ -398,6 +398,27 @@ const viewUserDetails = async (user) => {
   showDetailsModal.value = true;
 };
 
+const getEquipmentKitOption = (val) => {
+  if (!val) {
+    return 'N/A';
+  } else {
+    switch (val.toLowerCase()) {
+      case 'personal':
+        return 'KYWW issued kit for individual use';
+      case 'other':
+        return 'Borrow (borrow from friend/other sampler)';
+      case 'own':
+        return 'Personal (personally bought/acquired not from KYWW)';
+      case 'borrow':
+        return 'Borrowed kit from Hub (either you already have it or plan to pick it up)';
+      case 'none':
+        return 'Non-sampler';
+      default:
+        return 'N/A';
+    }
+  } 
+};
+
 const closeDetailsModal = () => {
   showDetailsModal.value = false;
   editingTraining.value = false;
@@ -1313,7 +1334,7 @@ onMounted(async () => {
                   <p class="text-sm font-medium text-gray-700 mb-2">Expiration Dates:</p>
                   <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     <div v-if="selectedUser.equipmentRecord.ph_expire" class="text-sm">
-                      <span class="font-medium text-gray-700">Lamotte pH Meter:</span>
+                      <span class="font-medium text-gray-700">Lamotte pH Reagent Expiration:</span>
                       <span class="ml-2" :class="new Date(selectedUser.equipmentRecord.ph_expire) < new Date() ? 'text-red-600 font-medium' : 'text-gray-600'">
                         {{ formatDate(selectedUser.equipmentRecord.ph_expire) }}
                       </span>
@@ -1322,7 +1343,7 @@ onMounted(async () => {
                       </UBadge>
                     </div>
                     <div v-if="selectedUser.equipmentRecord.do_expire" class="text-sm">
-                      <span class="font-medium text-gray-700">DO Meter:</span>
+                      <span class="font-medium text-gray-700">Lamotte DO Reagent Expiration:</span>
                       <span class="ml-2" :class="new Date(selectedUser.equipmentRecord.do_expire) < new Date() ? 'text-red-600 font-medium' : 'text-gray-600'">
                         {{ formatDate(selectedUser.equipmentRecord.do_expire) }}
                       </span>
@@ -1337,7 +1358,7 @@ onMounted(async () => {
                 <div class="border-t pt-2 space-y-1">
                   <div v-if="selectedUser.equipmentRecord.kit_option" class="text-sm">
                     <span class="font-medium text-gray-700">Kit Ownership/Status:</span>
-                    <span class="ml-2 text-gray-600">{{ selectedUser.equipmentRecord.kit_option }}</span>
+                    <span class="ml-2 text-gray-600">{{ getEquipmentKitOption(selectedUser.equipmentRecord.kit_option) }}</span>
                   </div>
                   <div v-if="selectedUser.equipmentRecord.notes" class="text-sm">
                     <span class="font-medium text-gray-700">Notes:</span>

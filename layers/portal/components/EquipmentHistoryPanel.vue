@@ -26,11 +26,33 @@ const equipmentForm = ref({
   equip_cond: false,
   equip_thermo: false,
   equip_incubator: false,
-  ph_expire: '',
-  do_expire: '',
+  ph_expire: null,
+  do_expire: null,
   kit_option: '',
   notes: '',
   status: 'published'
+});
+
+// Check if at least one equipment item is selected
+const hasEquipmentSelected = computed(() => {
+  return equipmentForm.value.equip_ph || 
+         equipmentForm.value.equip_do || 
+         equipmentForm.value.equip_cond || 
+         equipmentForm.value.equip_thermo || 
+         equipmentForm.value.equip_incubator;
+});
+
+// Check if "none" kit option is selected
+const isNonSampler = computed(() => {
+  return equipmentForm.value.kit_option === 'none';
+});
+
+// Validation message - only require kit option
+const validationMessage = computed(() => {
+  if (!equipmentForm.value.kit_option) {
+    return 'Please select a kit ownership/status option.';
+  }
+  return '';
 });
 
 // Check which equipment is currently active
@@ -58,9 +80,9 @@ const expirationWarnings = computed(() => {
   if (currentEquipment.value.equip_ph && currentEquipment.value.ph_expire) {
     const phExpire = new Date(currentEquipment.value.ph_expire);
     if (phExpire < today) {
-      warnings.push({ type: 'pH Meter', status: 'expired', date: currentEquipment.value.ph_expire });
+      warnings.push({ type: 'pH Reagent', status: 'expired', date: currentEquipment.value.ph_expire });
     } else if (phExpire < thirtyDaysOut) {
-      warnings.push({ type: 'pH Meter', status: 'expiring', date: currentEquipment.value.ph_expire });
+      warnings.push({ type: 'pH Reagent', status: 'expiring', date: currentEquipment.value.ph_expire });
     }
   }
   
@@ -68,9 +90,9 @@ const expirationWarnings = computed(() => {
   if (currentEquipment.value.equip_do && currentEquipment.value.do_expire) {
     const doExpire = new Date(currentEquipment.value.do_expire);
     if (doExpire < today) {
-      warnings.push({ type: 'DO Meter', status: 'expired', date: currentEquipment.value.do_expire });
+      warnings.push({ type: 'DO Reagent', status: 'expired', date: currentEquipment.value.do_expire });
     } else if (doExpire < thirtyDaysOut) {
-      warnings.push({ type: 'DO Meter', status: 'expiring', date: currentEquipment.value.do_expire });
+      warnings.push({ type: 'DO Reagent', status: 'expiring', date: currentEquipment.value.do_expire });
     }
   }
   
@@ -87,7 +109,9 @@ const fetchCurrentEquipment = async () => {
       fields: [
         '*',
         'user_created.first_name',
-        'user_created.last_name'
+        'user_created.last_name',
+        'user_updated.first_name',
+        'user_updated.last_name'
       ],
       sort: ['-date_created'],
       limit: 1
@@ -128,13 +152,13 @@ const openEditModal = () => {
   if (currentEquipment.value) {
     // Populate form with existing values
     equipmentForm.value = {
-      equip_ph: currentEquipment.value.equip_ph,
-      equip_do: currentEquipment.value.equip_do,
-      equip_cond: currentEquipment.value.equip_cond,
-      equip_thermo: currentEquipment.value.equip_thermo,
-      equip_incubator: currentEquipment.value.equip_incubator,
-      ph_expire: currentEquipment.value.ph_expire || '',
-      do_expire: currentEquipment.value.do_expire || '',
+      equip_ph: currentEquipment.value.equip_ph || false,
+      equip_do: currentEquipment.value.equip_do || false,
+      equip_cond: currentEquipment.value.equip_cond || false,
+      equip_thermo: currentEquipment.value.equip_thermo || false,
+      equip_incubator: currentEquipment.value.equip_incubator || false,
+      ph_expire: currentEquipment.value.ph_expire || null,
+      do_expire: currentEquipment.value.do_expire || null,
       kit_option: currentEquipment.value.kit_option || '',
       notes: currentEquipment.value.notes || '',
       status: 'published'
@@ -147,8 +171,8 @@ const openEditModal = () => {
       equip_cond: false,
       equip_thermo: false,
       equip_incubator: false,
-      ph_expire: '',
-      do_expire: '',
+      ph_expire: null,
+      do_expire: null,
       kit_option: '',
       notes: '',
       status: 'published'
@@ -163,13 +187,15 @@ const getEquipmentKitOption = (val) => {
   } else {
     switch (val.toLowerCase()) {
       case 'personal':
-        return 'KYWW issued kit (you own it)';
+        return 'KYWW issued kit for individual use';
       case 'other':
         return 'Borrow (borrow from friend/other sampler)';
       case 'own':
         return 'Personal (personally bought/acquired not from KYWW)';
       case 'borrow':
-        return 'Borrowed kit from Hub';
+        return 'Borrowed kit from Hub (either you already have it or plan to pick it up)';
+      case 'none':
+        return 'Non-sampler';
       default:
         return 'N/A';
     }
@@ -177,14 +203,35 @@ const getEquipmentKitOption = (val) => {
 };
 
 const saveEquipmentUpdate = async () => {
+  // Validate before saving - only check for kit option
+  if (!equipmentForm.value.kit_option) {
+    toast.add({
+      title: 'Validation Error',
+      description: validationMessage.value,
+      color: 'red'
+    });
+    return;
+  }
+
   isSubmitting.value = true;
   try {
+    // Prepare the data object, converting empty strings to null for date fields
+    const updateData = {
+      equip_ph: equipmentForm.value.equip_ph,
+      equip_do: equipmentForm.value.equip_do,
+      equip_cond: equipmentForm.value.equip_cond,
+      equip_thermo: equipmentForm.value.equip_thermo,
+      equip_incubator: equipmentForm.value.equip_incubator,
+      ph_expire: equipmentForm.value.ph_expire || null,
+      do_expire: equipmentForm.value.do_expire || null,
+      kit_option: equipmentForm.value.kit_option || null,
+      notes: equipmentForm.value.notes || null,
+      status: 'published'
+    };
+
     if (currentEquipment.value?.id) {
       // Update existing equipment record
-      await useDirectus(updateItem('equipment_history', currentEquipment.value.id, {
-        ...equipmentForm.value,
-        status: 'published'
-      }));
+      await useDirectus(updateItem('equipment_history', currentEquipment.value.id, updateData));
       
       toast.add({
         title: 'Success',
@@ -195,8 +242,7 @@ const saveEquipmentUpdate = async () => {
       // Create new equipment record if none exists
       await useDirectus(createItem('equipment_history', {
         user_id: props.userId,
-        ...equipmentForm.value,
-        status: 'published'
+        ...updateData
       }));
       
       toast.add({
@@ -213,7 +259,7 @@ const saveEquipmentUpdate = async () => {
     console.error('Error updating equipment:', err);
     toast.add({
       title: 'Error',
-      description: 'Failed to update equipment',
+      description: err?.message || 'Failed to update equipment',
       color: 'red'
     });
   } finally {
@@ -229,8 +275,8 @@ const closeEditModal = () => {
     equip_cond: false,
     equip_thermo: false,
     equip_incubator: false,
-    ph_expire: '',
-    do_expire: '',
+    ph_expire: null,
+    do_expire: null,
     kit_option: '',
     notes: '',
     status: 'published'
@@ -296,8 +342,15 @@ onMounted(() => {
         </div>
 
         <div v-if="currentEquipment" class="space-y-3">
-          <!-- Equipment Grid -->
-          <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <!-- Show Non-Sampler Badge if applicable -->
+          <div v-if="currentEquipment.kit_option === 'none' && !hasEquipmentSelected" class="text-center py-4">
+            <UBadge color="gray" size="lg">
+              Non-Sampler - No Equipment Required
+            </UBadge>
+          </div>
+
+          <!-- Equipment Grid - only show if they have equipment -->
+          <div v-if="activeEquipment.ph || activeEquipment.do || activeEquipment.cond || activeEquipment.thermo || activeEquipment.incubator" class="grid grid-cols-2 md:grid-cols-4 gap-3">
             <div v-for="(has, type) in activeEquipment" :key="type" class="text-center">
               <UIcon
                 :name="has ? 'i-heroicons-check-circle' : 'i-heroicons-x-circle'"
@@ -305,9 +358,9 @@ onMounted(() => {
                 size="24"
                 class="mx-auto mb-1"
               />
-              <div class="text-sm capitalize">
-                {{ type === 'ph' ? 'pH Meter' : 
-                   type === 'do' ? 'DO Meter' : 
+              <div class="text-sm font-medium text-gray-900">
+                {{ type === 'ph' ? 'Lamotte pH Meter' : 
+                   type === 'do' ? 'Lamotte DO Meter' : 
                    type === 'cond' ? 'Conductivity' :
                    type === 'thermo' ? 'Thermometer' :
                    type === 'incubator' ? 'Incubator' :
@@ -320,21 +373,21 @@ onMounted(() => {
           <div v-if="currentEquipment.equip_ph || currentEquipment.equip_do" 
                class="pt-3 border-t border-gray-200 grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
             <div v-if="currentEquipment.equip_ph">
-              <span class="text-gray-700 font-medium">pH Meter Expires:</span>
+              <span class="text-gray-700 font-medium">pH Reagent Expires:</span>
               <span class="ml-2" :class="{
-                'text-red-600': expirationWarnings.some(w => w.type === 'pH Meter' && w.status === 'expired'),
-                'text-orange-600': expirationWarnings.some(w => w.type === 'pH Meter' && w.status === 'expiring'),
-                'text-gray-900': !expirationWarnings.some(w => w.type === 'pH Meter')
+                'text-red-600': expirationWarnings.some(w => w.type === 'pH Reagent' && w.status === 'expired'),
+                'text-orange-600': expirationWarnings.some(w => w.type === 'pH Reagent' && w.status === 'expiring'),
+                'text-gray-900': !expirationWarnings.some(w => w.type === 'pH Reagent')
               }">
                 {{ formatDateShort(currentEquipment.ph_expire) }}
               </span>
             </div>
             <div v-if="currentEquipment.equip_do">
-              <span class="text-gray-700 font-medium">DO Meter Expires:</span>
+              <span class="text-gray-700 font-medium">DO Reagent Expires:</span>
               <span class="ml-2" :class="{
-                'text-red-600': expirationWarnings.some(w => w.type === 'DO Meter' && w.status === 'expired'),
-                'text-orange-600': expirationWarnings.some(w => w.type === 'DO Meter' && w.status === 'expiring'),
-                'text-gray-900': !expirationWarnings.some(w => w.type === 'DO Meter')
+                'text-red-600': expirationWarnings.some(w => w.type === 'DO Reagent' && w.status === 'expired'),
+                'text-orange-600': expirationWarnings.some(w => w.type === 'DO Reagent' && w.status === 'expiring'),
+                'text-gray-900': !expirationWarnings.some(w => w.type === 'DO Reagent')
               }">
                 {{ formatDateShort(currentEquipment.do_expire) }}
               </span>
@@ -344,7 +397,7 @@ onMounted(() => {
           <!-- Kit Option -->
           <div v-if="currentEquipment.kit_option" class="pt-3 border-t border-gray-200 text-sm">
             <span class="text-gray-700 font-medium">Kit Ownership/Status:</span>
-            <span class="ml-2 text-gray-900 capitalize">{{ getEquipmentKitOption(currentEquipment.kit_option) }}</span>
+            <span class="ml-2 text-gray-900">{{ getEquipmentKitOption(currentEquipment.kit_option) }}</span>
           </div>
           
           <!-- Notes -->
@@ -399,8 +452,36 @@ onMounted(() => {
         </template>
 
         <div class="space-y-4">
+          <!-- Validation Warning -->
+          <UAlert
+            v-if="validationMessage"
+            type="warning"
+            :title="validationMessage"
+            class="mb-4"
+          />
+
+          <!-- Kit Option - moved to top -->
+          <UFormGroup label="Kit Ownership/Status" required>
+            <USelect
+              v-model="equipmentForm.kit_option"
+              :options="[
+                { value: 'personal', label: 'KYWW issued kit for individual use' },
+                { value: 'other', label: 'Borrow (borrow from friend/other sampler)' },
+                { value: 'own', label: 'Personal (personally bought/acquired not from KYWW)' },
+                { value: 'borrow', label: 'Borrowed kit from Hub (either you already have it or plan to pick it up)' },
+                { value: 'none', label: 'Non-sampler (no kit needed)'}
+              ]"
+              placeholder="Select kit ownership/status"
+            />
+            <template #help>
+              <p class="text-xs text-gray-500 mt-1">
+                Required field. Equipment selection below is optional.
+              </p>
+            </template>
+          </UFormGroup>
+
           <!-- Equipment Checkboxes -->
-          <UFormGroup label="Equipment">
+          <UFormGroup label="Equipment (optional)">
             <div class="grid grid-cols-2 gap-3">
               <UCheckbox v-model="equipmentForm.equip_ph" label="Lamotte pH Meter" />
               <UCheckbox v-model="equipmentForm.equip_do" label="Lamotte DO Meter" />
@@ -414,7 +495,7 @@ onMounted(() => {
           <div class="grid grid-cols-2 gap-4">
             <UFormGroup 
               v-if="equipmentForm.equip_ph"
-              label="Lamotte pH Meter Expiration"
+              label="Lamotte pH Reagent Expiration"
             >
               <UInput
                 v-model="equipmentForm.ph_expire"
@@ -424,7 +505,7 @@ onMounted(() => {
 
             <UFormGroup 
               v-if="equipmentForm.equip_do"
-              label="DO Meter Expiration"
+              label="Lamotte DO Reagent Expiration"
             >
               <UInput
                 v-model="equipmentForm.do_expire"
@@ -432,20 +513,6 @@ onMounted(() => {
               />
             </UFormGroup>
           </div>
-
-          <!-- Kit Option -->
-          <UFormGroup label="Kit Ownership/Status">
-            <USelect
-              v-model="equipmentForm.kit_option"
-              :options="[
-                { value: 'personal', label: 'KYWW issued kit (you own it)' },
-                { value: 'other', label: 'Borrow (borrow from friend/other sampler)' },
-                { value: 'own', label: 'Personal (personally bought/acquired not from KYWW)' },
-                { value: 'borrow', label: 'Borrowed kit from Hub' },
-              ]"
-              placeholder="Select kit ownership/status"
-            />
-          </UFormGroup>
 
           <!-- Notes -->
           <UFormGroup label="Notes">
@@ -469,6 +536,7 @@ onMounted(() => {
             <UButton
               color="primary"
               :loading="isSubmitting"
+              :disabled="!!validationMessage"
               @click="saveEquipmentUpdate"
             >
               {{ currentEquipment ? 'Save Changes' : 'Add Equipment' }}

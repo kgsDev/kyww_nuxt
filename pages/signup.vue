@@ -189,7 +189,7 @@
               <label>Lamotte pH kit: <input type="checkbox" :checked="equip_ph" v-model="equip_ph"/></label>
             </div>
             <div v-if="equip_ph" class="form-group">
-              <label>Lamotte pH Kit Expiration Date:
+              <label>Lamotte pH Kit (reagent) Expiration Date:
               <input type="date" v-model="equip_ph_expiration" id="equip_ph_expiration" @input="validateEquipmentDate('ph')"/></label>
               <p v-if="equipmentDateErrors.ph" class="error-message">{{ equipmentDateErrors.ph }}</p>
             </div>
@@ -198,7 +198,7 @@
               <input type="checkbox" :checked="equip_do" v-model="equip_do"/></label>
             </div>
             <div v-if="equip_do" class="form-group">
-              <label>Lamotte DO Kit Expiration Date:
+              <label>Lamotte DO Kit (reagent) Expiration Date:
               <input type="date" v-model="equip_do_expiration" id="equip_do_expiration" @input="validateEquipmentDate('do')"/></label>
               <p v-if="equipmentDateErrors.do" class="error-message">{{ equipmentDateErrors.do }}</p>
             </div>
@@ -287,13 +287,14 @@
           <label class="block font-bold mt-4">Sampling Kit:</label>
           <div class="form-group">
             <div class="form-group">
-              <label>Kit Ownership/Status:</label>
+              <label>Kit Ownership/Status (please select one even if you aren't a sampler):</label>
               <select v-model="kitOption" required>
               <option value="">Select kit ownership/status</option>
-              <option value="own">KYWW issued kit (you own it)</option>
+              <option value="own">KYWW issued kit for individual use</option>
               <option value="other">Borrow (borrow from friend/other sampler)</option>
               <option value="personal">Personal (personally bought/acquired not from KYWW)</option>
-              <option value="borrow">Borrowed kit from Hub</option>
+              <option value="borrow">Borrow a kit from Hub</option>
+              <option value="none">Non-sampler (no kit needed)</option>
               </select>
             </div>
           </div>

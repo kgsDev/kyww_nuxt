@@ -479,13 +479,15 @@
     }else {
       switch (equipment.kit_option.toLowerCase()) {
         case 'personal':
-          return 'KYWW issued kit (you own it)';
+          return 'KYWW issued kit for individual use';
         case 'other':
           return 'Borrow (borrow from friend/other sampler)';
         case 'own':
           return 'Personal (personally bought/acquired not from KYWW)';
         case 'borrow':
-          return 'Borrowed kit from Hub';
+          return 'Borrowed kit from Hub (either you already have it or plan to pick it up)';
+        case 'none':
+          return 'Non-sampler';
         default:
           return 'N/A';
       }
