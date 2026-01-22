@@ -1,6 +1,8 @@
+<!-- Users Management Page -->
 <script setup lang="ts">
   //users/index.vue - display and manage users in the Kentucky Watershed Watch portal
   import { ref, computed, onMounted, watch } from 'vue'
+  import { readItems, readItem, updateItem, createItem, deleteItems, createItems, readUsers } from '@directus/sdk'
   import PolicyGuard from '../../components/PolicyGuard.vue'
   import SamplingIntentSummary from '~/components/SamplingIntentSummary.vue'
   import UserSamplingIntent from '~/components/UserSamplingIntent.vue'
@@ -104,10 +106,18 @@
 
   const sortTable = (column) => {
     if (column === tableSortBy.value) {
+      // Toggle direction if clicking the same column
       tableSortDirection.value = tableSortDirection.value === 'asc' ? 'desc' : 'asc';
     } else {
+      // When clicking a new column, set default direction
       tableSortBy.value = column;
-      tableSortDirection.value = 'asc';
+      
+      // Default to descending for numeric columns (samples and sites)
+      if (column === 'activity' || column === 'sites') {
+        tableSortDirection.value = 'desc';
+      } else {
+        tableSortDirection.value = 'asc';
+      }
     }
   };
 
@@ -319,28 +329,85 @@
     }
   };
 
-  // Fetch actual sampling data for the current year
+  // Fetch actual sampling data for all time
   const fetchActualSamplingData = async () => {
     try {
+      
+      // Fetch all base samples with just the IDs
       const response = await useDirectus(readItems('base_samples', {
-        filter: {
-          date: { 
-            _gte: `${currentYear.value}-01-01`, 
-            _lte: `${currentYear.value}-12-31` 
-          }
-        },
         fields: [
-          'volunteer_id.id',
-          'volunteer_id.first_name',
-          'volunteer_id.last_name', 
-          'wwky_id.description',
-          'wwky_id.wwkyid_pk',
-          'date'
+          'id',
+          'date',
+          'volunteer_id',
+          'wwky_id'
         ],
         limit: -1
-      }));
-      
-      actualSamplingData.value = response;
+      }));      
+     
+      // If we have samples, fetch related data
+      if (response && response.length > 0) {
+        
+        // Get unique volunteer IDs and site IDs
+        const volunteerIds = [...new Set(response.map(s => s.volunteer_id).filter(Boolean))];
+        const siteIds = [...new Set(response.map(s => s.wwky_id).filter(Boolean))];
+
+        // Fetch volunteer details using readUsers (for core collection)
+        let volunteers = {};
+        if (volunteerIds.length > 0) {
+          try {
+            // Use readUsers instead of readItems for the core directus_users collection
+            const volunteerResponse = await useDirectus(readUsers({
+              filter: {
+                id: { _in: volunteerIds }
+              },
+              fields: ['id', 'first_name', 'last_name'],
+              limit: -1
+            }));
+            
+            volunteers = volunteerResponse.reduce((acc, v) => {
+              acc[v.id] = v;
+              return acc;
+            }, {});
+          } catch (err) {
+            console.error('Error fetching volunteer details:', err);
+            // Continue without volunteer details - we'll just use IDs
+          }
+        }
+        
+        // Fetch site details
+        let sites = {};
+        if (siteIds.length > 0) {
+          try {
+            const siteResponse = await useDirectus(readItems('wwky_sites', {
+              filter: {
+                wwkyid_pk: { _in: siteIds }
+              },
+              fields: ['wwkyid_pk', 'description'],
+              limit: -1
+            }));
+            
+            sites = siteResponse.reduce((acc, s) => {
+              acc[s.wwkyid_pk] = s;
+              return acc;
+            }, {});
+            
+          } catch (err) {
+            console.error('Error fetching site details:', err);
+            // Continue without site details
+          }
+        }
+        
+        // Enhance the samples with nested data
+        actualSamplingData.value = response.map(sample => ({
+          ...sample,
+          volunteer_id: volunteers[sample.volunteer_id] || { id: sample.volunteer_id },
+          wwky_id: sites[sample.wwky_id] || { wwkyid_pk: sample.wwky_id }
+        }));
+        
+      } else {
+        actualSamplingData.value = [];
+        console.log('No samples found in database');
+      }
     } catch (err) {
       console.error('Error fetching actual sampling data:', err);
       actualSamplingData.value = [];
@@ -494,7 +561,6 @@
     } 
   };
 
-  // Export to CSV function
   const exportToCSV = async () => {
     const months = [
       { name: 'January', abbr: 'Jan', key: 'jan' },
@@ -536,7 +602,7 @@
 
     months.forEach(month => {
       headers.push(`${month.abbr} Sites (Planned)`);
-      headers.push(`${month.abbr} E.coli Cards (Planned)`);
+      headers.push(`${month.abbr} R-Cards (Planned)`); // Changed from E.coli Cards
     });
 
     let samplingIntentData = [];
@@ -597,7 +663,9 @@
       months.forEach(month => {
         const key = month.key;
         userData.push(userIntent ? (userIntent[`${key}_sites`] || 0) : 0);
-        userData.push(userIntent ? (userIntent[`${key}_ecoli`] || 0) : 0);
+        // For R-cards: -1 = Yes, 0 or anything else = No
+        const rCardValue = userIntent?.[`${key}_ecoli`];
+        userData.push(rCardValue === -1 ? 'Yes' : 'No');
       });
 
       return userData;
@@ -616,6 +684,7 @@
     document.body.removeChild(link);
   };
 
+
   const visibleGroups = ref(Object.keys(userGroups).reduce((acc, key) => {
     acc[key] = true;
     return acc;
@@ -625,7 +694,6 @@
   const changeYear = (newYear) => {
     currentYear.value = newYear;
     fetchSamplersWithPlansCount();
-    fetchActualSamplingData();
   };
 
   const fetchUsers = async () => {

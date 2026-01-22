@@ -1,3 +1,4 @@
+<!-- Sampling Intent Summary Component -->
 <script setup>
 import { ref, onMounted, computed, watch } from 'vue';
 
@@ -45,20 +46,21 @@ const months = [
 const monthlyTotals = computed(() => {
   const totals = {
     sites: {},
-    ecoli: {}
+    rCards: {} // Changed from ecoli to rCards for clarity
   };
   
   // Initialize totals for each month
   months.forEach(month => {
     totals.sites[month.key] = 0;
-    totals.ecoli[month.key] = 0;
+    totals.rCards[month.key] = 0;
   });
   
   // Sum up the values for each month
   samplingData.value.forEach(userData => {
     months.forEach(month => {
       totals.sites[month.key] += userData[`${month.key}_sites`] || 0;
-      totals.ecoli[month.key] += userData[`${month.key}_ecoli`] || 0;
+      // Count "yes" responses (-1 values) for R cards
+      totals.rCards[month.key] += userData[`${month.key}_ecoli`] === -1 ? 1 : 0;
     });
   });
   
@@ -69,7 +71,7 @@ const monthlyTotals = computed(() => {
 const grandTotals = computed(() => {
   return {
     sites: Object.values(monthlyTotals.value.sites).reduce((sum, val) => sum + val, 0),
-    ecoli: Object.values(monthlyTotals.value.ecoli).reduce((sum, val) => sum + val, 0)
+    rCards: Object.values(monthlyTotals.value.rCards).reduce((sum, val) => sum + val, 0)
   };
 });
 
@@ -86,7 +88,7 @@ const chartData = computed(() => {
   return months.map(month => ({
     name: month.abbr,
     sites: monthlyTotals.value.sites[month.key] || 0,
-    ecoli: monthlyTotals.value.ecoli[month.key] || 0,
+    rCards: monthlyTotals.value.rCards[month.key] || 0,
     highlight: month.highlight
   }));
 });
@@ -126,7 +128,7 @@ const fetchSamplingData = async () => {
       fields: ['*', {
         user_id: ['id', 'first_name', 'last_name']
       }],
-      limit: -1// Fetch all records without limit
+      limit: -1 // Fetch all records without limit
     }));
     
     samplingData.value = response;
@@ -191,8 +193,8 @@ watch(uniqueUsersWithPlans, (newCount) => {
           <div class="text-sm text-gray-600">Total Sites</div>
         </div>
         <div class="text-center">
-          <div class="text-2xl font-bold text-green-600">{{ grandTotals.ecoli }}</div>
-          <div class="text-sm text-gray-600">Total E. coli Cards</div>
+          <div class="text-2xl font-bold text-green-600">{{ grandTotals.rCards }}</div>
+          <div class="text-sm text-gray-600">Samplers Planning R-Cards</div>
         </div>
         <div class="text-center">
           <div class="text-2xl font-bold text-purple-600">{{ uniqueUsersWithPlans }}</div>
@@ -234,19 +236,19 @@ watch(uniqueUsersWithPlans, (newCount) => {
               </td>
             </tr>
             
-            <!-- E. coli cards row -->
+            <!-- R-Cards row (count of "yes" responses) -->
             <tr>
-              <td nowrap class="p-2 border font-medium bg-gray-50">E. coli Cards</td>
+              <td nowrap class="p-2 border font-medium bg-gray-50">Using R-Cards</td>
               <template v-for="month in months" :key="`ecoli-${month.key}`">
                 <td 
                   class="p-2 border text-center" 
                   :class="getMonthClass(month)"
                 >
-                  {{ monthlyTotals.ecoli[month.key] }}
+                  {{ monthlyTotals.rCards[month.key] }}
                 </td>
               </template>
               <td class="p-2 border text-center font-bold bg-gray-50">
-                {{ grandTotals.ecoli }}
+                {{ grandTotals.rCards }}
               </td>
             </tr>
           </tbody>

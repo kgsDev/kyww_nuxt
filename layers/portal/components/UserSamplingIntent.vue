@@ -1,3 +1,4 @@
+<!-- Sampling Intent Display Component -->
 <script setup>
 import { ref, onMounted, computed } from 'vue';
 
@@ -35,11 +36,11 @@ const months = [
 
 // Calculate totals for the user
 const totals = computed(() => {
-  if (!samplingData.value) return { sites: 0, ecoli: 0 };
+  if (!samplingData.value) return { sites: 0, rCardMonths: 0 };
   
   return {
     sites: months.reduce((sum, month) => sum + (samplingData.value[`${month.key}_sites`] || 0), 0),
-    ecoli: months.reduce((sum, month) => sum + (samplingData.value[`${month.key}_ecoli`] || 0), 0)
+    rCardMonths: months.reduce((sum, month) => sum + (samplingData.value[`${month.key}_ecoli`] === -1 ? 1 : 0), 0)
   };
 });
 
@@ -49,6 +50,11 @@ const getMonthClass = (month) => {
     'bg-blue-50': month.highlight,
     'font-semibold': month.highlight
   };
+};
+
+// Helper to check if R-Card is planned for a month
+const isRCardPlanned = (monthKey) => {
+  return samplingData.value?.[`${monthKey}_ecoli`] === -1;
 };
 
 // Fetch user's sampling intent data
@@ -118,7 +124,7 @@ watch([() => props.userId, () => props.year], () => {
         <div class="text-sm text-gray-900 font-medium">
           <span>{{ props.year }} Sampling Plan:</span>
           <span class="ml-2 text-blue-600">{{ totals.sites }} Sites</span>
-          <span class="ml-2 text-green-600">{{ totals.ecoli }} E. coli Cards</span>
+          <span class="ml-2 text-green-600">R-Cards: {{ totals.rCardMonths }} months</span>
         </div>
         <UButton
           size="xs"
@@ -161,15 +167,23 @@ watch([() => props.userId, () => props.year], () => {
               </template>
             </tr>
             
-            <!-- E. coli cards row -->
+            <!-- R-Cards row -->
             <tr>
-              <td class="p-1 border font-medium bg-gray-50">E. coli</td>
+              <td class="p-1 border font-medium bg-gray-50">R-Cards</td>
               <template v-for="month in months" :key="`ecoli-${month.key}`">
                 <td 
                   class="p-1 border text-center" 
                   :class="getMonthClass(month)"
                 >
-                  {{ samplingData[`${month.key}_ecoli`] || 0 }}
+                  <UBadge 
+                    v-if="isRCardPlanned(month.key)"
+                    color="green" 
+                    variant="soft" 
+                    size="xs"
+                  >
+                    Yes
+                  </UBadge>
+                  <span v-else class="text-gray-400 text-xs">No</span>
                 </td>
               </template>
             </tr>

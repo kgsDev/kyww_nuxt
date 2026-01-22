@@ -1,3 +1,4 @@
+<!-- Sampling Intent Form Component -->
 <script setup>
 import { ref, onMounted, computed } from 'vue';
 
@@ -65,11 +66,22 @@ const totalSites = computed(() => {
   }, 0);
 });
 
-const totalEcoli = computed(() => {
+// Count of months planning to use R cards (count -1 values)
+const totalRCardMonths = computed(() => {
   return months.reduce((total, month) => {
-    return total + (yearData.value[`${month.key}_ecoli`] || 0);
+    return total + (yearData.value[`${month.key}_ecoli`] === -1 ? 1 : 0);
   }, 0);
 });
+
+// Helper to get boolean state for R card toggle
+const getRCardValue = (monthKey) => {
+  return yearData.value[`${monthKey}_ecoli`] === -1;
+};
+
+// Helper to set R card value based on toggle
+const setRCardValue = (monthKey, value) => {
+  yearData.value[`${monthKey}_ecoli`] = value ? -1 : 0;
+};
 
 // Load user's sampling intent data
 const loadSamplingIntent = async () => {
@@ -196,7 +208,7 @@ onMounted(() => {
         </div>
       </div>
       <p class="text-sm text-gray-500 mt-1">
-        Please indicate how many sites you plan to sample and how many E.coli cards you'll need each month (3 cards/site).
+        Please indicate how many sites you plan to sample and whether you plan to use R-Cards each month.
         <span class="font-medium">Major sampling months (May, July, September) are highlighted in orange.</span>
       </p>
     </template>
@@ -261,23 +273,21 @@ onMounted(() => {
             </td>
           </tr>
           
-          <!-- E. coli cards row -->
+          <!-- R-Cards row -->
           <tr>
-            <td nowrap class="p-2 border font-medium bg-gray-50">E.coli Cards Needed<br><span class="text-sm">(3 cards/site)</span></td>
+            <td nowrap class="p-2 border font-medium bg-gray-50">Using R-Cards?</td>
             <template v-for="month in months" :key="`ecoli-${month.key}`">
-              <td class="p-1 border" :class="getMonthClass(month)">
-                <UInput
-                  v-model.number="yearData[`${month.key}_ecoli`]"
-                  type="number"
-                  min="0"
-                  size="sm"
-                  class="w-16 text-center"
+              <td class="p-1 border text-center" :class="getMonthClass(month)">
+                <UToggle
+                  :model-value="getRCardValue(month.key)"
+                  @update:model-value="(value) => setRCardValue(month.key, value)"
                   :disabled="saving"
+                  size="sm"
                 />
               </td>
             </template>
             <td class="p-2 border text-center font-bold bg-gray-50">
-              {{ totalEcoli }}
+              {{ totalRCardMonths }} months
             </td>
           </tr>
         </tbody>
