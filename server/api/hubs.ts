@@ -45,17 +45,18 @@ export default defineEventHandler(async (event) => {
               h."Email",
               h."Availability",
               h."Sampling_kits",
-              h."Kit_count",
+              h."kit_count",
               h."Incubator",
-              h."Incubator_count",
+              h."incubator_count",
               h."Biological_kit",
-              h."Biokit_count",
+              h."biokit_count",
               h."Events_and_meetings",
               h."Site_selection_assist",
               h."Data_entry_assistance",
               h."Interpret_findings",
               h."Coordinate_community",
               h."Host_outreach_materials",
+              h."Provide_sampler_training",
               h."date_created",
               h."date_updated",
               CASE
@@ -99,10 +100,10 @@ export default defineEventHandler(async (event) => {
                 availability: row.Availability || '',
                 // Services offered (text fields - "Yes" for true, "" for false)
                 samplingKits: row.Sampling_kits ? "Yes" : "",
-                kitCount: row.Kit_count || 0,
+                kitCount: row.kit_count || 0,
                 incubator: row.Incubator ? "Yes" : "",
-                incubatorCount: row.Incubator_count || 0,
-                biokitCount: row.Biokit_count || 0, 
+                incubatorCount: row.incubator_count || 0,
+                biokitCount: row.biokit_count || 0, 
                 biologicalKit: row.Biological_kit ? "Yes" : "",
                 eventsAndMeetings: row.Events_and_meetings ? "Yes" : "",
                 siteSelectionAssist: row.Site_selection_assist ? "Yes" : "",
@@ -110,6 +111,7 @@ export default defineEventHandler(async (event) => {
                 interpretFindings: row.Interpret_findings ? "Yes" : "",
                 coordinateCommunity: row.Coordinate_community ? "Yes" : "",
                 hostOutreachMaterials: row.Host_outreach_materials ? "Yes" : "",
+                provideSamplerTraining: row.Provide_sampler_training ? "Yes" : "",
                 dateCreated: row.date_created,
                 dateUpdated: row.date_updated
               },
@@ -180,7 +182,8 @@ export default defineEventHandler(async (event) => {
               SUM(CASE WHEN "Data_entry_assistance" = true THEN 1 ELSE 0 END) as data_entry_count,
               SUM(CASE WHEN "Interpret_findings" = true THEN 1 ELSE 0 END) as interpret_findings_count,
               SUM(CASE WHEN "Coordinate_community" = true THEN 1 ELSE 0 END) as coordinate_community_count,
-              SUM(CASE WHEN "Host_outreach_materials" = true THEN 1 ELSE 0 END) as outreach_materials_count
+              SUM(CASE WHEN "Host_outreach_materials" = true THEN 1 ELSE 0 END) as outreach_materials_count,
+              SUM(CASE WHEN "Provide_sampler_training" = true THEN 1 ELSE 0 END) as provide_sampler_training_count
             FROM 
               public.wwky_hubs
           `;
@@ -201,7 +204,8 @@ export default defineEventHandler(async (event) => {
             dataEntryAssistanceCount: Number(statsRow.data_entry_count),
             interpretFindingsCount: Number(statsRow.interpret_findings_count),
             coordinateCommunityCount: Number(statsRow.coordinate_community_count),
-            hostOutreachMaterialsCount: Number(statsRow.outreach_materials_count)
+            hostOutreachMaterialsCount: Number(statsRow.outreach_materials_count),
+            provideSamplerTrainingCount: Number(statsRow.provide_sampler_training_count)
           };
           break;
           

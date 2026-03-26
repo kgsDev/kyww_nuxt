@@ -18,7 +18,7 @@ export default defineEventHandler(async (event) => {
       message: 'Method not allowed'
     });
   }
-
+ 
   // Get the authenticated user from the session/token
   const { userId } = getQuery(event);
   

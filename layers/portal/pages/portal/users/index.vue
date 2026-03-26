@@ -29,6 +29,7 @@
   const selectedTraining = ref('all')
   const selectedRole = ref('all')
   const selectedSamplingActivity = ref('all')
+  const selectedSamplingPlan = ref('all')
   const siteSearchQuery = ref('')
   const sortBy = ref('name')
   const sortDirection = ref('asc')
@@ -158,16 +159,22 @@
   })
 
   const samplingActivityOptions = [
-    { value: 'all', label: 'All Users' },
+    { value: 'all', label: 'All Users (regardless of activity)' },
     { value: 'active_samplers', label: 'Active Samplers (Has Samples)' },
     { value: 'inactive_samplers', label: 'No Samples Yet' },
     { value: 'high_activity', label: 'High Activity (5+ Samples)' },
     { value: 'multiple_sites', label: 'Multiple Sites (2+ Sites)' }
   ]
 
+  const samplingPlanOptions = computed(() => [
+    { value: 'all', label: 'All Users (regardless of sampling plan)' },
+    { value: 'has_plan', label: `Has ${currentYear.value} Sampling Plan` },
+    { value: 'no_plan', label: `Does Not Have ${currentYear.value} Sampling Plan` }
+  ])
+
   // Training options
   const trainingOptions = [
-    { value: 'all', label: 'All Training' },
+    { value: 'all', label: 'All Users (regardless of training)' },
     { value: 'field_chemistry', label: 'Field Chemistry' },
     { value: 'r_card', label: 'R-Card' },
     { value: 'habitat', label: 'Habitat' },
@@ -249,13 +256,24 @@
           matchesSamplingActivity = true
       }
 
+      let matchesSamplingPlan = true
+      switch (selectedSamplingPlan.value) {
+        case 'has_plan':
+          matchesSamplingPlan = userIdsWithPlans.value.has(user.id)
+          break
+        case 'no_plan':
+          matchesSamplingPlan = !userIdsWithPlans.value.has(user.id)
+          break
+      }
+
       const matchesSiteSearch = siteSearchQuery.value === '' || 
         getUserUniqueSites(user.id).some(site => 
           site.toLowerCase().includes(siteSearchQuery.value.toLowerCase())
         )
       
-      return matchesSearch && matchesStatus && matchesHub && matchesBasin && matchesTraining && 
-            matchesRole && matchesSamplingActivity && matchesSiteSearch
+    return matchesSearch && matchesStatus && matchesHub && matchesBasin && matchesTraining && 
+          matchesRole && matchesSamplingActivity && matchesSiteSearch && matchesSamplingPlan
+
     }).sort((a, b) => {
       const aValue = getSortValue(a, sortBy.value)
       const bValue = getSortValue(b, sortBy.value)
@@ -300,6 +318,7 @@
     selectedTraining.value = 'all'
     selectedRole.value = 'all'
     selectedSamplingActivity.value = 'all'
+    selectedSamplingPlan.value = 'all'
     siteSearchQuery.value = ''
     sortBy.value = 'name'
     sortDirection.value = 'asc'
@@ -311,21 +330,21 @@
   };
 
   // Function to fetch samplers with plans count
+  const userIdsWithPlans = ref(new Set())
   const fetchSamplersWithPlansCount = async () => {
     try {
       const response = await useDirectus(readItems('sampling_intent', {
-        filter: {
-          year: { _eq: currentYear.value }
-        },
+        filter: { year: { _eq: currentYear.value } },
         fields: ['user_id'],
         limit: -1
       }));
-      
       const uniqueUserIds = new Set(response.map(plan => plan.user_id));
       samplersWithPlans.value = uniqueUserIds.size;
+      userIdsWithPlans.value = uniqueUserIds;  // <-- add this line
     } catch (err) {
       console.error('Error fetching samplers with plans count:', err);
       samplersWithPlans.value = 0;
+      userIdsWithPlans.value = new Set();
     }
   };
 
@@ -693,6 +712,7 @@
   // Year selection buttons
   const changeYear = (newYear) => {
     currentYear.value = newYear;
+    selectedSamplingPlan.value = 'all';  // reset plan filter when year changes
     fetchSamplersWithPlansCount();
   };
 
@@ -943,11 +963,18 @@
               </div>
 
               <!-- Second Row - Training Filter -->
-              <div class="grid grid-cols-1 lg:grid-cols-1 gap-4">
+              <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <!-- Training Filter -->
                 <USelect
                   v-model="selectedTraining"
                   :options="trainingOptions"
+                />
+
+                <!-- Sampling Plan Filter -->
+                <USelect
+                  v-model="selectedSamplingPlan"
+                  :options="samplingPlanOptions"
+                  placeholder="Filter by sampling plan"
                 />
               </div>
 
@@ -1021,6 +1048,10 @@
                   Training: {{ trainingOptions.find(t => t.value === selectedTraining)?.label }} ×
                 </UBadge>
                 
+                <UBadge v-if="selectedSamplingPlan !== 'all'" color="emerald" variant="soft" @click="selectedSamplingPlan = 'all'" class="cursor-pointer">
+                  Plan: {{ samplingPlanOptions.find(p => p.value === selectedSamplingPlan)?.label }} ×
+                </UBadge>
+
                 <UBadge v-if="selectedSamplingActivity !== 'all'" color="red" variant="soft" @click="selectedSamplingActivity = 'all'" class="cursor-pointer">
                   Activity: {{ samplingActivityOptions.find(a => a.value === selectedSamplingActivity)?.label }} ×
                 </UBadge>
