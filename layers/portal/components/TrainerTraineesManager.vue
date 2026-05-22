@@ -329,6 +329,11 @@ const formatDateForInput = (date) => {
 };
 
 const getTrainerName = (trainerId) => {
+  // Handle case where trainer_id is a nested object (from fetchOtherTrainees)
+  if (trainerId && typeof trainerId === 'object') {
+    return `${trainerId.first_name} ${trainerId.last_name}`.trim() || 'Unknown';
+  }
+  // Handle case where trainer_id is a plain UUID string
   const trainer = trainers.value.find(t => t.id === trainerId);
   return trainer ? `${trainer.first_name} ${trainer.last_name}` : 'Unknown';
 };

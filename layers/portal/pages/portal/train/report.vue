@@ -187,7 +187,6 @@ const matchesTrainingType = (item) => {
 const matchesGlobalSearch = (item) => {
   if (!globalSearch.value) return true;
   const search = globalSearch.value.toLowerCase();
-  
   return (
     item.email?.toLowerCase().includes(search) ||
     item.training_location?.toLowerCase().includes(search) ||

@@ -17,6 +17,7 @@ const error = ref('')
 const success = ref('')
 const showModal = ref(false)
 const showSuccessModal = ref(false)
+const successType = ref<'sent' | 'registered' | 'mixed'>('sent');
 
 const hasTrainingSelected = computed(() => {
 	return training_field_chemistry.value || 
@@ -214,19 +215,31 @@ async function submitEmails() {
 		// Handle other successful responses
 		if (response.ok) {
 			const data = await response.json();
-			
-			if (data.status === 'success') {
-				if (data.code === 'PROCESSING') {
-					success.value = 'Invitations are being processed. You will be notified of any failures.';
-				} else {
-					success.value = data.message || 'Invitations sent successfully!';
-				}
-			} else {
-				success.value = data.message || 'Invitations sent successfully!';
+			const parts = [];
+			if (data.data?.successful?.length > 0) {
+				parts.push(`${data.data.successful.length} invitation(s) sent`);
 			}
-			
-			showSuccessModal.value = true;
-			resetForm();
+			if (data.data?.alreadyRegistered?.length > 0) {
+				const registeredEmails = data.data.alreadyRegistered.map(r => r.email).join(', ');
+				parts.push(`${data.data.alreadyRegistered.length} already registered: ${registeredEmails}\n\nThis training was added for the already registered trainees.\n\nPlease view their Training Management report to check their training information.`);
+			}
+			if (data.data?.failed?.length > 0) {
+				const failDetails = data.data.failed.map(f => `${f.email} (${f.reason})`).join(', ');
+				parts.push(`${data.data.failed.length} failed: ${failDetails}`);
+			}
+
+			const summary = parts.length > 0 ? parts.join(' | ') : data.message;
+
+			if (data.data?.failed?.length > 0 && data.data?.successful?.length === 0 && data.data?.alreadyRegistered?.length === 0) {
+				error.value = summary;
+			} else {
+				success.value = summary;
+				successType.value = data.data?.successful?.length > 0 && data.data?.alreadyRegistered?.length > 0
+					? 'mixed'
+					: data.data?.alreadyRegistered?.length > 0 ? 'registered' : 'sent';
+				showSuccessModal.value = true;
+				resetForm();
+			}
 		} else {
 			let errorData;
 			try {
@@ -270,7 +283,6 @@ function resetForm() {
 	training_biological.value = false;
 	training_no_training.value = false;
 	error.value = '';
-	success.value = '';
 }
 
 async function retrySubmission() {
@@ -280,10 +292,12 @@ async function retrySubmission() {
 
 function closeSuccessModal() {
 	showSuccessModal.value = false;
+	success.value = '';
 }
 
 function viewReport() {
 	showSuccessModal.value = false;
+	success.value = '';
 	navigateTo('/portal/train/report');
 }
 </script>
@@ -301,10 +315,13 @@ function viewReport() {
 			]"
 		  ></PortalPageHeader>
   
-		  <div class="flex items-center justify-between">
-			<h1 class="text-2xl text-gray-900">
-			  Kentucky Watershed Watch Trainee Invite Form
-			</h1>
+		  <div class="flex items-start justify-between gap-6">
+			<div>
+			  <h1 class="text-2xl text-gray-900">
+				Kentucky Watershed Watch Trainee Invite Form
+			  </h1>
+			  <h2 class="mt-2">This form is intended for onboarding / inviting <b>NEW samplers only</b>.<br>To add and edit training for existing samplers, please use the <a href="/portal/train/report" class="text-blue-500 hover:underline">Training Management</a> section.</h2>
+			</div>
 			<img
 			  class="w-48"
 			  src="~/assets/illustrations/tokyo-luminous-table-lamp-on-boxes.svg"
@@ -319,6 +336,10 @@ function viewReport() {
 			<p class="text-m text-gray-800 mb-4">
 				Thank you for assisting Kentucky Watershed Watch as a trainer. 
 				Your assistance is greatly appreciated as we work to create an informed network of stream samplers.
+				<br><br>
+				Use this form to invite newly trained samplers to register for the KWW data portal. If you are updating training information for existing samplers, use the 
+				<a href="/portal/train/report" class="text-blue-500 hover:underline">Training Management</a> section instead of this form 
+				(click on a trainee and add training information from their latest training session).
 				<br><br>
 				To help us enroll newly trained samplers and grant them access to the data portal, 
 				please provide the following information from your training session.
@@ -338,7 +359,7 @@ function viewReport() {
 				This will send an email invitation to each volunteer with a link to sign up for the data portal.
 			</p>
   
-			<label class="block mb-2 font-bold required">Trainee Email Addresses (up to 15 emails):</label>
+			<label class="block mb-2 font-bold required">NEW Trainee Email Addresses (up to 15 emails):</label>
 			<textarea
 				v-model="emails"
 				@input="clearMessages"
@@ -476,12 +497,22 @@ function viewReport() {
 		<div v-if="showSuccessModal" class="modal">
 			<div class="modal-content">
 				<div class="flex items-center justify-center mb-4">
-				<svg class="h-8 w-8 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
-					<path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+				<svg 
+				class="h-8 w-8 mr-2" 
+				:class="{
+					'text-green-500': successType === 'sent',
+					'text-blue-500': successType === 'registered',
+					'text-yellow-500': successType === 'mixed'
+				}"
+				fill="currentColor" viewBox="0 0 20 20"
+				>
+				<path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
 				</svg>
-				<h3 class="text-lg font-semibold">Invitations Sent!</h3>
+				<h3 class="text-lg font-semibold">
+					{{ successType === 'sent' ? 'Invitations Sent!' : successType === 'registered' ? 'Already Registered' : 'Invitations Processed' }}
+				</h3>
 				</div>
-				<p class="mb-4">{{ success }}</p>
+				<p class="mb-4 message-preline">{{ success }}</p>
 				<div class="flex gap-4 justify-center mt-4">
 				<UButton variant="solid" @click="viewReport">View Report</UButton>
 				<UButton variant="outline" @click="closeSuccessModal">Close</UButton>
@@ -511,7 +542,7 @@ function viewReport() {
 				<svg class="h-5 w-5 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
 				<path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
 				</svg>
-				<span>{{ success }}</span>
+				<span class="message-preline">{{ success }}</span>
 			</div>
 			</div>
 		</div>
@@ -693,5 +724,9 @@ function viewReport() {
 
 	.opacity-50 {
 		opacity: 0.5;
+	}
+
+	.message-preline {
+		white-space: pre-line;
 	}
 </style>

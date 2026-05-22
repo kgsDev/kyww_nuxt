@@ -1,4 +1,5 @@
 // server/api/other-trainer-invites.ts
+// This API route fetches invites from other trainers with training type fields and includes trainer information.
 import { getApiConfig, getDirectusHeaders } from '../utils/config';
 
 export default defineEventHandler(async (event) => {
@@ -43,7 +44,7 @@ export default defineEventHandler(async (event) => {
       
       // Process each trainer ID individually to avoid issues with complex query parameters
       let trainers = [];
-      
+
       for (const trainerId of trainerIds) {
         // Fetch a single trainer at a time to avoid complex query parameters
         const trainerResponse = await fetch(

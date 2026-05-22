@@ -4,6 +4,7 @@
   import { ref, computed, onMounted, watch } from 'vue'
   import { readItems, readItem, updateItem, createItem, deleteItems, createItems, readUsers } from '@directus/sdk'
   import PolicyGuard from '../../components/PolicyGuard.vue'
+  import VolunteerActivityReport from '~/components/VolunteerActivityReport.vue';
   import SamplingIntentSummary from '~/components/SamplingIntentSummary.vue'
   import UserSamplingIntent from '~/components/UserSamplingIntent.vue'
   import ConnectionsDashboard from '~/components/ConnectionsDashboard.vue'
@@ -1063,6 +1064,22 @@
             </div>
           </UCard>
 
+          <!-- Volunteer Activity Report -->
+          <UCard>
+            <template #header>
+              <div class="flex items-center gap-2">
+                <UIcon name="i-heroicons-clock" class="w-5 h-5" />
+                <h2 class="text-xl font-semibold">{{ currentYear }} Volunteer Activity</h2>
+              </div>
+              <p class="text-sm text-gray-600 mt-1">Hours and miles for {{ filteredAndSortedUsers.length }} users</p>
+            </template>
+
+            <VolunteerActivityReport
+              :user-ids="filteredUserIds"
+              :year="currentYear"
+            />
+          </UCard>
+
           <!-- Sampling Intent Summary -->
           <UCard>
             <template #header>
@@ -1076,7 +1093,7 @@
                 Overview for {{ filteredAndSortedUsers.length }} users
               </p>
             </template>
-            
+
             <div class="overflow-x-auto">
               <SamplingIntentSummary
                 :user-ids="filteredUserIds"
@@ -1085,7 +1102,7 @@
               />
             </div>
           </UCard>
-
+         
           <!-- Stats Overview -->
           <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
             <div 

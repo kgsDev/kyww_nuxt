@@ -203,7 +203,8 @@ export default eventHandler(async (event) => {
 
         // Check if user already exists
         const existingUserResponse = await fetch(
-          `${config.public.directusUrl}/users?filter[email][_eq]=${encodeURIComponent(trimmedEmail)}`,
+          // AFTER
+          `${config.public.directusUrl}/users?filter[email][_icontains]=${encodeURIComponent(trimmedEmail)}`,
           {
             headers: getDirectusHeaders(config),
             method: 'GET'
@@ -214,53 +215,82 @@ export default eventHandler(async (event) => {
         
         if (existingUserData.data && existingUserData.data.length > 0) {
           const existingUser = existingUserData.data[0];
-          
-          // Only create training record if actual training was conducted
-          if (!training_no_training) {
-            try {
-              // Create training history record
-              const trainingHistoryResponse = await fetch(
-                `${config.public.directusUrl}/items/training_history`,
-                {
-                  method: 'POST',
-                  headers: {
-                    ...getDirectusHeaders(config),
-                    'Content-Type': 'application/json'
-                  },
-                  body: JSON.stringify({
-                    user_id: existingUser.id,
-                    trainer_id,
-                    trainer_name,
-                    training_date,
-                    training_location,
-                    training_field_chemistry,
-                    training_r_card,
-                    training_habitat,
-                    training_biological,
-                    status: 'published',
-                    verified: true,
-                    notes: `Training session on ${training_date} at ${training_location}`
-                  })
-                }
-              );
 
-              if (!trainingHistoryResponse.ok) {
-                throw new Error('Failed to create training history');
+          // catch case where user exists but no training record and no_training is checked - we want to add a training record for them in this case so they show up in the trained sampler list, even though they didn't actually attend a training session
+          if (training_no_training) {
+            results.alreadyRegistered.push({
+              email: trimmedEmail,
+              message: 'User already registered'
+            });
+            continue;
+          }
+
+          try {
+            // Check if training record already exists for this user+date+trainer
+            const existingTrainingResponse = await fetch(
+              `${config.public.directusUrl}/items/training_history` +
+              `?filter[user_id][_eq]=${existingUser.id}` +
+              `&filter[training_date][_eq]=${training_date}` +
+              `&filter[trainer_id][_eq]=${trainer_id}`,
+              { headers: getDirectusHeaders(config), method: 'GET' }
+            );
+            const existingTrainingData = await existingTrainingResponse.json();
+
+            if (existingTrainingData.data && existingTrainingData.data.length > 0) {
+              results.alreadyRegistered.push({
+                email: trimmedEmail,
+                message: 'User is already registered in the system'
+              });;
+              continue;
+            }
+
+            // Create training history record
+            const trainingHistoryResponse = await fetch(
+              `${config.public.directusUrl}/items/training_history`,
+              {
+                method: 'POST',
+                headers: { ...getDirectusHeaders(config), 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  user_id: existingUser.id,
+                  trainer_id,
+                  trainer_name,
+                  training_date,
+                  training_location,
+                  training_field_chemistry,
+                  training_r_card,
+                  training_habitat,
+                  training_biological,
+                  status: 'published',
+                  verified: true,
+                  notes: `Training session on ${training_date} at ${training_location}`
+                })
               }
+            );
 
-              // CREATE EQUIPMENT HISTORY if any equipment was issued
-              const hasEquipment = equip_ph || equip_do || equip_cond || equip_thermo || 
-                                  equip_waste || equip_pan || equip_flip || equip_incubator;
-              
-              if (hasEquipment) {
+            if (!trainingHistoryResponse.ok) {
+              const errorBody = await trainingHistoryResponse.text();
+              console.error('Directus training history error:', trainingHistoryResponse.status, errorBody);
+              throw new Error(`Failed to create training history: ${trainingHistoryResponse.status} - ${errorBody}`);
+            }
+            // Issue #3 (equipment dedup): Check if equipment record already exists for this user
+            const hasEquipment = equip_ph || equip_do || equip_cond || equip_thermo ||
+                                equip_waste || equip_pan || equip_flip || equip_incubator;
+
+            if (hasEquipment) {
+              const existingEquipResponse = await fetch(
+                `${config.public.directusUrl}/items/equipment_history` +
+                `?filter[user_id][_eq]=${existingUser.id}`,
+                { headers: getDirectusHeaders(config), method: 'GET' }
+              );
+              const existingEquipData = await existingEquipResponse.json();
+              const equipAlreadyExists = existingEquipData.data && existingEquipData.data.length > 0;
+
+              if (!equipAlreadyExists) {
                 const equipmentHistoryResponse = await fetch(
                   `${config.public.directusUrl}/items/equipment_history`,
                   {
                     method: 'POST',
-                    headers: {
-                      ...getDirectusHeaders(config),
-                      'Content-Type': 'application/json'
-                    },
+                    headers: { ...getDirectusHeaders(config), 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                       user_id: existingUser.id,
                       equip_ph,
@@ -271,8 +301,8 @@ export default eventHandler(async (event) => {
                       equip_pan,
                       equip_flip,
                       equip_incubator,
-                      ph_expire: null, // Set if you have this data
-                      do_expire: null, // Set if you have this data
+                      ph_expire: null,
+                      do_expire: null,
                       kit_option: kitOption,
                       status: 'published',
                     })
@@ -281,29 +311,32 @@ export default eventHandler(async (event) => {
 
                 if (!equipmentHistoryResponse.ok) {
                   console.error('Failed to create equipment history');
-                  // Don't throw - training record was created successfully
+                  // Don't throw - training record was already created successfully
                 }
+              } else {
+                console.log(`Equipment record already exists for ${trimmedEmail}, skipping`);
               }
-
-              results.alreadyRegistered.push({
-                email: trimmedEmail,
-                message: 'User already registered - training and equipment records added'
-              });
-            } catch (trainingError) {
-              console.error('Error creating training/equipment history:', trainingError);
-              results.failed.push({
-                email: trimmedEmail,
-                reason: 'Failed to add training/equipment record'
-              });
             }
+
+            results.alreadyRegistered.push({
+              email: trimmedEmail,
+              message: 'User is already registered — training record added'
+            });
+
+          } catch (trainingError) {
+            console.error('Error creating training/equipment history:', trainingError);
+            results.failed.push({
+              email: trimmedEmail,
+              reason: 'Failed to add training/equipment record'
+            });
           }
-          
+
           continue;
         }
 
         // Check for existing invitation
         const existingInviteResponse = await fetch(
-          `${config.public.directusUrl}/items/user_invites?filter[email][_eq]=${encodeURIComponent(trimmedEmail)}&filter[used][_eq]=false`,
+          `${config.public.directusUrl}/items/user_invites?filter[email][_icontains]=${encodeURIComponent(trimmedEmail)}`,
           {
             headers: getDirectusHeaders(config),
             method: 'GET'
@@ -311,11 +344,11 @@ export default eventHandler(async (event) => {
         );
 
         const existingInviteData = await existingInviteResponse.json();
-        
+
         if (existingInviteData.data && existingInviteData.data.length > 0) {
           results.failed.push({
             email: trimmedEmail,
-            reason: 'Pending invitation already exists'
+            reason: 'A pending invitation already exists for this email'
           });
           continue;
         }
@@ -423,17 +456,22 @@ export default eventHandler(async (event) => {
         'ALL_INVITES_SENT',
         results
       ), 200);
-    } else if (results.successful.length > 0) {
+    } else if (results.successful.length > 0 || results.alreadyRegistered.length > 0) {
+      const parts = [];
+      if (results.successful.length > 0) parts.push(`${results.successful.length} invitation(s) sent`);
+      if (results.alreadyRegistered.length > 0) parts.push(`${results.alreadyRegistered.length} already registered`);
+      if (results.failed.length > 0) parts.push(`${results.failed.length} failed`);
       return respondWithStatus(event, createApiResponse(
-        'partial',
-        `Sent ${results.successful.length} invitation(s), ${results.failed.length} failed, ${results.alreadyRegistered.length} already registered`,
+        results.failed.length > 0 ? 'partial' : 'success',
+        parts.join(', '),
         'PARTIAL_SUCCESS',
         results
-      ), 207);
+      ), results.failed.length > 0 ? 207 : 200);
     } else {
+      const failReasons = results.failed.map(f => `${f.email}: ${f.reason}`).join('; ');
       return respondWithStatus(event, createApiResponse(
         'error',
-        'All invitations failed',
+        `All invitations failed — ${failReasons}`,
         'ALL_FAILED',
         results
       ), 400);

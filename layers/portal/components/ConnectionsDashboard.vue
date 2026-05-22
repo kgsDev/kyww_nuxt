@@ -146,71 +146,37 @@ const fetchConnections = async () => {
   
   isLoading.value = true;
   error.value = null;
-  connections.value = []; // Clear existing connections
+  connections.value = [];
   
   try {
     const startDate = new Date(props.year, 0, 1);
     const endDate = new Date(props.year, 11, 31, 23, 59, 59);
     
-    // Determine whether to use batching based on number of user IDs
-    const BATCH_SIZE = 20; // Adjust as needed
+    const allConnections = await fetchConnectionsBatch(startDate, endDate);
     
-    // If we have lots of users, use batching
-    if (props.userIds.length > BATCH_SIZE) {
-      // Split userIds into smaller batches
-      const batches = [];
-      for (let i = 0; i < props.userIds.length; i += BATCH_SIZE) {
-        batches.push(props.userIds.slice(i, i + BATCH_SIZE));
-      }
-      
-      console.log(`Processing ${props.userIds.length} users in ${batches.length} batches of max ${BATCH_SIZE}`);
-      
-      // Process each batch sequentially to avoid overwhelming the server
-      for (let i = 0; i < batches.length; i++) {
-        const batchUserIds = batches[i];
-        
-        // Fetch connections for this batch
-        const batchResponse = await fetchConnectionsBatch(batchUserIds, startDate, endDate);
-        
-        // Add to our overall connections array
-        connections.value = [...connections.value, ...batchResponse];
-        
-       // console.log(`Batch ${i+1}/${batches.length} completed, found ${batchResponse.length} connections`);
-      }
-    } else {
-      // For smaller user lists, just use the original approach
-      const response = await fetchConnectionsBatch(props.userIds, startDate, endDate);
-      connections.value = response;
-    }
+    const userIdSet = new Set(props.userIds);
+    connections.value = allConnections.filter(conn => 
+      userIdSet.has(conn.requesting_user_id?.id) || userIdSet.has(conn.samplerid)
+    );
     
-    // Calculate statistics
     calculateStats();
   } catch (err) {
     console.error('Error fetching connections:', err);
-    error.value = 'Failed to load connection data. The request may be too large.';
+    error.value = 'Failed to load connection data.';
   } finally {
     isLoading.value = false;
   }
 };
 
 // Helper function to fetch a batch of connections
-const fetchConnectionsBatch = async (userIdsBatch, startDate, endDate) => {
+const fetchConnectionsBatch = async (startDate, endDate) => {
+  // Fetch all connections for the time window — no user filter in the query
   const response = await useDirectus(
     readItems('sampler_connections', {
       filter: {
-        _and: [
-          {
-            _or: [
-              { requesting_user_id: { _in: userIdsBatch } },
-              { samplerid: { _in: userIdsBatch } }
-            ]
-          },
-          {
-            date_created: {
-              _between: [startDate.toISOString(), endDate.toISOString()]
-            }
-          }
-        ]
+        date_created: {
+          _between: [startDate.toISOString(), endDate.toISOString()]
+        }
       },
       fields: [
         '*', 
@@ -226,7 +192,6 @@ const fetchConnectionsBatch = async (userIdsBatch, startDate, endDate) => {
       sort: ['-date_created']
     })
   );
-  
   return response || [];
 };
 

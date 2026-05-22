@@ -98,8 +98,6 @@ const fetchSamplingData = async () => {
   if (!props.userIds.length) {
     samplingData.value = [];
     loading.value = false;
-    
-    // Emit the count update
     emit('update:count', 0);
     return;
   }
@@ -108,38 +106,21 @@ const fetchSamplingData = async () => {
   error.value = null;
   
   try {
-    // Build a filter for user_id and year
-    const filter = {
-      _and: [
-        { year: { _eq: currentYear.value } }
-      ]
-    };
-    
-    // Add user_id filter only if we have specific userIds
-    if (props.userIds.length > 0) {
-      filter._and.push({
-        user_id: { _in: props.userIds }
-      });
-    }
-    
-    // Get all sampling intent records for the current year and filtered users
+    // Fetch ALL intent records for the year — filter client-side
     const response = await useDirectus(readItems('sampling_intent', {
-      filter,
-      fields: ['*', {
-        user_id: ['id', 'first_name', 'last_name']
-      }],
-      limit: -1 // Fetch all records without limit
+      filter: { year: { _eq: currentYear.value } },
+      fields: ['*', { user_id: ['id', 'first_name', 'last_name'] }],
+      limit: -1
     }));
     
-    samplingData.value = response;
+    // Filter to only the users in our filtered list
+    const userIdSet = new Set(props.userIds);
+    samplingData.value = response.filter(r => userIdSet.has(r.user_id?.id || r.user_id));
     
-    // Emit the count update after data is fetched
     emit('update:count', uniqueUsersWithPlans.value);
   } catch (err) {
     console.error('Error fetching sampling intent data:', err);
     error.value = 'Failed to load sampling data';
-    
-    // Emit zero count on error
     emit('update:count', 0);
   } finally {
     loading.value = false;
