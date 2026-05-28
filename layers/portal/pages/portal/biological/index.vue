@@ -1767,7 +1767,7 @@ watch([isEditMode, sampleId], ([newIsEditMode, newSampleId]) => {
         <Teleport to="body">
           <Transition name="fade">
             <div v-if="isMapOpen" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" @click="handleClickOutside">
-              <div ref="mapModalRef" class="bg-white rounded-lg p-4 w-full max-w-[750px] max-h-[90vh] sm:max-h-[500px] overflow-auto relative">
+              <div ref="mapModalRef" class="bg-white rounded-lg p-2 sm:p-4 max-w-[750px] w-full max-h-[90vh] h-full overflow-auto relative">
                 <button @click="closeMap" class="absolute top-2 right-2 text-gray-500 hover:text-gray-700 z-10">
                   <i class="fas fa-times text-xl"></i>
                 </button>
