@@ -3,6 +3,7 @@ export interface AccessControl {
   roles?: string[]
   policies?: string[]
   exact?: boolean
+  requireTraining?: ('fieldChemistry' | 'habitat' | 'biological' | 'rCard')[]
   requireTrainer?: boolean
   requireBasinLead?: boolean
   requireSampler?: boolean
@@ -18,6 +19,7 @@ export function useRBAC() {
   const userRoleRef = ref(null)
   const loading = ref(false)
   const error = ref(null)
+  const userTrainingRef = ref<Record<string, boolean>>({})
 
   // Roles configuration
   const roles = {
@@ -42,37 +44,46 @@ export function useRBAC() {
       console.warn('User not logged in')
       return
     }
-  
+
     loading.value = true
     error.value = null
-  
+
     try {
       const userData = await $directus.request(readMe({
         fields: ['*', 'role.id', 'role.name', 'policies.*']
       }))
 
-      // Set role of user (one per user)
       if (userData?.role?.id) {
         userRoleRef.value = userData.role.id
       }
-  
-      // Handle policies - clean array of policy IDs
+
       if (userData?.policies && Array.isArray(userData.policies)) {
-        // Convert the proxy to a regular array and extract policy IDs
         const policyArray = Array.from(userData.policies)
         userPoliciesRef.value = policyArray.map(p => p.policy)
       } else {
         userPoliciesRef.value = []
       }
+
+      // ✅ Fetch training status here, inside the async function
+      try {
+        const trainingStatus = await $fetch('/api/my-training-status', {
+          query: { userId: userData.id }
+        })
+        userTrainingRef.value = trainingStatus
+      } catch {
+        userTrainingRef.value = {}
+      }
+
     } catch (err) {
       console.error('Error fetching policies:', err)
       error.value = err
       userPoliciesRef.value = []
       userRoleRef.value = null
+      userTrainingRef.value = {}   // ← also reset training on failure
     } finally {
       loading.value = false
     }
-  }  
+  }
 
   // Access configuration - add new routes here - update the portal.vue for navigation
   const accessConfig: AccessControl[] = [
@@ -113,17 +124,20 @@ export function useRBAC() {
     {
       path: '/portal/sample',
       roles: [roles.devAdmin, roles.wwkyAdmin],
-      policies: [policies.fullAdmin, policies.sampler],
+      policies: [policies.fullAdmin, policies.sampler, policies.trainer, policies.leader],
+      requireTraining: ['fieldChemistry'],
     },
     {
       path: '/portal/biological',
       roles: [roles.devAdmin, roles.wwkyAdmin],
-      policies: [policies.fullAdmin, policies.wwkyAdmin]
+      policies: [policies.fullAdmin, policies.sampler, policies.trainer, policies.leader],
+      requireTraining: ['biological'],
     },
     {
       path: '/portal/habitat',
       roles: [roles.devAdmin, roles.wwkyAdmin],
-      policies: [policies.fullAdmin, policies.wwkyAdmin]
+      policies: [policies.fullAdmin, policies.sampler, policies.trainer, policies.leader],
+      requireTraining: ['habitat'],
     },
     {
       path: '/unauthorized',
@@ -133,40 +147,50 @@ export function useRBAC() {
   ] as const
 
   const hasAccess = async (path: string): Promise<boolean> => {
-    // First ensure policies are loaded if needed
     if (_loggedIn.get() && (!userPoliciesRef.value.length || !userRoleRef.value)) {
       await fetchUserPolicies()
     }
-  
+
     if (!path) return false
-  
-    const config = accessConfig.find(p => 
+
+    const routeConfig = accessConfig.find(p =>
       p.exact ? p.path === path : path.startsWith(p.path)
     )
-    
-    if (!config) return true
-  
-    // Get clean arrays for comparison
-    const currentPolicies = Array.isArray(userPoliciesRef.value) 
-      ? Array.from(userPoliciesRef.value)
-      : []
- 
-    // Check role access
+
+    if (!routeConfig) return true
+
+    const currentPolicies = Array.isArray(userPoliciesRef.value)
+      ? Array.from(userPoliciesRef.value) : []
+
+    const isAdmin = Boolean(
+      userRoleRef.value &&
+      [roles.devAdmin, roles.wwkyAdmin].includes(userRoleRef.value)
+    )
+
+    // Admins bypass all training checks
+    if (isAdmin) return true
+
     const hasRole = Boolean(
-      !config.roles?.length || 
-      (userRoleRef.value && config.roles.includes(userRoleRef.value))
+      !routeConfig.roles?.length ||
+      (userRoleRef.value && routeConfig.roles.includes(userRoleRef.value))
     )
-  
-    // Check policy access
+
     const hasPolicy = Boolean(
-      !config.policies?.length || 
-      currentPolicies.some(userPolicy => 
-        config.policies.includes(userPolicy)
-      )
+      !routeConfig.policies?.length ||
+      currentPolicies.some(p => routeConfig.policies.includes(p))
     )
-  
-    const allowed = (hasRole || hasPolicy)
-    return allowed
+
+    if (!hasRole && !hasPolicy) return false
+
+    // Training check — only if the route requires it
+    if (routeConfig.requireTraining?.length) {
+      const hasRequiredTraining = routeConfig.requireTraining.every(
+        type => userTrainingRef.value[type] === true
+      )
+      if (!hasRequiredTraining) return false
+    }
+
+    return true
   }
   
   const getAccessibleRoutes = computed(async () => {
@@ -220,6 +244,7 @@ export function useRBAC() {
   
   return {
     userPolicies: computed(() => userPoliciesRef.value),
+    userTraining: computed(() => userTrainingRef.value),
     userRole: computed(() => userRoleRef.value),
     loading: computed(() => loading.value),
     error: computed(() => error.value),
