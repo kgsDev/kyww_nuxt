@@ -82,6 +82,11 @@ export function usePublicKYWWMap() {
   const sampledSitesVisible = ref(true);
   const countiesVisible = ref(true);
 
+  const biologicalSites = ref<any[]>([]);
+  const habitatSites = ref<any[]>([]);
+  const biologicalVisible = ref(true);
+  const habitatVisible = ref(true);
+
   // Search state
   const siteSearchQuery = ref('');
   const searchResults = ref<Site[]>([]);
@@ -91,6 +96,8 @@ export function usePublicKYWWMap() {
   let view: any = null;
   let hubsLayer: any = null;
   let sampledSitesLayer: any = null;
+  let biologicalLayer: any = null;
+  let habitatLayer: any = null;
   let countiesLayer: any = null;
 
   // Load ArcGIS modules
@@ -128,17 +135,32 @@ export function usePublicKYWWMap() {
   async function fetchData() {
     try {
       loading.value = true;
-      
-      // Fetch sampled sites and hubs
-      const [sampledSitesResponse, hubsData] = await Promise.all([
+
+      const [sampledSitesResponse, hubsData, biologicalData, habitatData] = await Promise.all([
         fetch(API_SAMPLED_SITES).then(res => res.json()),
         useDirectus(readItems('wwky_hubs', {
           sort: ['Description'],
           fields: ['*'],
           limit: -1
+        })),
+        useDirectus(readItems('biological_samples', {
+          fields: [
+            'id', 'wwky_id', 'date', 'biological_water_quality_score',
+            'volunteer_id.first_name', 'volunteer_id.last_name'
+          ],
+          sort: ['-date'],
+          limit: -1
+        })),
+        useDirectus(readItems('habitat_samples', {
+          fields: [
+            'id', 'wwky_id', 'date', 'physical_assessment_score',
+            'volunteer_id.first_name', 'volunteer_id.last_name'
+          ],
+          sort: ['-date'],
+          limit: -1
         }))
       ]);
-         
+      
       // Process sampled sites directly
       const processedSampledSites: Site[] = [];
       const siteMap = new Map<number, Site>();
@@ -195,6 +217,54 @@ export function usePublicKYWWMap() {
       // Store processed data
       sampledSites.value = processedSampledSites;
       
+      // Group biological samples by site
+      const biologicalSiteMap = new Map();
+      biologicalData.forEach(sample => {
+        if (!biologicalSiteMap.has(sample.wwky_id)) {
+          biologicalSiteMap.set(sample.wwky_id, { wwky_id: sample.wwky_id, samples: [] });
+        }
+        biologicalSiteMap.get(sample.wwky_id).samples.push(sample);
+      });
+
+      // Group habitat samples by site
+      const habitatSiteMap = new Map();
+      habitatData.forEach(sample => {
+        if (!habitatSiteMap.has(sample.wwky_id)) {
+          habitatSiteMap.set(sample.wwky_id, { wwky_id: sample.wwky_id, samples: [] });
+        }
+        habitatSiteMap.get(sample.wwky_id).samples.push(sample);
+      });
+
+      // Resolve site details (lat/lng/name) for anything with a bio or habitat sample
+      const allAssessmentSiteIds = new Set([
+        ...Array.from(biologicalSiteMap.keys()),
+        ...Array.from(habitatSiteMap.keys())
+      ]);
+
+      if (allAssessmentSiteIds.size > 0) {
+        const siteDetails = await useDirectus(readItems('wwky_sites', {
+          filter: { wwkyid_pk: { _in: Array.from(allAssessmentSiteIds) } },
+          fields: ['wwkyid_pk', 'stream_name', 'wwkybasin', 'description', 'latitude', 'longitude'],
+          limit: -1
+        }));
+
+        biologicalSites.value = siteDetails.filter(site => biologicalSiteMap.has(site.wwkyid_pk))
+          .map(site => ({
+            ...site,
+            samples: biologicalSiteMap.get(site.wwkyid_pk).samples,
+            latitude: parseFloat(site.latitude),
+            longitude: parseFloat(site.longitude)
+          }));
+
+        habitatSites.value = siteDetails.filter(site => habitatSiteMap.has(site.wwkyid_pk))
+          .map(site => ({
+            ...site,
+            samples: habitatSiteMap.get(site.wwkyid_pk).samples,
+            latitude: parseFloat(site.latitude),
+            longitude: parseFloat(site.longitude)
+          }));
+      }
+
       // Store hub data
       hubs.value = hubsData;
       
@@ -207,7 +277,7 @@ export function usePublicKYWWMap() {
   }
   
   // Toggle layer visibility
-  function toggleLayerVisibility(layerType: 'hubs' | 'sampledSites' | 'counties') {
+  function toggleLayerVisibility(layerType: 'hubs' | 'sampledSites' | 'counties' | 'biological' | 'habitat') {
     switch (layerType) {
       case 'hubs':
         hubsVisible.value = !hubsVisible.value;
@@ -215,15 +285,19 @@ export function usePublicKYWWMap() {
         break;
       case 'sampledSites':
         sampledSitesVisible.value = !sampledSitesVisible.value;
-        if (sampledSitesLayer) {
-          sampledSitesLayer.visible = sampledSitesVisible.value;
-        } else {
-          console.warn('Sampled sites layer is null when trying to toggle visibility');
-        }
+        if (sampledSitesLayer) sampledSitesLayer.visible = sampledSitesVisible.value;
         break;
       case 'counties':
         countiesVisible.value = !countiesVisible.value;
         if (countiesLayer) countiesLayer.visible = countiesVisible.value;
+        break;
+      case 'biological':
+        biologicalVisible.value = !biologicalVisible.value;
+        if (biologicalLayer) biologicalLayer.visible = biologicalVisible.value;
+        break;
+      case 'habitat':
+        habitatVisible.value = !habitatVisible.value;
+        if (habitatLayer) habitatLayer.visible = habitatVisible.value;
         break;
     }
   }
@@ -313,14 +387,9 @@ export function usePublicKYWWMap() {
         type: "simple",
         symbol: {
           type: "simple-marker",
-          //color: [30, 144, 255, 0.8], // Dodger Blue for sampled sites
-          color: [255, 165, 0, 0.7], // Orange for sampled sites
-          size: 14, 
-          outline: {
-            //color: [255, 255, 255], //white outline
-            color: [50, 50, 50], // Black outline
-            width: 1.5
-          }
+          color: [249, 115, 22, 0.7], // Orange - matches portal chemistry color now
+          size: 10,
+          outline: { color: [50, 50, 50], width: 1.5 }
         }
       };
   
@@ -402,6 +471,76 @@ export function usePublicKYWWMap() {
       sampledSitesLayer.visible = true;
       sampledSitesVisible.value = true;
       
+      biologicalLayer = new GraphicsLayer({
+        id: 'biological',
+        title: "Biological Assessments",
+        visible: biologicalVisible.value,
+        listMode: "hide"
+      });
+
+      habitatLayer = new GraphicsLayer({
+        id: 'habitat',
+        title: "Habitat Assessments",
+        visible: habitatVisible.value,
+        listMode: "hide"
+      });
+
+      // Populate biological sites
+      if (options.showBiological !== false) {
+        biologicalSites.value.forEach(site => {
+          if (site.longitude && site.latitude) {
+            const point = new Point({ longitude: site.longitude, latitude: site.latitude });
+            const markerSymbol = {
+              type: "simple-marker",
+              color: [139, 92, 246, 0.7], // Purple
+              size: 10,
+              outline: { color: [0, 0, 0], width: 1 }
+            };
+            const popupTemplate = new PopupTemplate({
+              title: `Biological Assessments - Site: ${site.wwkyid_pk}`,
+              content: `
+                <div class="bg-gray-50 p-4 rounded">
+                  <dl class="space-y-2">
+                    <div><dt class="font-medium">Stream Name:</dt><dd>${site.stream_name || 'Unnamed'}</dd></div>
+                    <div><dt class="font-medium">Basin:</dt><dd>${site.wwkybasin || 'N/A'}</dd></div>
+                    <div><dt class="font-medium">Assessments:</dt><dd>${site.samples?.length || 0}</dd></div>
+                  </dl>
+                </div>
+              `
+            });
+            biologicalLayer.add(new Graphic({ geometry: point, symbol: markerSymbol, popupTemplate, attributes: site }));
+          }
+        });
+      }
+
+      // Populate habitat sites
+      if (options.showHabitat !== false) {
+        habitatSites.value.forEach(site => {
+          if (site.longitude && site.latitude) {
+            const point = new Point({ longitude: site.longitude, latitude: site.latitude });
+            const markerSymbol = {
+              type: "simple-marker",
+              color: [219, 39, 119], // Brown/amber - habitat
+              size: 10,
+              outline: { color: [0, 0, 0], width: 1 }
+            };
+            const popupTemplate = new PopupTemplate({
+              title: `Habitat Assessments - Site: ${site.wwkyid_pk}`,
+              content: `
+                <div class="bg-gray-50 p-4 rounded">
+                  <dl class="space-y-2">
+                    <div><dt class="font-medium">Stream Name:</dt><dd>${site.stream_name || 'Unnamed'}</dd></div>
+                    <div><dt class="font-medium">Basin:</dt><dd>${site.wwkybasin || 'N/A'}</dd></div>
+                    <div><dt class="font-medium">Assessments:</dt><dd>${site.samples?.length || 0}</dd></div>
+                  </dl>
+                </div>
+              `
+            });
+            habitatLayer.add(new Graphic({ geometry: point, symbol: markerSymbol, popupTemplate, attributes: site }));
+          }
+        });
+      }
+
       // Create graphics layer for hubs
       hubsLayer = new GraphicsLayer({ 
         id: 'hubsLayer',
@@ -421,7 +560,7 @@ export function usePublicKYWWMap() {
   
             const markerSymbol = {
               type: "simple-marker",
-              size: 12,
+              size: 14,
               color: [46, 204, 113, 0.7], // Green for hubs
               outline: {
                 color: [0, 0, 0],
@@ -498,13 +637,9 @@ export function usePublicKYWWMap() {
       const layersToAdd = [];
       layersToAdd.push(countiesLayer);
       if (hubsLayer) layersToAdd.push(hubsLayer);
-      
-      // Add sampled sites layer last so it appears on top
-      if (sampledSitesLayer) {
-        layersToAdd.push(sampledSitesLayer);
-      } else {
-        console.warn('Sampled sites layer not created');
-      }
+      if (habitatLayer) layersToAdd.push(habitatLayer);
+      if (biologicalLayer) layersToAdd.push(biologicalLayer);
+      if (sampledSitesLayer) layersToAdd.push(sampledSitesLayer);
       
       mapInstance.addMany(layersToAdd);
       
@@ -706,12 +841,16 @@ export function usePublicKYWWMap() {
   return {
     hubs,
     sampledSites,
+    biologicalSites,
+    habitatSites,
     loading,
     error,
     mapView,
     hubsVisible,
     sampledSitesVisible,
     countiesVisible,
+    biologicalVisible,
+    habitatVisible,
     siteSearchQuery,
     searchResults,
     isSearching,

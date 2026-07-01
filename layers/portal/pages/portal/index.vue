@@ -56,10 +56,15 @@ const {
   error,
   userSites,
   sites,
+  biologicalSites: biological,
+  habitatSites: habitat,
   hubs,
   userSitesVisible,
   sitesVisible,
   hubsVisible,
+  biologicalVisible,
+  habitatVisible,
+  countiesVisible,
   fetchData,
   initializeMap,
   highlightUserSites,
@@ -411,7 +416,7 @@ onMounted(async () => {
                   @change="toggleLayerVisibility('userSites')"
                   class="mr-2 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                 />
-                <div class="w-4 h-4 rounded-full bg-blue-500 opacity-70 mr-2"></div>
+                <div class="w-[12px] h-[12px] rounded-full bg-[#2563EB] opacity-70 mr-2"></div> <!-- Your sites -->
                 <span>Your Sampling Sites ({{ samplingStats.uniqueSites.length || 0 }})</span>
               </div>
               <div class="flex items-center">
@@ -421,8 +426,28 @@ onMounted(async () => {
                   @change="toggleLayerVisibility('sites')"
                   class="mr-2 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                 />
-                <div class="w-4 h-4 rounded-full bg-[#a83271] opacity-70 mr-2"></div>
-                <span>All Sampled Sites ({{ sites.length || 0 }})</span>
+                <div class="w-[12px] h-[12px] rounded-full bg-[#F97316] opacity-70 mr-2"></div> <!-- Chemistry -->
+                <span>All Chemistry Sampled Sites ({{ sites.length || 0 }})</span>
+              </div>
+              <div class="flex items-center">
+                <input 
+                  type="checkbox" 
+                  :checked="biologicalVisible" 
+                  @change="toggleLayerVisibility('biological')"
+                  class="mr-2 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                <div class="w-[12px] h-[12px] rounded-full bg-[#8B5CF6] opacity-70 mr-2"></div> <!-- Biological -->
+                <span>All Biological Sampled Sites ({{ biological.length || 0 }})</span>
+              </div>
+              <div class="flex items-center">
+                <input 
+                  type="checkbox" 
+                  :checked="habitatVisible" 
+                  @change="toggleLayerVisibility('habitat')"
+                  class="mr-2 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                <div class="w-[12px] h-[12px] rounded-full bg-[#DB2777] opacity-70 mr-2"></div> <!-- Habitat -->
+                <span>All Habitat Sampled Sites ({{ habitat.length || 0 }})</span>
               </div>
               <div class="flex items-center">
                 <input 
@@ -431,9 +456,17 @@ onMounted(async () => {
                   @change="toggleLayerVisibility('hubs')"
                   class="mr-2 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                 />
-                <div class="w-3 h-3 rounded-full bg-[#2ECC71] opacity-70 mr-2"></div>
+                <div class="w-[16px] h-[16px] rounded-full bg-[#2ECC71] opacity-70 mr-2"></div> <!-- Hubs (portal size) -->
                 <span>Support Hubs ({{ hubs?.length || 0 }})</span>
               </div>
+
+              <div class="flex items-center">
+                <input type="checkbox" :checked="countiesVisible" @change="toggleLayerVisibility('counties')"
+                  class="mr-2 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                <div class="w-4 h-4 border border-gray-400 mr-2"></div>
+                <span>County Boundaries</span>
+              </div>
+
               <div class="mt-4 text-xs text-gray-500">
                 Total Sites: {{ sites?.length || 0 }}
               </div>

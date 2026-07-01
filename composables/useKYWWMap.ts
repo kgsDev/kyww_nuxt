@@ -59,6 +59,7 @@ interface MapOptions {
   showHubs?: boolean;
   showBiological?: boolean;
   showHabitat?: boolean;
+  showCounties?: boolean;
   singleSite?: SingleSiteConfig;
 }
 
@@ -85,7 +86,8 @@ export function useKYWWMap() {
   const biologicalVisible = ref(true);
   const habitatVisible = ref(true);
   const userSitesVisible = ref(false);
-  
+  const countiesVisible = ref(true);
+
   // Search state
   const siteSearchQuery = ref('');
   const searchResults = ref<Site[]>([]);
@@ -99,19 +101,21 @@ export function useKYWWMap() {
   let habitatLayer: any = null;
   let userSitesLayer: any = null;
   let graphicsLayer: any = null;
+  let countiesLayer: any = null;
 
   // Load ArcGIS modules
   async function loadArcGISModules() {
-    const [Map, MapView, GraphicsLayer, Graphic, Point, PopupTemplate] = await Promise.all([
+    const [Map, MapView, GraphicsLayer, GeoJSONLayer, Graphic, Point, PopupTemplate] = await Promise.all([
       import('@arcgis/core/Map').then(m => m.default),
       import('@arcgis/core/views/MapView').then(m => m.default),
       import('@arcgis/core/layers/GraphicsLayer').then(m => m.default),
+      import('@arcgis/core/layers/GeoJSONLayer').then(m => m.default),
       import('@arcgis/core/Graphic').then(m => m.default),
       import('@arcgis/core/geometry/Point').then(m => m.default),
       import('@arcgis/core/PopupTemplate').then(m => m.default),
     ]);
 
-    return { Map, MapView, GraphicsLayer, Graphic, Point, PopupTemplate };
+    return { Map, MapView, GraphicsLayer, GeoJSONLayer, Graphic, Point, PopupTemplate };
   }
   
   // Fetch data
@@ -266,7 +270,7 @@ export function useKYWWMap() {
   }
   
   // Toggle layer visibility
-  function toggleLayerVisibility(layerType: 'hubs' | 'sites' | 'biological' | 'habitat' | 'userSites') {
+  function toggleLayerVisibility(layerType: 'hubs' | 'sites' | 'biological' | 'habitat' | 'userSites' | 'counties') {
     switch (layerType) {
       case 'hubs':
         hubsVisible.value = !hubsVisible.value;
@@ -288,6 +292,10 @@ export function useKYWWMap() {
         userSitesVisible.value = !userSitesVisible.value;
         if (userSitesLayer) userSitesLayer.visible = userSitesVisible.value;
         break;
+      case 'counties':
+        countiesVisible.value = !countiesVisible.value;
+        if (countiesLayer) countiesLayer.visible = countiesVisible.value;
+      break;
     }
   }
 
@@ -328,6 +336,7 @@ export function useKYWWMap() {
         Map,
         MapView,
         GraphicsLayer,
+        GeoJSONLayer,
         Graphic,
         Point,
         PopupTemplate,
@@ -392,6 +401,45 @@ export function useKYWWMap() {
         visible: userSitesVisible.value 
       });
       
+      // Counties layer
+      if (options.showCounties !== false) {
+        const countiesRenderer = {
+          type: "simple",
+          symbol: {
+            type: "simple-fill",
+            color: [0, 0, 0, 0], // Transparent fill
+            outline: {
+              color: [128, 128, 128, 0.5], // Light gray, semi-transparent
+              width: 1
+            }
+          }
+        };
+
+        const countiesLabelClass = {
+          labelExpressionInfo: { expression: "$feature.Name" },
+          symbol: {
+            type: "text",
+            color: [100, 100, 100, 0.8],
+            haloColor: [255, 255, 255, 0.7],
+            haloSize: 1,
+            font: { size: 9, family: "sans-serif", weight: "normal", style: "italic" }
+          },
+          labelPlacement: "always-horizontal",
+          minScale: 2000000,
+          maxScale: 0
+        };
+
+        countiesLayer = new GeoJSONLayer({
+          url: "/data/ky_counties.geojson",
+          renderer: countiesRenderer as any,
+          opacity: 0.8,
+          title: "Kentucky Counties",
+          labelingInfo: [countiesLabelClass] as any,
+          legendEnabled: false,
+          visible: countiesVisible.value
+        });
+      }
+
       // Add stream sample sites
       if (options.showSites !== false) {
         sites.value.forEach(site => {
@@ -403,12 +451,9 @@ export function useKYWWMap() {
 
             const markerSymbol = {
               type: "simple-marker",
-              color: [168,50,113, 0.7], // Purple - stream samples
+              color: [249, 115, 22, 0.7], // Orange - stream/chemistry samples
               size: 10,
-              outline: {
-                color: [0, 0, 0],
-                width: 1
-              }
+              outline: { color: [0, 0, 0], width: 1 }
             };
             
             const popupTemplate = new PopupTemplate({
@@ -478,12 +523,9 @@ export function useKYWWMap() {
 
             const markerSymbol = {
               type: "simple-marker",
-              color: [34, 139, 34, 0.7], // Forest green - biological
-              size: 8,
-              outline: {
-                color: [0, 0, 0],
-                width: 1
-              }
+              color: [139, 92, 246, 0.7], // Purple - biological
+              size: 10,
+              outline: { color: [0, 0, 0], width: 1 }
             };
 
             const popupTemplate = new PopupTemplate({
@@ -560,12 +602,9 @@ export function useKYWWMap() {
 
             const markerSymbol = {
               type: "simple-marker",
-              color: [255, 140, 0, 0.7], // Dark orange - habitat
-              size: 8,
-              outline: {
-                color: [0, 0, 0],
-                width: 1
-              }
+              color: [219, 39, 119], // Brown/amber - habitat
+              size: 10,
+              outline: { color: [0, 0, 0], width: 1 }
             };
 
             const popupTemplate = new PopupTemplate({
@@ -642,12 +681,9 @@ export function useKYWWMap() {
 
             const markerSymbol = {
               type: "simple-marker",
-              size: 16,
-              color: [46, 204, 113, 0.7],
-              outline: {
-                color: [0, 0, 0],
-                width: 1
-              }
+              color: [46,204,113, 0.7], // Green - hubs
+              size: 14,
+              outline: { color: [0, 0, 0], width: 1 }
             };
 
             const popupTemplate = new PopupTemplate({
@@ -737,7 +773,7 @@ export function useKYWWMap() {
         });
   
         graphicsLayer.add(sitegraphic);
-  
+
         await viewInstance.goTo({
           target: point,
           zoom: options.zoom || 14
@@ -750,7 +786,10 @@ export function useKYWWMap() {
       }
       
       // Add layers to the map in proper order
-      mapInstance.addMany([graphicsLayer, hubsLayer, sitesLayer, biologicalLayer, habitatLayer, userSitesLayer]);
+      mapInstance.addMany(
+        [countiesLayer, graphicsLayer, hubsLayer, habitatLayer, biologicalLayer, sitesLayer, userSitesLayer]
+          .filter(Boolean)
+      );
 
       return viewInstance;
     } catch (err) {
@@ -976,6 +1015,7 @@ export function useKYWWMap() {
     sitesVisible,
     biologicalVisible,
     habitatVisible,
+    countiesVisible,
     fetchData,
     initializeMap,
     highlightUserSites,

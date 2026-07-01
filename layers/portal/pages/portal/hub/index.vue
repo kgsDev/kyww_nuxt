@@ -11,12 +11,17 @@ const {
   error,
   hubs,
   sites,
+  biologicalSites,
+  habitatSites,
   sitesVisible,
   hubsVisible,
+  biologicalVisible,
+  habitatVisible,
+  countiesVisible,
   fetchData,
   initializeMap,
   zoomTo,
-  toggleLayerVisibility, // Function to toggle layer visibility
+  toggleLayerVisibility,
 } = useKYWWMap();
 
 // Handle zooming to hub
@@ -31,7 +36,9 @@ watch(mapContainer, async (newValue) => {
     containerReady.value = true;
     await initializeMap(newValue, {
       showSites: true,
-      showHubs: true
+      showHubs: true,
+      showBiological: true,
+      showHabitat: true
     });
   }
 });
@@ -123,8 +130,28 @@ onMounted(async () => {
                     @change="toggleLayerVisibility('sites')"
                     class="mr-2 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                   />
-                  <div class="w-4 h-4 rounded-full bg-[#a83271] opacity-70 mr-2"></div>
-                  <span>All Sampled Sites ({{ sites.length || 0 }})</span>
+                  <div class="w-[12px] h-[12px] rounded-full bg-[#F97316] opacity-70 mr-2"></div> <!-- Chemistry -->
+                  <span>Chemistry Sampled Sites ({{ sites.length || 0 }})</span>
+                </div>
+                <div class="flex items-center">
+                  <input 
+                    type="checkbox" 
+                    :checked="biologicalVisible" 
+                    @change="toggleLayerVisibility('biological')"
+                    class="mr-2 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <div class="w-[12px] h-[12px] rounded-full bg-[#8B5CF6] opacity-70 mr-2"></div> <!-- Biological -->
+                  <span>Biological Sampled Sites ({{ biologicalSites?.length || 0 }})</span>
+                </div>
+                <div class="flex items-center">
+                  <input 
+                    type="checkbox" 
+                    :checked="habitatVisible" 
+                    @change="toggleLayerVisibility('habitat')"
+                    class="mr-2 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <div class="w-[12px] h-[12px] rounded-full bg-[#DB2777] opacity-70 mr-2"></div> <!-- Habitat -->
+                  <span>Habitat Sampled Sites ({{ habitatSites?.length || 0 }})</span>
                 </div>
                 <div class="flex items-center">
                   <input 
@@ -133,8 +160,14 @@ onMounted(async () => {
                     @change="toggleLayerVisibility('hubs')"
                     class="mr-2 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                   />
-                  <div class="w-3 h-3 rounded-full bg-[#2ECC71] opacity-70 mr-2"></div>
+                  <div class="w-[16px] h-[16px] rounded-full bg-[#2ECC71] opacity-70 mr-2"></div> <!-- Hubs (portal size) -->
                   <span>Support Hubs ({{ hubs?.length || 0 }})</span>
+                </div>
+                <div class="flex items-center">
+                  <input type="checkbox" :checked="countiesVisible" @change="toggleLayerVisibility('counties')"
+                    class="mr-2 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                  <div class="w-4 h-4 border border-gray-400 mr-2"></div>
+                  <span>County Boundaries</span>
                 </div>
               </div>
             </div>

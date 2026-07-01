@@ -204,7 +204,7 @@ export default eventHandler(async (event) => {
         // Check if user already exists
         const existingUserResponse = await fetch(
           // AFTER
-          `${config.public.directusUrl}/users?filter[email][_icontains]=${encodeURIComponent(trimmedEmail)}`,
+          `${config.public.directusUrl}/users?filter[email][_eq]=${encodeURIComponent(trimmedEmail)}`,
           {
             headers: getDirectusHeaders(config),
             method: 'GET'

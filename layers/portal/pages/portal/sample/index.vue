@@ -1160,14 +1160,21 @@ const submitData = async () => {
     isSubmitted.value = true;
 		
   } catch (error) {
-    console.error('Error during submission:', error);
-    errorMessage.value = `An error occurred: ${error.message}. `;
-    
-    if (createdSampleId) {
-      errorMessage.value += 'Rolling back changes...';
-      await rollbackChanges(createdSampleId);
-    }
-    showErrorModal();
+	console.error('Submission error full detail:', error);
+	const statusMatch = error?.message?.match(/(\d{3})/);
+	const statusCode = statusMatch ? parseInt(statusMatch[1]) : null;
+	
+	if (statusCode === 403) {
+		errorMessage.value = 'Permission denied. Your session may have expired — please refresh the page and try again (or log out and try to log back in). If this continues, contact support.';
+	} else {
+		errorMessage.value = 'There was an error - Please try to submit again.';
+	}
+	
+	if (createdSampleId) {
+		errorMessage.value += ' Rolling back changes...';
+		await rollbackChanges(createdSampleId);
+	}
+	showErrorModal();
   } finally {
     isSubmitting.value = false;
   }

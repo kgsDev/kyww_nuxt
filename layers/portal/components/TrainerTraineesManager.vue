@@ -22,7 +22,8 @@ const savingTraining = ref(false);
 // Collapsible section states
 const sectionsExpanded = ref({
   myTrainees: true,
-  otherTrainees: false
+  otherTrainees: false,
+  untrainedSamplers: false 
 });
 
 // Inject parent's refresh function and filters
@@ -148,6 +149,11 @@ const filteredOtherTrainees = computed(() => {
            matchesTrainingType(trainee) &&
            matchesGlobalSearch(trainee);
   });
+});
+
+const filteredUntrainedSamplers = computed(() => {
+  if (!isAdmin.value) return [];
+  return untrainedSamplers.value.filter(s => matchesGlobalSearch(s));
 });
 
 // Fetch all trainers for the dropdown
@@ -304,6 +310,49 @@ const fetchOtherTrainees = async () => {
   }
 };
 
+const untrainedSamplers = ref([]);
+
+const fetchUntrainedSamplers = async () => {
+  if (!isAdmin.value) return;
+  
+  try {
+    // Get all user IDs that have at least one training record
+    const trainingRecords = await useDirectus(readItems('training_history', {
+      fields: ['user_id'],
+      limit: -1
+    }));
+    
+    const trainedUserIds = new Set(
+      trainingRecords
+        .map(r => r.user_id?.id ?? r.user_id)
+        .filter(Boolean)
+    );
+    
+    // Get all users with Sampler policy
+    const response = await $fetch('/api/samplers', {
+      query: { samplerId: user.value.id }
+    });
+    
+    // Filter to only those with no training history
+    untrainedSamplers.value = response
+      .filter(s => !trainedUserIds.has(s.id))
+      .map(s => ({
+        ...s,
+        trainingCount: 0,
+        latestTraining: null,
+        trainingHistory: [],
+        current_certifications: {
+          field_chemistry: false,
+          r_card: false,
+          habitat: false,
+          biological: false
+        }
+      }));
+  } catch (err) {
+    console.error('Error fetching untrained samplers:', err);
+  }
+};
+
 const formatName = (user) => {
   if (!user) return 'Unknown User';
   return `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Unnamed User';
@@ -455,6 +504,10 @@ const startEditingTraining = (training) => {
 };
 
 const confirmSaveNew = () => {
+  // Enforce: R-Card requires Field Chemistry
+  if (trainingForm.value.training_r_card && !trainingForm.value.training_field_chemistry) {
+    trainingForm.value.training_field_chemistry = true;
+  }
   // Validation before showing confirmation
   if (!trainingForm.value.training_date) {
     toast.add({
@@ -502,6 +555,10 @@ const confirmSaveNew = () => {
 };
 
 const confirmSaveEdit = () => {
+  // Enforce: R-Card requires Field Chemistry
+  if (trainingForm.value.training_r_card && !trainingForm.value.training_field_chemistry) {
+    trainingForm.value.training_field_chemistry = true;
+  }
   // Validation before showing confirmation
   if (!trainingForm.value.training_date) {
     toast.add({
@@ -567,6 +624,11 @@ const cancelEditingTraining = () => {
 };
 
 const saveTraining = async () => {
+  // Enforce: R-Card requires Field Chemistry
+  if (trainingForm.value.training_r_card && !trainingForm.value.training_field_chemistry) {
+    trainingForm.value.training_field_chemistry = true;
+  }
+
   if (!trainingForm.value.id) {
     toast.add({
       title: 'Error',
@@ -669,6 +731,7 @@ const saveTraining = async () => {
     // Refresh the trainee data
     await fetchMyTrainees();
     await fetchOtherTrainees();
+    await fetchUntrainedSamplers();
     
     // Update the selected user's training history to reflect changes
     if (selectedUser.value) {
@@ -712,6 +775,10 @@ const addNewTraining = () => {
 };
 
 const saveNewTraining = async () => {
+  // Enforce: R-Card requires Field Chemistry
+  if (trainingForm.value.training_r_card && !trainingForm.value.training_field_chemistry) {
+    trainingForm.value.training_field_chemistry = true;
+  }
   if (!selectedUser.value) {
     toast.add({
       title: 'Error',
@@ -876,7 +943,8 @@ const stats = computed(() => ({
   myTotalTrainees: filteredMyTrainees.value.length,
   myActiveSamplers: filteredMyTrainees.value.filter(u => u.status === 'active').length,
   otherTotalTrainees: filteredOtherTrainees.value.length,
-  otherActiveSamplers: filteredOtherTrainees.value.filter(u => u.status === 'active').length
+  otherActiveSamplers: filteredOtherTrainees.value.filter(u => u.status === 'active').length,
+  untrainedCount: filteredUntrainedSamplers.value.length
 }));
 
 // Check if filters are active
@@ -887,11 +955,18 @@ const hasActiveFilters = computed(() => {
          filters.selectedTrainingType.value !== 'all';
 });
 
+watch(() => trainingForm.value.training_field_chemistry, (newVal) => {
+  if (!newVal) {
+    trainingForm.value.training_r_card = false;
+  }
+});
+
 onMounted(async () => {
   loading.value = true;
   await fetchTrainers();
   await fetchMyTrainees();
   await fetchOtherTrainees();
+  await fetchUntrainedSamplers();
   loading.value = false;
 });
 </script>
@@ -923,6 +998,10 @@ onMounted(async () => {
         <div class="bg-orange-50 p-4 rounded-lg">
           <div class="text-2xl font-bold text-orange-600">{{ stats.otherActiveSamplers }}</div>
           <div class="text-sm text-orange-700">Other Active</div>
+        </div>
+        <div v-if="isAdmin" class="bg-red-50 p-4 rounded-lg">
+          <div class="text-2xl font-bold text-red-600">{{ stats.untrainedCount }}</div>
+          <div class="text-sm text-red-700">No Training On Record</div>
         </div>
       </div>
 
@@ -1056,6 +1135,58 @@ onMounted(async () => {
           </div>
         </div>
       </UCard>
+
+      <!-- Untrained Samplers (Admin Only) -->
+      <UCard v-if="isAdmin">
+        <template #header>
+          <button
+            @click="toggleSection('untrainedSamplers')"
+            class="w-full flex justify-between items-center gap-2 text-left hover:bg-gray-50 -m-4 p-4 rounded-t-lg transition-colors"
+          >
+            <div class="flex items-center gap-2">
+              <UIcon
+                :name="sectionsExpanded.untrainedSamplers ? 'i-heroicons-chevron-down' : 'i-heroicons-chevron-right'"
+                class="w-5 h-5 transition-transform"
+              />
+              <h3 class="text-lg font-semibold">No Training On Record</h3>
+              <UBadge color="red" variant="soft">
+                {{ filteredUntrainedSamplers.length }}
+              </UBadge>
+            </div>
+          </button>
+        </template>
+
+        <div v-show="sectionsExpanded.untrainedSamplers">
+          <div v-if="filteredUntrainedSamplers.length === 0" class="text-center py-8 text-gray-500">
+            <UIcon name="i-heroicons-check-circle" class="mx-auto mb-2" size="48" />
+            <p>All samplers have training on record</p>
+          </div>
+
+          <div v-else class="space-y-3">
+            <div
+              v-for="sampler in filteredUntrainedSamplers"
+              :key="sampler.id"
+              class="bg-red-50 p-4 rounded-lg hover:bg-red-100 transition-colors cursor-pointer"
+              @click="viewUserDetails(sampler)"
+            >
+              <div class="flex justify-between items-start">
+                <div class="flex-1">
+                  <h3 class="font-medium text-gray-900">{{ formatName(sampler) }}</h3>
+                  <p class="text-sm text-gray-600">{{ sampler.email }}</p>
+                  <p class="text-sm text-red-600 mt-1">No training records found</p>
+                </div>
+                <UButton
+                  icon="i-heroicons-arrow-right"
+                  size="xs"
+                  color="gray"
+                  variant="ghost"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </UCard>
+
     </template>
 <!-- User Details Modal -->
     <UModal v-model="showDetailsModal" :ui="{ width: 'sm:max-w-4xl' }">
@@ -1196,8 +1327,9 @@ onMounted(async () => {
                         v-model="trainingForm.training_r_card"
                         type="checkbox"
                         class="rounded border-gray-300"
+                        :disabled="!trainingForm.training_field_chemistry"
                       />
-                      <span class="text-sm">R-Card</span>
+                      <span class="text-sm" :class="{ 'text-gray-400': !trainingForm.training_field_chemistry }">R-Card</span>
                     </label>
                     <label class="flex items-center gap-2">
                       <input
