@@ -35,7 +35,8 @@ function useCommandPalette() {
 const allNavigationItems = {
   top: [
     {name: 'Dashboard', href: '/portal', icon: 'material-symbols:home-outline-rounded'},
-    {name: 'View All Users', href: '/portal/users', icon: 'mdi:account-group'}, 
+    {name: 'View All Sites/Samples', href: '/sites', icon: 'material-symbols:public'},
+    {name: 'View All Users', href: '/portal/users', icon: 'mdi:account-group'},
     {name: 'Add New Trainees', href: '/portal/train', icon: 'oui:training'},  
     {name: 'Training Management', href: '/portal/train/report', icon: 'mdi:file-document-outline'},
     {name: 'Add / Edit Hub', href: '/portal/hub/hub-add', icon: 'material-symbols:hub-outline'},

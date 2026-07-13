@@ -5,6 +5,7 @@
 import { useGreetings } from '~/composables/useGreetings';
 import { useKYWWMap } from '~/composables/useKYWWMap';
 import TrainingExpirationAlert from '~/components/TrainingExpirationAlert.vue';
+import DashboardBadges from '~/components/DashboardBadges.vue';
 
 const { loading: messagesLoading, error: messagesError, messages: greetingMessages } = useGreetings();
 
@@ -78,6 +79,11 @@ const {
 onMounted(async () => {
   await fetchData();
 });
+
+function handleZoom({ lng, lat, zoom }: { lng: number; lat: number; zoom: number }) {
+  zoomTo([lng, lat], zoom);
+  mapContainer.value?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
 
 // Watch for container and data
 watch(mapContainer, async (newValue) => {
@@ -291,6 +297,9 @@ onMounted(async () => {
         </div>
       </div>
     </div>
+
+    <DashboardBadges v-if="user?.id" :user-id="user.id" class="my-6" />
+
     <VDivider class="my-8" />
     
     <div class="grid w-full grid-cols-1 gap-6 md:grid-cols-2">
@@ -479,6 +488,8 @@ onMounted(async () => {
           </div>
         </div>
       </UCard>
+
+      <RecognitionBoards context="portal" class="mt-6 col-span-2" @zoom="handleZoom" />
 
       <!-- Site Sampling History - Full Width -->
       <UCard class="col-span-2">

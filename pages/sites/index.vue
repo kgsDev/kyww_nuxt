@@ -325,6 +325,11 @@ watch(mapContainer, async (newValue) => {
   }
 });
 
+function handleZoom({ lng, lat, zoom }: { lng: number; lat: number; zoom: number }) {
+  zoomTo([lng, lat], zoom);
+  mapContainer.value?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
 // Handle pagination
 function goToPage(page) {
   if (page >= 1 && page <= totalPages.value) {
@@ -532,6 +537,8 @@ onMounted(async () => {
         </div>
       </UCard>
 
+      <RecognitionBoards context="public" class="mt-6" @zoom="handleZoom" />
+    
       <!-- Filter Section -->
       <UCard class="w-full mb-8">
         <template #header>
