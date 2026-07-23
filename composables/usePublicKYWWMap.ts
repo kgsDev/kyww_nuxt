@@ -58,6 +58,8 @@ interface MapOptions {
   showSites?: boolean;
   showHubs?: boolean;
   showSampledSitesOnly?: boolean;
+  showBiological?: boolean;
+  showHabitat?: boolean;
   singleSite?: SingleSiteConfig;
 }
 
@@ -145,16 +147,14 @@ export function usePublicKYWWMap() {
         })),
         useDirectus(readItems('biological_samples', {
           fields: [
-            'id', 'wwky_id', 'date', 'biological_water_quality_score',
-            'volunteer_id.first_name', 'volunteer_id.last_name'
+            'id', 'wwky_id', 'date', 'biological_water_quality_score'
           ],
           sort: ['-date'],
           limit: -1
         })),
         useDirectus(readItems('habitat_samples', {
           fields: [
-            'id', 'wwky_id', 'date', 'physical_assessment_score',
-            'volunteer_id.first_name', 'volunteer_id.last_name'
+            'id', 'wwky_id', 'date', 'physical_assessment_score'
           ],
           sort: ['-date'],
           limit: -1
@@ -446,7 +446,7 @@ export function usePublicKYWWMap() {
               button.onclick = function() {
                 const siteId = event.graphic.attributes.siteId;
                 if (siteId) {
-                  window.open(`/sites/${siteId}`, '_blank');
+                  window.open(`/sites/${siteId}?tab=stream`, '_blank');
                 }
               };
               
@@ -498,15 +498,52 @@ export function usePublicKYWWMap() {
             };
             const popupTemplate = new PopupTemplate({
               title: `Biological Assessments - Site: ${site.wwkyid_pk}`,
-              content: `
-                <div class="bg-gray-50 p-4 rounded">
-                  <dl class="space-y-2">
-                    <div><dt class="font-medium">Stream Name:</dt><dd>${site.stream_name || 'Unnamed'}</dd></div>
-                    <div><dt class="font-medium">Basin:</dt><dd>${site.wwkybasin || 'N/A'}</dd></div>
-                    <div><dt class="font-medium">Assessments:</dt><dd>${site.samples?.length || 0}</dd></div>
-                  </dl>
-                </div>
-              `
+              content: function () {
+                const container = document.createElement("div");
+                container.className = "bg-gray-50 p-4 rounded";
+
+                const dl = document.createElement("dl");
+                dl.className = "space-y-2";
+
+                function addDetail(term, detail) {
+                  const div = document.createElement("div");
+                  const dt = document.createElement("dt");
+                  dt.className = "font-medium";
+                  dt.textContent = term;
+                  div.appendChild(dt);
+                  const dd = document.createElement("dd");
+                  dd.textContent = detail || "Not available";
+                  div.appendChild(dd);
+                  dl.appendChild(div);
+                }
+
+                addDetail("Stream Name:", site.stream_name || "Unnamed");
+                addDetail("Basin:", site.wwkybasin || "N/A");
+                addDetail("Assessments:", String(site.samples?.length || 0));
+
+                const latest = site.samples?.[0];
+                if (latest?.date) {
+                  addDetail("Latest Assessment:", new Date(latest.date).toLocaleDateString());
+                }
+
+                container.appendChild(dl);
+
+                const buttonContainer = document.createElement("div");
+                buttonContainer.className = "mt-4";
+
+                const button = document.createElement("button");
+                button.className = "esri-button esri-button--secondary";
+                button.style.cursor = "pointer";
+                button.textContent = "View all samples at this site";
+                button.onclick = function () {
+                  window.open(`/sites/${site.wwkyid_pk}?tab=biological`, '_blank');
+                };
+
+                buttonContainer.appendChild(button);
+                container.appendChild(buttonContainer);
+
+                return container;
+              }
             });
             biologicalLayer.add(new Graphic({ geometry: point, symbol: markerSymbol, popupTemplate, attributes: site }));
           }
@@ -526,15 +563,52 @@ export function usePublicKYWWMap() {
             };
             const popupTemplate = new PopupTemplate({
               title: `Habitat Assessments - Site: ${site.wwkyid_pk}`,
-              content: `
-                <div class="bg-gray-50 p-4 rounded">
-                  <dl class="space-y-2">
-                    <div><dt class="font-medium">Stream Name:</dt><dd>${site.stream_name || 'Unnamed'}</dd></div>
-                    <div><dt class="font-medium">Basin:</dt><dd>${site.wwkybasin || 'N/A'}</dd></div>
-                    <div><dt class="font-medium">Assessments:</dt><dd>${site.samples?.length || 0}</dd></div>
-                  </dl>
-                </div>
-              `
+              content: function () {
+                const container = document.createElement("div");
+                container.className = "bg-gray-50 p-4 rounded";
+
+                const dl = document.createElement("dl");
+                dl.className = "space-y-2";
+
+                function addDetail(term, detail) {
+                  const div = document.createElement("div");
+                  const dt = document.createElement("dt");
+                  dt.className = "font-medium";
+                  dt.textContent = term;
+                  div.appendChild(dt);
+                  const dd = document.createElement("dd");
+                  dd.textContent = detail || "Not available";
+                  div.appendChild(dd);
+                  dl.appendChild(div);
+                }
+
+                addDetail("Stream Name:", site.stream_name || "Unnamed");
+                addDetail("Basin:", site.wwkybasin || "N/A");
+                addDetail("Assessments:", String(site.samples?.length || 0));
+
+                const latest = site.samples?.[0];
+                if (latest?.date) {
+                  addDetail("Latest Assessment:", new Date(latest.date).toLocaleDateString());
+                }
+
+                container.appendChild(dl);
+
+                const buttonContainer = document.createElement("div");
+                buttonContainer.className = "mt-4";
+
+                const button = document.createElement("button");
+                button.className = "esri-button esri-button--secondary";
+                button.style.cursor = "pointer";
+                button.textContent = "View all samples at this site";
+                button.onclick = function () {
+                  window.open(`/sites/${site.wwkyid_pk}?tab=habitat`, '_blank');
+                };
+
+                buttonContainer.appendChild(button);
+                container.appendChild(buttonContainer);
+
+                return container;
+              }
             });
             habitatLayer.add(new Graphic({ geometry: point, symbol: markerSymbol, popupTemplate, attributes: site }));
           }

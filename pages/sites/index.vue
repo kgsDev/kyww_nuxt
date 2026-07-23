@@ -1,4 +1,6 @@
 <script setup lang="ts">
+//THis is the public-facing site index page for KYWW. It shows a map of all sites, and a table of
+//sampled sites (chemistry, biological, and habitat) with filters and search functionality.
 import { usePublicKYWWMap } from '~/composables/usePublicKYWWMap';
 import * as turf from '@turf/turf';
 
@@ -13,17 +15,17 @@ const siteSearchQuery = ref('');
 const basinFilter = ref('');
 const dateRangeFilter = ref('all');
 const hasEcoliFilter = ref(false);
+const sampleTypeFilter = ref('all');
 
-// Pagination with larger page size for better handling of many sites
+// Pagination
 const currentPage = ref(1);
-const itemsPerPage = ref(25); // Increased from 10 to 25
-const pagesToShow = 7; // Number of page buttons to show in pagination
+const itemsPerPage = ref(25);
+const pagesToShow = 7;
 
 // Site data
 const loading = ref(true);
 const error = ref(null);
 
-// For the map - use our enhanced public map composable
 const {
   loading: mapLoading,
   error: mapError,
@@ -50,23 +52,18 @@ const countyFilter = ref('');
 const countiesData = ref(null);
 const countiesLoaded = ref(false);
 const loadingCounties = ref(false);
+const countyBySite = ref(new Map());
 
-// KY Counties GeoJSON URL
-//const KY_COUNTIES_URL = 'https://kgs.uky.edu/arcgis/rest/services/Base/KYCounties_WGS84/MapServer/0/query?where=1%3D1&geometryType=esriGeometryEnvelope&outFields=Name&returnGeometry=true&f=geojson';
 const KY_COUNTIES_PATH = '/data/ky_counties.geojson';
 
-// Load counties GeoJSON from static file
 async function loadCountiesData() {
   if (countiesLoaded.value) return;
-  
+
   try {
     loadingCounties.value = true;
-    
-    // Fetch the static file
     const response = await fetch(KY_COUNTIES_PATH);
     countiesData.value = await response.json();
-    
-    // Process sites to determine their county
+
     processSitesCounties();
     countiesLoaded.value = true;
   } catch (error) {
@@ -76,57 +73,137 @@ async function loadCountiesData() {
   }
 }
 
-// Find county for each site
+// Resolve a county for every site across all three sample types.
+// Results go in a Map keyed by site id rather than mutating the source arrays.
 function processSitesCounties() {
-  if (!countiesData.value || !sampledSites.value.length) return;
-  
-  // Process only sampled sites (much faster)
-  sampledSites.value.forEach(site => {
-    if (!site.longitude || !site.latitude) return;
-    
-    const point = turf.point([site.longitude, site.latitude]);
-    
-    // Find which county polygon contains this point
-    for (const feature of countiesData.value.features) {
-      try {
-        if (turf.booleanPointInPolygon(point, feature.geometry)) {
-          site.county = feature.properties.NAME;
-          break;
+  if (!countiesData.value?.features) return;
+
+  const resolved = new Map();
+
+  const assign = (list) => {
+    for (const site of list || []) {
+      const id = site?.wwkyid_pk ?? site?.wwky_id;
+      if (id == null || resolved.has(id)) continue;
+      if (!site.longitude || !site.latitude) continue;
+
+      const point = turf.point([site.longitude, site.latitude]);
+
+      for (const feature of countiesData.value.features) {
+        try {
+          if (turf.booleanPointInPolygon(point, feature.geometry)) {
+            resolved.set(id, feature.properties.NAME);
+            break;
+          }
+        } catch (e) {
+          console.error('Error in point-in-polygon test for site', id, e);
         }
-      } catch (e) {
-        console.error('Error in point-in-polygon test for site', site.wwkyid_pk, e);
       }
     }
-  });
+  };
+
+  assign(sampledSites.value);
+  assign(biologicalSites.value);
+  assign(habitatSites.value);
+
+  countyBySite.value = resolved;
 }
 
-// Get available counties for filter dropdown
-const availableCounties = computed(() => {
-  if (!countiesLoaded.value || !sampledSites.value.length) return [];
-  
-  const countiesSet = new Set();
-  sampledSites.value.forEach(site => {
-    if (site.county) {
-      countiesSet.add(site.county);
+// Merge chemistry, biological, and habitat into one row per site.
+// Chemistry sites seed the rows (they carry ecoli_count and sample dates);
+// bio/habitat-only sites get appended so they aren't invisible in the table.
+const allSiteRows = computed(() => {
+  const rows = new Map();
+
+  for (const site of sampledSites.value || []) {
+    if (site?.wwkyid_pk == null) continue;
+    rows.set(site.wwkyid_pk, {
+      ...site,
+      chem_count: site.sample_count || 0,
+      bio_count: 0,
+      hab_count: 0
+    });
+  }
+
+  const merge = (list, countKey) => {
+    for (const entry of list || []) {
+      const id = entry?.wwkyid_pk ?? entry?.wwky_id;
+      if (id == null) continue;
+
+      if (!rows.has(id)) {
+        rows.set(id, {
+          wwkyid_pk: id,
+          stream_name: entry.stream_name || '',
+          wwkybasin: (entry.wwkybasin || '').trim(),
+          description: entry.description || '',
+          longitude: entry.longitude,
+          latitude: entry.latitude,
+          has_samples: true,
+          ecoli_count: 0,
+          latest_sample_date: null,
+          chem_count: 0,
+          bio_count: 0,
+          hab_count: 0
+        });
+      }
+
+      const row = rows.get(id);
+
+      // Tolerate either shape: one entry per site carrying a samples array,
+      // or one entry per individual sample.
+      const samples = Array.isArray(entry.samples) ? entry.samples : [entry];
+      row[countKey] += samples.length;
+
+      for (const s of samples) {
+        const d = s?.date;
+        if (!d) continue;
+        if (!row.latest_sample_date || new Date(d) > new Date(row.latest_sample_date)) {
+          row.latest_sample_date = d;
+        }
+      }
     }
-  });
-  
-  return Array.from(countiesSet).sort();
+  };
+
+  merge(biologicalSites.value, 'bio_count');
+  merge(habitatSites.value, 'hab_count');
+
+  const counties = countyBySite.value;
+
+  return [...rows.values()].map(row => ({
+    ...row,
+    county: counties.get(row.wwkyid_pk) || null,
+    total_count: row.chem_count + row.bio_count + row.hab_count
+  }));
 });
 
+const availableCounties = computed(() => {
+  const set = new Set();
+  for (const row of allSiteRows.value) {
+    if (row.county) set.add(row.county);
+  }
+  return Array.from(set).sort();
+});
 
-const sortField = ref('wwkyid_pk'); // Default sort by site ID
-const sortDirection = ref('asc'); // Default sort direction (asc or desc)
+const availableBasins = computed(() => {
+  const set = new Set();
+  for (const row of allSiteRows.value) {
+    if (row.wwkybasin) set.add(row.wwkybasin);
+  }
+  return Array.from(set).sort();
+});
 
-// Function to toggle sorting
+const sortField = ref('wwkyid_pk');
+const sortDirection = ref('asc');
+
 function toggleSort(field) {
   if (sortField.value === field) {
-    // If already sorting by this field, toggle direction
     sortDirection.value = sortDirection.value === 'asc' ? 'desc' : 'asc';
   } else {
-    // If sorting by a new field, set it and default to ascending
     sortField.value = field;
-    sortDirection.value = 'asc';
+    // Counts are more useful highest-first on the initial click.
+    sortDirection.value =
+      ['chem_count', 'bio_count', 'hab_count', 'total_count', 'ecoli_count'].includes(field)
+        ? 'desc'
+        : 'asc';
   }
 }
 
@@ -134,81 +211,60 @@ const customSearchQuery = ref('');
 const customSearchResults = ref([]);
 
 function handleCustomSearch() {
-    if (!customSearchQuery.value || customSearchQuery.value.length < 2) {
-        customSearchResults.value = [];
-        return;
-    }
-    
-    const query = customSearchQuery.value.toLowerCase();
-    
-    // Search both sampled and unsampled sites
-    const results = sampledSites.value.filter(site => 
-        site.wwkyid_pk.toString().includes(query) || 
-        (site.stream_name && site.stream_name.toLowerCase().includes(query))
-    );
-    
-    customSearchResults.value = results.slice(0, 10); // Limit to 10 results
+  if (!customSearchQuery.value || customSearchQuery.value.length < 2) {
+    customSearchResults.value = [];
+    return;
+  }
+
+  const query = customSearchQuery.value.toLowerCase();
+
+  const results = allSiteRows.value.filter(site =>
+    site.wwkyid_pk.toString().includes(query) ||
+    (site.stream_name && site.stream_name.toLowerCase().includes(query))
+  );
+
+  customSearchResults.value = results.slice(0, 10);
 }
 
 function selectSearchResult(site) {
-    if (site.longitude && site.latitude) {
-        // Zoom to the site on the map
-        zoomTo([site.longitude, site.latitude], 14);
-        
-        // Make sure the appropriate layer is visible
-        if (site.has_samples && !sampledSitesVisible.value) {
-        toggleLayerVisibility('sampledSites');
-        } else if (!site.has_samples && !sitesVisible.value) {
-        toggleLayerVisibility('sites');
-        }
-        
-        // Clear the search results
-        customSearchResults.value = [];
-        customSearchQuery.value = '';
+  if (site.longitude && site.latitude) {
+    zoomTo([site.longitude, site.latitude], 14);
+
+    // Make sure a layer this site actually appears on is visible.
+    if (site.chem_count > 0 && !sampledSitesVisible.value) {
+      toggleLayerVisibility('sampledSites');
+    } else if (site.bio_count > 0 && !biologicalVisible.value) {
+      toggleLayerVisibility('biological');
+    } else if (site.hab_count > 0 && !habitatVisible.value) {
+      toggleLayerVisibility('habitat');
     }
+
+    customSearchResults.value = [];
+    customSearchQuery.value = '';
+  }
 }
 
-// Computed for available basins (derived from sampled sites)
-const availableBasins = computed(() => {
-  if (!sampledSites.value || !sampledSites.value.length) return [];
-  
-  const basinsSet = new Set();
-  sampledSites.value.forEach(site => {
-    if (site.wwkybasin) {
-      basinsSet.add(site.wwkybasin);
-    }
-  });
-  
-  return Array.from(basinsSet).sort();
-});
-
-// Computed for filtered sites
 const filteredSites = computed(() => {
-  if (!sampledSites.value || !sampledSites.value.length) return [];
-  
-  // Apply filters first
-  const filtered = sampledSites.value.filter(site => {
-    // Filter by search query
+  const filtered = allSiteRows.value.filter(site => {
     const searchMatch = !siteSearchQuery.value ||
       (site.stream_name && site.stream_name.toLowerCase().includes(siteSearchQuery.value.toLowerCase())) ||
       (site.wwkyid_pk && site.wwkyid_pk.toString().includes(siteSearchQuery.value)) ||
       (site.description && site.description.toLowerCase().includes(siteSearchQuery.value.toLowerCase()));
-    
-    // Filter by basin
+
     const basinMatch = !basinFilter.value || site.wwkybasin === basinFilter.value;
-    
-    // Filter by county
     const countyMatch = !countyFilter.value || site.county === countyFilter.value;
-    
-    // Filter by E. coli data
     const ecoliMatch = !hasEcoliFilter.value || (site.ecoli_count && site.ecoli_count > 0);
-    
-    // Filter by date range
+
+    let typeMatch = true;
+    if (sampleTypeFilter.value === 'chemistry') typeMatch = site.chem_count > 0;
+    else if (sampleTypeFilter.value === 'biological') typeMatch = site.bio_count > 0;
+    else if (sampleTypeFilter.value === 'habitat') typeMatch = site.hab_count > 0;
+
     let dateMatch = true;
     if (dateRangeFilter.value !== 'all' && site.latest_sample_date) {
       const latestDate = new Date(site.latest_sample_date);
       const now = new Date();
-      
+
       if (dateRangeFilter.value === 'last30') {
         const thirtyDaysAgo = new Date();
         thirtyDaysAgo.setDate(now.getDate() - 30);
@@ -222,82 +278,75 @@ const filteredSites = computed(() => {
         yearAgo.setDate(now.getDate() - 365);
         dateMatch = latestDate >= yearAgo;
       }
+    } else if (dateRangeFilter.value !== 'all') {
+      dateMatch = false;
     }
-    
-    return searchMatch && basinMatch && ecoliMatch && dateMatch && countyMatch;
+
+    return searchMatch && basinMatch && ecoliMatch && dateMatch && countyMatch && typeMatch;
   });
-  
-  // Then sort the filtered results
-  return filtered.sort((a, b) => {
-    // Your existing sort logic here
+
+  return [...filtered].sort((a, b) => {
     let aValue = a[sortField.value];
     let bValue = b[sortField.value];
-    
-    // Special cases for different data types
+
     if (sortField.value === 'latest_sample_date') {
       aValue = aValue ? new Date(aValue).getTime() : 0;
       bValue = bValue ? new Date(bValue).getTime() : 0;
-    } else if (typeof aValue === 'string') {
-      aValue = aValue ? aValue.toLowerCase() : '';
-      bValue = bValue ? bValue.toLowerCase() : '';
-    } else if (typeof aValue === 'number' || typeof bValue === 'number') {
+    } else if (typeof aValue === 'string' || typeof bValue === 'string') {
+      aValue = aValue ? String(aValue).toLowerCase() : '';
+      bValue = bValue ? String(bValue).toLowerCase() : '';
+    } else {
       aValue = aValue || 0;
       bValue = bValue || 0;
     }
-    
-    if (sortDirection.value === 'asc') {
-      return aValue > bValue ? 1 : -1;
-    } else {
-      return aValue < bValue ? 1 : -1;
-    }
+
+    if (aValue === bValue) return 0;
+    return sortDirection.value === 'asc'
+      ? (aValue > bValue ? 1 : -1)
+      : (aValue < bValue ? 1 : -1);
   });
 });
 
-// Computed for pagination
 const paginatedSites = computed(() => {
   const startIndex = (currentPage.value - 1) * itemsPerPage.value;
-  const endIndex = startIndex + itemsPerPage.value;
-  
-  return filteredSites.value.slice(startIndex, endIndex);
+  return filteredSites.value.slice(startIndex, startIndex + itemsPerPage.value);
 });
 
 const totalPages = computed(() => {
   return Math.ceil(filteredSites.value.length / itemsPerPage.value);
 });
 
-// Generate array of pages to display (with ellipsis for large page counts)
+// Reset to page 1 whenever the result set shrinks out from under the cursor.
+watch(filteredSites, () => {
+  if (currentPage.value > totalPages.value) {
+    currentPage.value = 1;
+  }
+});
+
 const paginationItems = computed(() => {
   if (totalPages.value <= pagesToShow) {
-    // If we have fewer pages than we want to show, just return all pages
     return Array.from({ length: totalPages.value }, (_, i) => i + 1);
   }
-  
-  // Otherwise, we need to calculate which pages to show
+
   const items = [];
   const halfWay = Math.floor(pagesToShow / 2);
-  
-  // Always show first page
+
   items.push(1);
-  
-  // Current page is close to the start
+
   if (currentPage.value <= halfWay + 1) {
     for (let i = 2; i <= pagesToShow - 1; i++) {
       items.push(i);
     }
     items.push('ellipsis');
     items.push(totalPages.value);
-  } 
-  // Current page is close to the end
-  else if (currentPage.value >= totalPages.value - halfWay) {
+  } else if (currentPage.value >= totalPages.value - halfWay) {
     items.push('ellipsis');
     const startPage = totalPages.value - pagesToShow + 2;
     for (let i = startPage; i < totalPages.value; i++) {
       items.push(i);
     }
     items.push(totalPages.value);
-  } 
-  // Current page is in the middle
-  else {
+  } else {
     items.push('ellipsis');
     const startPage = currentPage.value - Math.floor(halfWay / 2);
     const endPage = currentPage.value + Math.floor(halfWay / 2);
@@ -307,11 +356,10 @@ const paginationItems = computed(() => {
     items.push('ellipsis');
     items.push(totalPages.value);
   }
-  
+
   return items;
 });
 
-// Handle map initialization
 watch(mapContainer, async (newValue) => {
   if (newValue && !mapLoading.value) {
     containerReady.value = true;
@@ -330,11 +378,9 @@ function handleZoom({ lng, lat, zoom }: { lng: number; lat: number; zoom: number
   mapContainer.value?.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
-// Handle pagination
 function goToPage(page) {
   if (page >= 1 && page <= totalPages.value) {
     currentPage.value = page;
-    // Scroll to top of table when changing pages
     const tableElement = document.getElementById('sites-table');
     if (tableElement) {
       tableElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -342,14 +388,12 @@ function goToPage(page) {
   }
 }
 
-// Handle zooming to a site on the map
 function zoomToSite(site) {
   if (site.longitude && site.latitude) {
     zoomTo([site.longitude, site.latitude]);
   }
 }
 
-// Function to format date
 function formatDate(dateString) {
   if (!dateString) return 'No data';
   return new Date(dateString).toLocaleDateString('en-US', {
@@ -359,21 +403,20 @@ function formatDate(dateString) {
   });
 }
 
-// Reset filters
 function resetFilters() {
   siteSearchQuery.value = '';
   basinFilter.value = '';
-  countyFilter.value = ''; // Add this line
+  countyFilter.value = '';
   dateRangeFilter.value = 'all';
   hasEcoliFilter.value = false;
+  sampleTypeFilter.value = 'all';
   currentPage.value = 1;
 }
 
-// Initialize data
 onMounted(async () => {
   loading.value = true;
-  await fetchData(); // This fetches the map data and sampled sites from usePublicKYWWMap()
-  await loadCountiesData(); // Add this line to load counties data
+  await fetchData();
+  await loadCountiesData();
   loading.value = false;
 });
 </script>
@@ -386,7 +429,7 @@ onMounted(async () => {
       <p class="text-gray-700 max-w-3xl">
         Explore water quality data collected by trained volunteers at monitoring sites across Kentucky watersheds. View sample data, water quality metrics, and see where volunteer water monitoring efforts are making a difference.
         <br><br>
-        If you're interessted in volunteering to collect water quality data, please find more information on the <a href="https://www.kywater.org" target="_blank">Kentucky Watershed Watch website</a> or contact your local support hub.
+        If you're interested in volunteering to collect water quality data, please find more information on the <a href="https://www.kywater.org" target="_blank">Kentucky Watershed Watch website</a> or contact your local support hub.
       </p>
     </div>
     
@@ -545,7 +588,7 @@ onMounted(async () => {
           <h2 class="text-xl font-semibold">Search and Filter Sampled Sites</h2>
         </template>
         
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
           <!-- Search box -->
           <div>
             <label for="site-search" class="block text-sm font-medium text-gray-700 mb-1">
@@ -558,6 +601,23 @@ onMounted(async () => {
               placeholder="Search ID, stream name, or description"
               class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
             />
+          </div>
+
+          <!-- Sample type filter -->
+          <div>
+            <label for="type-filter" class="block text-sm font-medium text-gray-700 mb-1">
+              Filter by sample type
+            </label>
+            <select
+              id="type-filter"
+              v-model="sampleTypeFilter"
+              class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+            >
+              <option value="all">All Sample Types</option>
+              <option value="chemistry">Has Chemistry Samples</option>
+              <option value="biological">Has Biological Assessments</option>
+              <option value="habitat">Has Habitat Assessments</option>
+            </select>
           </div>
 
           <!-- Basin filter -->
@@ -577,6 +637,7 @@ onMounted(async () => {
             </select>
           </div>
 
+          <!-- County filter -->
           <div>
             <label for="county-filter" class="block text-sm font-medium text-gray-700 mb-1">
               Filter by county
@@ -627,7 +688,7 @@ onMounted(async () => {
                 Has E. coli data
               </label>
             </div>
-            
+
             <UButton
               class="ml-auto"
               size="sm"
@@ -638,10 +699,10 @@ onMounted(async () => {
             </UButton>
           </div>
         </div>
-        
+
         <div class="mt-2">
           <p class="text-sm text-gray-600">
-            Showing {{ filteredSites.length }} sampled sites out of {{ sampledSites.length }} total sampled sites
+            Showing {{ filteredSites.length }} of {{ allSiteRows.length }} monitoring sites
           </p>
         </div>
       </UCard>
@@ -658,56 +719,52 @@ onMounted(async () => {
         
         <div v-else class="overflow-x-auto">
           <table class="min-w-full divide-y divide-gray-200">
-            <thead>
+           <thead>
               <tr>
-                <th @click="toggleSort('wwkyid_pk')" 
+                <th @click="toggleSort('wwkyid_pk')"
                     class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none">
                   Site ID
-                  <span v-if="sortField === 'wwkyid_pk'" class="ml-1">
-                    {{ sortDirection === 'asc' ? '▲' : '▼' }}
-                  </span>
+                  <span v-if="sortField === 'wwkyid_pk'" class="ml-1">{{ sortDirection === 'asc' ? '▲' : '▼' }}</span>
                 </th>
-                <th @click="toggleSort('stream_name')" 
+                <th @click="toggleSort('stream_name')"
                     class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none">
                   Stream Name
-                  <span v-if="sortField === 'stream_name'" class="ml-1">
-                    {{ sortDirection === 'asc' ? '▲' : '▼' }}
-                  </span>
+                  <span v-if="sortField === 'stream_name'" class="ml-1">{{ sortDirection === 'asc' ? '▲' : '▼' }}</span>
                 </th>
-                <th @click="toggleSort('wwkybasin')" 
+                <th @click="toggleSort('wwkybasin')"
                     class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none">
                   Basin
-                  <span v-if="sortField === 'wwkybasin'" class="ml-1">
-                    {{ sortDirection === 'asc' ? '▲' : '▼' }}
-                  </span>
+                  <span v-if="sortField === 'wwkybasin'" class="ml-1">{{ sortDirection === 'asc' ? '▲' : '▼' }}</span>
                 </th>
-                <th @click="toggleSort('county')" 
+                <th @click="toggleSort('county')"
                     class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none">
                   County
-                  <span v-if="sortField === 'county'" class="ml-1">
-                    {{ sortDirection === 'asc' ? '▲' : '▼' }}
-                  </span>
+                  <span v-if="sortField === 'county'" class="ml-1">{{ sortDirection === 'asc' ? '▲' : '▼' }}</span>
                 </th>
-                <th @click="toggleSort('sample_count')" 
-                    class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none">
-                  Samples
-                  <span v-if="sortField === 'sample_count'" class="ml-1">
-                    {{ sortDirection === 'asc' ? '▲' : '▼' }}
-                  </span>
+                <th @click="toggleSort('chem_count')"
+                    class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none">
+                  Chemistry
+                  <span v-if="sortField === 'chem_count'" class="ml-1">{{ sortDirection === 'asc' ? '▲' : '▼' }}</span>
                 </th>
-                <th @click="toggleSort('latest_sample_date')" 
+                <th @click="toggleSort('bio_count')"
+                    class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none">
+                  Biological
+                  <span v-if="sortField === 'bio_count'" class="ml-1">{{ sortDirection === 'asc' ? '▲' : '▼' }}</span>
+                </th>
+                <th @click="toggleSort('hab_count')"
+                    class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none">
+                  Habitat
+                  <span v-if="sortField === 'hab_count'" class="ml-1">{{ sortDirection === 'asc' ? '▲' : '▼' }}</span>
+                </th>
+                <th @click="toggleSort('latest_sample_date')"
                     class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none">
                   Latest Sample
-                  <span v-if="sortField === 'latest_sample_date'" class="ml-1">
-                    {{ sortDirection === 'asc' ? '▲' : '▼' }}
-                  </span>
+                  <span v-if="sortField === 'latest_sample_date'" class="ml-1">{{ sortDirection === 'asc' ? '▲' : '▼' }}</span>
                 </th>
-                <th @click="toggleSort('ecoli_count')" 
+                <th @click="toggleSort('ecoli_count')"
                     class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none">
                   E. coli Data
-                  <span v-if="sortField === 'ecoli_count'" class="ml-1">
-                    {{ sortDirection === 'asc' ? '▲' : '▼' }}
-                  </span>
+                  <span v-if="sortField === 'ecoli_count'" class="ml-1">{{ sortDirection === 'asc' ? '▲' : '▼' }}</span>
                 </th>
                 <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Actions
@@ -728,14 +785,35 @@ onMounted(async () => {
                 <td class="px-4 py-3 text-sm text-gray-700">
                   {{ site.county || 'Unknown' }}
                 </td>
-                <td class="px-4 py-3 text-sm text-gray-700">
-                  {{ site.sample_count || 0 }}
+                <td class="px-4 py-3 text-center text-sm">
+                  <NuxtLink v-if="site.chem_count" :to="`/sites/${site.wwkyid_pk}?tab=stream`">
+                    <span class="px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800 hover:bg-orange-200">
+                      {{ site.chem_count }}
+                    </span>
+                  </NuxtLink>
+                  <span v-else class="text-gray-300">&mdash;</span>
+                </td>
+                <td class="px-4 py-3 text-center text-sm">
+                  <NuxtLink v-if="site.bio_count" :to="`/sites/${site.wwkyid_pk}?tab=biological`">
+                    <span class="px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800 hover:bg-purple-200">
+                      {{ site.bio_count }}
+                    </span>
+                  </NuxtLink>
+                  <span v-else class="text-gray-300">&mdash;</span>
+                </td>
+                <td class="px-4 py-3 text-center text-sm">
+                  <NuxtLink v-if="site.hab_count" :to="`/sites/${site.wwkyid_pk}?tab=habitat`">
+                    <span class="px-2 py-1 rounded-full text-xs font-medium bg-pink-100 text-pink-800 hover:bg-pink-200">
+                      {{ site.hab_count }}
+                    </span>
+                  </NuxtLink>
+                  <span v-else class="text-gray-300">&mdash;</span>
                 </td>
                 <td class="px-4 py-3 text-sm text-gray-700">
                   {{ formatDate(site.latest_sample_date) }}
                 </td>
                 <td class="px-4 py-3 text-sm text-gray-700">
-                  <span 
+                  <span
                     :class="site.ecoli_count ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'"
                     class="px-2 py-1 rounded-full text-xs font-medium"
                   >
@@ -744,7 +822,7 @@ onMounted(async () => {
                 </td>
                 <td class="px-4 py-3 whitespace-nowrap text-right text-sm font-medium">
                   <div class="flex justify-center space-x-2">
-                    <UButton 
+                    <UButton
                       size="xs"
                       variant="soft"
                       @click="zoomToSite(site)"
@@ -753,12 +831,7 @@ onMounted(async () => {
                       Locate
                     </UButton>
                     <NuxtLink :to="`/sites/${site.wwkyid_pk}`">
-                      <UButton 
-                        size="xs"
-                        variant="soft"
-                        color="blue"
-                        icon="i-heroicons-eye"
-                      >
+                      <UButton size="xs" variant="soft" color="blue" icon="i-heroicons-eye">
                         View
                       </UButton>
                     </NuxtLink>

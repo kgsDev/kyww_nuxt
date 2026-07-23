@@ -5,6 +5,34 @@ import SampleForm from '../sample/index.vue'; // Import form
 import ContactSamplerForm from '~/components/ContactSamplerForm.vue'; // Import contact form
 
 const { user } = useDirectusAuth();
+const { hasAccess } = useRBAC();
+
+// Permission gates for the "New ..." buttons.
+// hasAccess() applies the same rule set as the rbac route middleware:
+// admin bypass -> role/policy check -> unexpired training check.
+const canAddStream = ref(false);
+const canAddBiological = ref(false);
+const canAddHabitat = ref(false);
+
+onMounted(async () => {
+  try {
+    const [stream, bio, hab] = await Promise.all([
+      hasAccess('/portal/sample'),
+      hasAccess('/portal/biological'),
+      hasAccess('/portal/habitat'),
+    ]);
+    canAddStream.value = stream;
+    canAddBiological.value = bio;
+    canAddHabitat.value = hab;
+  } catch (err) {
+    console.error('Error resolving sampling permissions:', err);
+    canAddStream.value = false;
+    canAddBiological.value = false;
+    canAddHabitat.value = false;
+  }
+});
+
+
 const configPublic = useRuntimeConfig().public;
 
 // Add these computed properties for permission checking
@@ -698,6 +726,7 @@ onMounted(async () => {
             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
               <h2 class="text-base sm:text-lg font-semibold">Your Stream Samples (Primary Sampler or Creator)</h2>
               <UButton
+                v-if="canAddStream"
                 icon="i-heroicons-plus"
                 @click="navigateTo('/portal/sample')"
                 class="w-full sm:w-auto"
@@ -998,6 +1027,7 @@ onMounted(async () => {
           <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
             <h2 class="text-base sm:text-lg font-semibold">Your Biological Assessments (Primary Sampler or Creator)</h2>
             <UButton
+              v-if="canAddBiological"
               icon="i-heroicons-plus"
               @click="navigateTo('/portal/biological')"
               class="w-full sm:w-auto"
@@ -1056,7 +1086,8 @@ onMounted(async () => {
                     <div class="flex justify-center space-x-1">
                       <UButton size="xs" variant="soft" @click="navigateTo(`/portal/biological/${sample.id}`)" 
                               icon="i-heroicons-eye">View</UButton>
-                      <UButton size="xs" variant="soft" color="blue" 
+                      <UButton size="xs" variant="soft" color="blue"
+                              v-if="canAddBiological"
                               @click="navigateTo(`/portal/biological?edit=${sample.id}`)" 
                               icon="i-heroicons-pencil-square">Edit</UButton>
                     </div>
@@ -1086,6 +1117,7 @@ onMounted(async () => {
                   <UButton size="xs" variant="soft" @click="navigateTo(`/portal/biological/${sample.id}`)" 
                           icon="i-heroicons-eye">View</UButton>
                   <UButton size="xs" variant="soft" color="blue" 
+                          v-if="canAddBiological" 
                           @click="navigateTo(`/portal/biological?edit=${sample.id}`)" 
                           icon="i-heroicons-pencil-square">Edit</UButton>
                 </div>
@@ -1202,19 +1234,20 @@ onMounted(async () => {
   
       <!-- Primary Habitat Samples Table -->
       <UCard class="mt-4 sm:mt-6">
-        <template #header>
-          <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-            <h2 class="text-base sm:text-lg font-semibold">Your Habitat Assessments (Primary Sampler or Creator)</h2>
-            <UButton
-              icon="i-heroicons-plus"
-              @click="navigateTo('/portal/habitat')"
-              class="w-full sm:w-auto"
-              size="sm"
-            >
-              New Habitat Assessment
-            </UButton>
-          </div>
-        </template>
+       <template #header>
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+          <h2 class="text-base sm:text-lg font-semibold">Your Habitat Assessments (Primary Sampler or Creator)</h2>
+          <UButton
+            v-if="canAddHabitat"
+            icon="i-heroicons-plus"
+            @click="navigateTo('/portal/habitat')"
+            class="w-full sm:w-auto"
+            size="sm"
+          >
+            New Habitat Assessment
+          </UButton>
+        </div>
+      </template>
 
         <div v-if="habSamples.primary.length === 0" class="text-center py-6 sm:py-4 text-gray-500 text-sm sm:text-base">
           You haven't created any habitat assessments or been a primary sampler for this site yet.
@@ -1262,7 +1295,8 @@ onMounted(async () => {
                     <div class="flex justify-center space-x-1">
                       <UButton size="xs" variant="soft" @click="navigateTo(`/portal/habitat/${sample.id}`)" 
                               icon="i-heroicons-eye">View</UButton>
-                      <UButton size="xs" variant="soft" color="blue" 
+                      <UButton size="xs" variant="soft" color="blue"
+                              v-if="canAddHabitat"
                               @click="navigateTo(`/portal/habitat?edit=${sample.id}`)" 
                               icon="i-heroicons-pencil-square">Edit</UButton>
                     </div>
@@ -1292,6 +1326,7 @@ onMounted(async () => {
                   <UButton size="xs" variant="soft" @click="navigateTo(`/portal/habitat/${sample.id}`)" 
                           icon="i-heroicons-eye">View</UButton>
                   <UButton size="xs" variant="soft" color="blue" 
+                          v-if="canAddHabitat"
                           @click="navigateTo(`/portal/habitat?edit=${sample.id}`)" 
                           icon="i-heroicons-pencil-square">Edit</UButton>
                 </div>

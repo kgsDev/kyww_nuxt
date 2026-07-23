@@ -121,6 +121,27 @@ export function useRBAC() {
       path: '/portal/hub',
       roles: [roles.devAdmin, roles.wwkyAdmin, roles.standard],
     },
+
+    // --- Individual sample view pages: readable by any sampler, no current
+    // --- training required. MUST come before the form routes below, because
+    // --- accessConfig.find() returns the first startsWith() match.
+
+    {
+      path: '/portal/sample/',
+      roles: [roles.devAdmin, roles.wwkyAdmin],
+      policies: [policies.fullAdmin, policies.sampler, policies.trainer, policies.leader],
+    },
+    {
+      path: '/portal/biological/',
+      roles: [roles.devAdmin, roles.wwkyAdmin],
+      policies: [policies.fullAdmin, policies.sampler, policies.trainer, policies.leader],
+    },
+    {
+      path: '/portal/habitat/',
+      roles: [roles.devAdmin, roles.wwkyAdmin],
+      policies: [policies.fullAdmin, policies.sampler, policies.trainer, policies.leader],
+    },
+    // --- Data entry forms: training gated ---
     {
       path: '/portal/sample',
       roles: [roles.devAdmin, roles.wwkyAdmin],
@@ -153,8 +174,12 @@ export function useRBAC() {
 
     if (!path) return false
 
+    // Strip a trailing slash so '/portal/biological/' can't be mistaken for a
+    // sample-detail route and slip past the training gate.
+    const normalized = path.length > 1 ? path.replace(/\/+$/, '') : path
+
     const routeConfig = accessConfig.find(p =>
-      p.exact ? p.path === path : path.startsWith(p.path)
+      p.exact ? p.path === normalized : normalized.startsWith(p.path)
     )
 
     if (!routeConfig) return true

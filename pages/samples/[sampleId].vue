@@ -1,4 +1,5 @@
 <script setup lang="ts">
+// This page displays detailed information about a specific water quality sample, including environmental conditions, water quality measurements, bacteria analysis, and any associated photos. It is designed to be publicly accessible without revealing any personally identifying information about the volunteers who collected the sample.
 definePageMeta({
   layout: 'info'
 });
