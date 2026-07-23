@@ -48,6 +48,18 @@ export function getApiConfig(): RuntimeConfig {
   } as RuntimeConfig;
 }
 
+export function getDbConfig() {
+  const config = useRuntimeConfig();
+  const isDev = process.env.NODE_ENV === 'development';
+  return {
+    host: config.DB_HOST || 'localhost',
+    port: parseInt((isDev ? config.DB_PORT_DEV : config.DB_PORT) || (isDev ? '5434' : '5433')),
+    user: config.DB_USER,
+    password: config.DB_PASSWORD,
+    database: config.DB_DATABASE,
+  };
+}
+
 // You can also add helper functions for common API operations
 export function getDirectusHeaders(config: ReturnType<typeof getApiConfig>) {
   return {

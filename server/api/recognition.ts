@@ -6,99 +6,6 @@ interface CacheEntry { data: any; ts: number }
 const cache = new Map<string, CacheEntry>();
 const CACHE_TTL = 15 * 60 * 1000; // 15 min
 
-// ---- point-in-polygon (ray casting), supports Polygon + MultiPolygon + holes ----
-function pointInRing(x: number, y: number, ring: number[][]): boolean {
-  let inside = false;
-  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
-    const xi = ring[i][0], yi = ring[i][1], xj = ring[j][0], yj = ring[j][1];
-    if (((yi > y) !== (yj > y)) && (x < ((xj - xi) * (y - yi)) / (yj - yi) + xi)) inside = !inside;
-  }
-  return inside;
-}
-function pointInPolygon(x: number, y: number, poly: number[][][]): boolean {
-  if (!poly.length || !pointInRing(x, y, poly[0])) return false;
-  for (let k = 1; k < poly.length; k++) if (pointInRing(x, y, poly[k])) return false; // hole
-  return true;
-}
-function pointInFeature(x: number, y: number, geom: any): boolean {
-  if (!geom) return false;
-  if (geom.type === 'Polygon') return pointInPolygon(x, y, geom.coordinates);
-  if (geom.type === 'MultiPolygon') return geom.coordinates.some((p: number[][][]) => pointInPolygon(x, y, p));
-  return false;
-}
-
-// Parsed county polygons + bounding boxes, cached in module scope (loaded once).
-let countyIndex: { name: string; bbox: [number, number, number, number]; geom: any }[] | null = null;
-
-async function loadCountyGeoJSON(): Promise<any | null> {
-  // 1) Nitro server asset (works if server/assets/ky_counties.geojson was present at build time)
-  try {
-    const raw = await useStorage('assets:server').getItem('ky_counties.geojson');
-    if (raw) {
-      console.log('[recognition] counties loaded from server assets');
-      return typeof raw === 'string' ? JSON.parse(raw) : raw;
-    }
-  } catch (e) {
-    console.warn('[recognition] server asset read failed:', (e as Error).message);
-  }
-
-  // 2) Filesystem fallback — the same file the map serves from /data/
-  const { readFile } = await import('node:fs/promises');
-  const { resolve } = await import('node:path');
-  const candidates = [
-    resolve(process.cwd(), 'public/data/ky_counties.geojson'),        // dev
-    resolve(process.cwd(), '.output/public/data/ky_counties.geojson'), // built output
-    resolve(process.cwd(), '../public/data/ky_counties.geojson'),      // running from .output/server
-    '/app/.output/public/data/ky_counties.geojson',                    // common Docker layout
-  ];
-  for (const path of candidates) {
-    try {
-      const txt = await readFile(path, 'utf-8');
-      console.log('[recognition] counties loaded from', path);
-      return JSON.parse(txt);
-    } catch { /* try next */ }
-  }
-
-  console.error('[recognition] ky_counties.geojson NOT FOUND. cwd:', process.cwd(), 'tried:', candidates);
-  return null;
-}
-
-async function getCounties() {
-  if (countyIndex) return countyIndex;
-
-  const gj = await loadCountyGeoJSON();
-  if (!gj) return [];   // NOTE: no negative caching — retry next request instead of failing forever
-
-  const parsed = (gj.features || []).map((f: any) => {
-    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-    const scan = (c: any) => {
-      if (typeof c[0] === 'number') {
-        if (c[0] < minX) minX = c[0]; if (c[0] > maxX) maxX = c[0];
-        if (c[1] < minY) minY = c[1]; if (c[1] > maxY) maxY = c[1];
-      } else c.forEach(scan);
-    };
-    scan(f.geometry?.coordinates ?? []);
-    return {
-      name: f.properties?.Name ?? f.properties?.NAME ?? 'Unknown',
-      bbox: [minX, minY, maxX, maxY] as [number, number, number, number],
-      geom: f.geometry,
-    };
-  });
-
-  console.log(`[recognition] parsed ${parsed.length} county polygons`);
-  if (parsed.length) countyIndex = parsed;   // only cache a successful load
-  return parsed;
-}
-
-function countyForPoint(lon: number, lat: number, counties: any[]): string | null {
-  for (const c of counties) {
-    const [minX, minY, maxX, maxY] = c.bbox;
-    if (lon < minX || lon > maxX || lat < minY || lat > maxY) continue; // bbox prefilter
-    if (pointInFeature(lon, lat, c.geom)) return c.name;
-  }
-  return null;
-}
-
 export default defineEventHandler(async (event) => {
   const query = getQuery(event);
   const yearRaw = query.year ? String(query.year) : '';
@@ -112,13 +19,11 @@ export default defineEventHandler(async (event) => {
 
   const config = useRuntimeConfig();
   const { default: postgres } = await import('postgres');
-  const sql = postgres({
-    host: config.DB_HOST,
-    port: parseInt(config.DB_PORT || '5433'),
-    user: config.DB_USER,
-    password: config.DB_PASSWORD,
-    database: config.DB_DATABASE,
-  });
+  const sql = postgres(getDbConfig());
+  
+  const dbInfo = await sql`SELECT current_database() AS db, inet_server_port() AS port`;
+  console.log('[recognition] runtimeConfig →', config.DB_HOST, config.DB_PORT, config.DB_DATABASE);
+  console.log('[recognition] connected to →', dbInfo[0]);
 
   try {
     const fromDate = yearNum ? `${yearNum}-01-01` : null;
@@ -138,13 +43,14 @@ export default defineEventHandler(async (event) => {
       SELECT
         a.wwky_id AS site_id,
         COUNT(*)::int AS sample_count,
-        s.stream_name, s.description, s.wwkybasin,
+        s.stream_name, s.description, s.wwkybasin, s.county,
         CASE WHEN s.wkb_geometry IS NOT NULL THEN ST_X(s.wkb_geometry) ELSE s.longitude END AS lon,
         CASE WHEN s.wkb_geometry IS NOT NULL THEN ST_Y(s.wkb_geometry) ELSE s.latitude  END AS lat
       FROM all_samples a
       JOIN public.wwky_sites s ON s.wwkyid_pk = a.wwky_id
       WHERE TRUE ${yearFilter}
-      GROUP BY a.wwky_id, s.stream_name, s.description, s.wwkybasin, s.wkb_geometry, s.longitude, s.latitude
+      GROUP BY a.wwky_id, s.stream_name, s.description, s.wwkybasin, s.county,
+               s.wkb_geometry, s.longitude, s.latitude
     `;
 
     // Hub totals via the sampler's assigned hub.
@@ -171,9 +77,6 @@ export default defineEventHandler(async (event) => {
     `;
 
     // ---- Node rollups: basins + GIS counties ----
-    const counties = await getCounties();
-    const countyBBox = new Map<string, [number, number, number, number]>();
-    for (const c of counties) countyBBox.set(c.name, c.bbox);
     const basinMap = new Map<string, { sampleCount: number; siteCount: number }>();
     const countyMap = new Map<string, { sampleCount: number; siteCount: number }>();
 
@@ -184,10 +87,8 @@ export default defineEventHandler(async (event) => {
       const b = basinMap.get(basin) || { sampleCount: 0, siteCount: 0 };
       b.sampleCount += count; b.siteCount += 1; basinMap.set(basin, b);
 
-      const lon = r.lon != null ? Number(r.lon) : null;
-      const lat = r.lat != null ? Number(r.lat) : null;
-      if (lon != null && lat != null && counties.length) {
-        const county = countyForPoint(lon, lat, counties) || 'Unknown';
+      const county = (r.county || '').trim();
+      if (county) {
         const c = countyMap.get(county) || { sampleCount: 0, siteCount: 0 };
         c.sampleCount += count; c.siteCount += 1; countyMap.set(county, c);
       }
@@ -197,17 +98,23 @@ export default defineEventHandler(async (event) => {
       .map(([basin, v]) => ({ basin, ...v }))
       .sort((a, b) => b.sampleCount - a.sampleCount).slice(0, topN);
 
-    const topCounties = [...countyMap.entries()]
-      .filter(([name]) => name !== 'Unknown')
-      .map(([county, v]) => {
-        const bb = countyBBox.get(county);
-        return {
-          county, ...v,
-          lng: bb ? (bb[0] + bb[2]) / 2 : null,   // bbox center = good-enough county focus
-          lat: bb ? (bb[1] + bb[3]) / 2 : null,
-        };
-      })
+    let topCounties = [...countyMap.entries()]
+      .map(([county, v]) => ({ county, ...v, lng: null as number | null, lat: null as number | null }))
       .sort((a, b) => b.sampleCount - a.sampleCount).slice(0, topN);
+
+    // attach zoom coordinates for just the winners
+    if (topCounties.length) {
+      const names = topCounties.map((c) => c.county);
+      const centroids = await sql`
+        SELECT name, centroid_lng, centroid_lat
+        FROM public.ky_counties WHERE name IN ${sql(names)}
+      `;
+      const byName = new Map((centroids as any[]).map((r) => [r.name, r]));
+      topCounties = topCounties.map((c) => {
+        const m = byName.get(c.county);
+        return { ...c, lng: m?.centroid_lng ?? null, lat: m?.centroid_lat ?? null };
+      });
+    }
 
     const topSites = (siteRows as any[])
       .map((r) => ({

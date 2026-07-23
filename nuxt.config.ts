@@ -113,6 +113,7 @@ export default defineNuxtConfig({
 		DB_CLIENT : process.env.DB_CLIENT,
 		DB_HOST:process.env.DB_HOST,
 		DB_PORT : process.env.DB_PORT,
+		DB_PORT_DEV: process.env.DB_PORT_DEV,
 		DB_USER : process.env.DB_USER,
 		DB_PASSWORD	: process.env.DB_PASSWORD,
 		DB_DATABASE	: process.env.DB_DATABASE,
