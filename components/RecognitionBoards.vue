@@ -6,7 +6,7 @@ const emit = defineEmits<{ zoom: [payload: { lng: number; lat: number; zoom: num
 const currentYear = new Date().getFullYear();
 const yearOptions = [
   { label: 'All time', value: 'all' },
-  ...Array.from({ length: currentYear - 2019 }, (_, i) => {
+  ...Array.from({ length: currentYear - 2024 }, (_, i) => {
     const y = String(currentYear - i);
     return { label: y, value: y };
   }),

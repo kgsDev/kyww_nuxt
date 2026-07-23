@@ -764,7 +764,7 @@ export function usePublicKYWWMap() {
       // Add event listener to check if sampledSitesLayer loads properly
       if (sampledSitesLayer) {
         sampledSitesLayer.when(() => {
-          console.log('Sampled sites layer loaded successfully');
+          //console.log('Sampled sites layer loaded successfully');
           //console.log('Features count:', sampledSitesLayer.queryFeatureCount());
         }, (error) => {
           console.error('Error loading sampled sites layer:', error);

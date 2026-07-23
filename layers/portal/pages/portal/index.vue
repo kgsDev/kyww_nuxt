@@ -256,7 +256,9 @@ onMounted(async () => {
 
 <template>
   <PageContainer>
-    <img class="w-48 ml-auto mr-0" src="~/assets/KyWW_logo.png" />
+    <a href="/sites/" class="block">
+      <img class="w-48 ml-auto mr-0" src="~/assets/KyWW_logo.png" />
+    </a>
     <!-- Handle loading and error states for messages -->
     <TypographyTitle class="normal-case">{{ greetUser() }} {{ user?.first_name ?? 'friend' }},</TypographyTitle>
     

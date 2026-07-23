@@ -29,32 +29,67 @@ function pointInFeature(x: number, y: number, geom: any): boolean {
 
 // Parsed county polygons + bounding boxes, cached in module scope (loaded once).
 let countyIndex: { name: string; bbox: [number, number, number, number]; geom: any }[] | null = null;
-async function getCounties() {
-  if (countyIndex) return countyIndex;
+
+async function loadCountyGeoJSON(): Promise<any | null> {
+  // 1) Nitro server asset (works if server/assets/ky_counties.geojson was present at build time)
   try {
     const raw = await useStorage('assets:server').getItem('ky_counties.geojson');
-    const gj = typeof raw === 'string' ? JSON.parse(raw) : raw;
-    countyIndex = (gj?.features || []).map((f: any) => {
-      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-      const scan = (c: any) => {
-        if (typeof c[0] === 'number') {
-          if (c[0] < minX) minX = c[0]; if (c[0] > maxX) maxX = c[0];
-          if (c[1] < minY) minY = c[1]; if (c[1] > maxY) maxY = c[1];
-        } else c.forEach(scan);
-      };
-      scan(f.geometry?.coordinates ?? []);
-      return {
-        name: f.properties?.Name ?? f.properties?.NAME ?? 'Unknown',
-        bbox: [minX, minY, maxX, maxY] as [number, number, number, number],
-        geom: f.geometry,
-      };
-    });
+    if (raw) {
+      console.log('[recognition] counties loaded from server assets');
+      return typeof raw === 'string' ? JSON.parse(raw) : raw;
+    }
   } catch (e) {
-    console.error('Could not load ky_counties.geojson from server/assets:', e);
-    countyIndex = [];
+    console.warn('[recognition] server asset read failed:', (e as Error).message);
   }
-  return countyIndex;
+
+  // 2) Filesystem fallback — the same file the map serves from /data/
+  const { readFile } = await import('node:fs/promises');
+  const { resolve } = await import('node:path');
+  const candidates = [
+    resolve(process.cwd(), 'public/data/ky_counties.geojson'),        // dev
+    resolve(process.cwd(), '.output/public/data/ky_counties.geojson'), // built output
+    resolve(process.cwd(), '../public/data/ky_counties.geojson'),      // running from .output/server
+    '/app/.output/public/data/ky_counties.geojson',                    // common Docker layout
+  ];
+  for (const path of candidates) {
+    try {
+      const txt = await readFile(path, 'utf-8');
+      console.log('[recognition] counties loaded from', path);
+      return JSON.parse(txt);
+    } catch { /* try next */ }
+  }
+
+  console.error('[recognition] ky_counties.geojson NOT FOUND. cwd:', process.cwd(), 'tried:', candidates);
+  return null;
 }
+
+async function getCounties() {
+  if (countyIndex) return countyIndex;
+
+  const gj = await loadCountyGeoJSON();
+  if (!gj) return [];   // NOTE: no negative caching — retry next request instead of failing forever
+
+  const parsed = (gj.features || []).map((f: any) => {
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    const scan = (c: any) => {
+      if (typeof c[0] === 'number') {
+        if (c[0] < minX) minX = c[0]; if (c[0] > maxX) maxX = c[0];
+        if (c[1] < minY) minY = c[1]; if (c[1] > maxY) maxY = c[1];
+      } else c.forEach(scan);
+    };
+    scan(f.geometry?.coordinates ?? []);
+    return {
+      name: f.properties?.Name ?? f.properties?.NAME ?? 'Unknown',
+      bbox: [minX, minY, maxX, maxY] as [number, number, number, number],
+      geom: f.geometry,
+    };
+  });
+
+  console.log(`[recognition] parsed ${parsed.length} county polygons`);
+  if (parsed.length) countyIndex = parsed;   // only cache a successful load
+  return parsed;
+}
+
 function countyForPoint(lon: number, lat: number, counties: any[]): string | null {
   for (const c of counties) {
     const [minX, minY, maxX, maxY] = c.bbox;

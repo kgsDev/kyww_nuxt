@@ -6,7 +6,8 @@ const props = defineProps<{ userId: string }>();
 
 const {
   loading, error, load,
-  trainingBadges, roleBadges, seasonal, superSampler,
+  trainingBadges, roleBadges, completeSampler,
+  seasonal, superSampler, siteExplorer,
 } = useBadges();
 
 // Full literal class strings so Tailwind's JIT keeps them (never build `bg-${x}` dynamically).
@@ -15,7 +16,12 @@ const COLOR_CLASSES: Record<string, string> = {
   orange: 'bg-orange-50 text-orange-700',
   sky:    'bg-sky-50 text-sky-700',
   green:  'bg-green-50 text-green-700',
+  cyan:   'bg-cyan-50 text-cyan-700',
+  teal:   'bg-teal-50 text-teal-700',
+  indigo: 'bg-indigo-50 text-indigo-700',
+  violet: 'bg-violet-50 text-violet-700',
 };
+
 const MONTH_ABBR = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 onMounted(() => load(props.userId));
@@ -58,10 +64,45 @@ watch(() => props.userId, (id) => { if (id) load(id); });
         </div>
       </div>
 
+      <!-- Sampling Disciplines (Complete Sampler progression) -->
+      <div>
+        <h3 class="text-sm font-medium text-gray-500 mb-2">Sampling Disciplines</h3>
+        <div class="flex flex-wrap items-center gap-3">
+          <div
+            class="flex items-center gap-2 px-3 py-2 rounded-lg"
+            :class="completeSampler.earned
+              ? 'bg-gradient-to-r from-amber-100 to-emerald-100 text-emerald-800 ring-1 ring-emerald-200'
+              : 'bg-gray-50 text-gray-600'"
+          >
+            <UIcon
+              :name="completeSampler.earned ? 'mdi:star-circle' : 'mdi:flask-outline'"
+              class="w-6 h-6"
+              :class="completeSampler.earned ? 'text-amber-500' : 'text-gray-400'"
+            />
+            <div>
+              <div class="font-semibold">{{ completeSampler.label || 'No samples yet' }}</div>
+              <div class="text-xs">
+                <template v-if="completeSampler.earned">All three sampling types — a complete sampler!</template>
+                <template v-else>{{ completeSampler.count }} of {{ completeSampler.total }} sampling types</template>
+              </div>
+            </div>
+          </div>
+          <div class="flex gap-1">
+            <span
+              v-for="d in completeSampler.disciplines"
+              :key="d.key"
+              class="px-2 h-8 rounded-full flex items-center text-xs font-medium border"
+              :class="d.done ? 'bg-green-500 text-white border-green-500' : 'bg-gray-50 text-gray-400 border-gray-200'"
+              :title="d.done ? `${d.label} sampled` : `${d.label} not yet sampled`"
+            >{{ d.label }}</span>
+          </div>
+        </div>
+      </div>
+
       <!-- Seasonal participation -->
       <div>
         <h3 class="text-sm font-medium text-gray-500 mb-2">
-          Seasonal Participation (May · July · September)
+          Seasonal Participation (May · July · September - any participation counts)
         </h3>
         <div class="flex flex-wrap items-center gap-3">
           <div class="flex items-center gap-2 px-3 py-2 rounded-lg" :class="COLOR_CLASSES[seasonal.color]">
@@ -93,7 +134,7 @@ watch(() => props.userId, (id) => { if (id) load(id); });
 
       <!-- Super Sampler -->
       <div>
-        <h3 class="text-sm font-medium text-gray-500 mb-2">Super Sampler (samples at a single site)</h3>
+        <h3 class="text-sm font-medium text-gray-500 mb-2">Super Sampler (you were lead sampler at a single site)</h3>
         <div v-if="superSampler.earned" class="flex flex-wrap items-center gap-3">
           <div class="flex items-center gap-2 px-3 py-2 rounded-lg" :class="COLOR_CLASSES[superSampler.tier.color]">
             <UIcon :name="superSampler.tier.icon" class="w-6 h-6" />
@@ -112,6 +153,32 @@ watch(() => props.userId, (id) => { if (id) load(id); });
           <template v-if="superSampler.count > 0"> (Best so far: {{ superSampler.count }}.)</template>
         </div>
       </div>
+
+      <!-- Site Explorer -->
+      <div>
+        <h3 class="text-sm font-medium text-gray-500 mb-2">Site Explorer (different sites sampled - any sampling/participation counts)</h3>
+        <div v-if="siteExplorer.earned" class="flex flex-wrap items-center gap-3">
+          <div class="flex items-center gap-2 px-3 py-2 rounded-lg" :class="COLOR_CLASSES[siteExplorer.tier.color]">
+            <UIcon :name="siteExplorer.tier.icon" class="w-6 h-6" />
+            <div>
+              <div class="font-semibold">{{ siteExplorer.tier.label }}</div>
+              <div class="text-xs">
+                {{ siteExplorer.distinct }} different {{ siteExplorer.distinct === 1 ? 'site' : 'sites' }} sampled
+              </div>
+            </div>
+          </div>
+          <div v-if="siteExplorer.nextTier" class="text-xs text-gray-500">
+            {{ siteExplorer.nextTier.min - siteExplorer.distinct }} more
+            {{ siteExplorer.nextTier.min - siteExplorer.distinct === 1 ? 'site' : 'sites' }} to reach
+            “{{ siteExplorer.nextTier.label }}”
+          </div>
+        </div>
+        <div v-else class="text-sm text-gray-500">
+          Sample a second site to earn “Branching Out.”
+          <template v-if="siteExplorer.distinct === 1"> (You've sampled 1 site so far.)</template>
+        </div>
+      </div>
+
     </div>
   </UCard>
 </template>
